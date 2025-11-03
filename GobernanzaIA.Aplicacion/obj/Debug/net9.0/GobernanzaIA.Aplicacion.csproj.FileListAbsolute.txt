@@ -1,0 +1,15 @@
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\GobernanzaIA.Aplicacion.csproj.AssemblyReference.cache
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\GobernanzaIA.Aplicacion.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\GobernanzaIA.Aplicacion.AssemblyInfoInputs.cache
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\GobernanzaIA.Aplicacion.AssemblyInfo.cs
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\GobernanzaIA.Aplicacion.csproj.CoreCompileInputs.cache
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\bin\Debug\net9.0\GobernanzaIA.Aplicacion.deps.json
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\bin\Debug\net9.0\GobernanzaIA.Aplicacion.dll
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\bin\Debug\net9.0\GobernanzaIA.Aplicacion.pdb
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\bin\Debug\net9.0\GobernanzaIA.Dominio.dll
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\bin\Debug\net9.0\GobernanzaIA.Dominio.pdb
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\Gobernan.0AAEF83A.Up2Date
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\GobernanzaIA.Aplicacion.dll
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\refint\GobernanzaIA.Aplicacion.dll
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\GobernanzaIA.Aplicacion.pdb
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Aplicacion\obj\Debug\net9.0\ref\GobernanzaIA.Aplicacion.dll

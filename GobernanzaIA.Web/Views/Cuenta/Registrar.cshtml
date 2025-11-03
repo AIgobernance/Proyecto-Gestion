@@ -1,0 +1,65 @@
+﻿@model GobernanzaIA.Aplicacion.DTOs.RegistrarUsuarioDto
+
+@{
+    ViewData["Title"] = "Registrar";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<form asp-action="Registrar" method="post">
+    <div class="form-group">
+        <label asp-for="Email"></label>
+        <input asp-for="Email" class="form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Password"></label>
+        <input asp-for="Password" type="password" class="form-control" />
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="ConfirmarPassword"></label>
+        <input asp-for="ConfirmarPassword" type="password" class="form-control" />
+        <span asp-validation-for="ConfirmarPassword" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Nombre"></label>
+        <input asp-for="Nombre" class="form-control" />
+        <span asp-validation-for="Nombre" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Apellido"></label>
+        <input asp-for="Apellido" class="form-control" />
+        <span asp-validation-for="Apellido" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="NombreEmpresa"></label>
+        <input asp-for="NombreEmpresa" class="form-control" />
+        <span asp-validation-for="NombreEmpresa" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="Sector"></label>
+        <input asp-for="Sector" class="form-control" />
+        <span asp-validation-for="Sector" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label asp-for="NumeroEmpleados"></label>
+        <input asp-for="NumeroEmpleados" type="number" class="form-control" />
+        <span asp-validation-for="NumeroEmpleados" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Registrar</button>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

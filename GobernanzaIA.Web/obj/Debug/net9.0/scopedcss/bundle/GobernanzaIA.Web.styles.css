@@ -1,0 +1,49 @@
+/* _content/GobernanzaIA.Web/Views/Shared/_Layout.cshtml.rz.scp.css */
+/* Please see documentation at https://learn.microsoft.com/aspnet/core/client-side/bundling-and-minification
+for details on configuring this project to bundle and minify static web assets. */
+
+a.navbar-brand[b-g9sbmrmdvl] {
+  white-space: normal;
+  text-align: center;
+  word-break: break-all;
+}
+
+a[b-g9sbmrmdvl] {
+  color: #0077cc;
+}
+
+.btn-primary[b-g9sbmrmdvl] {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.nav-pills .nav-link.active[b-g9sbmrmdvl], .nav-pills .show > .nav-link[b-g9sbmrmdvl] {
+  color: #fff;
+  background-color: #1b6ec2;
+  border-color: #1861ac;
+}
+
+.border-top[b-g9sbmrmdvl] {
+  border-top: 1px solid #e5e5e5;
+}
+.border-bottom[b-g9sbmrmdvl] {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.box-shadow[b-g9sbmrmdvl] {
+  box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .05);
+}
+
+button.accept-policy[b-g9sbmrmdvl] {
+  font-size: 1rem;
+  line-height: inherit;
+}
+
+.footer[b-g9sbmrmdvl] {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  white-space: nowrap;
+  line-height: 60px;
+}
