@@ -1,0 +1,39 @@
+﻿@using Services.Models.FarmModels
+
+
+@{
+}
+@model AddFarmModel
+
+
+@{
+    ViewData["Title"] = "Agregar Granja";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2 class="mb-4">Agregar nueva granja</h2>
+
+<form asp-action="AddFarm" asp-controller="Farm" method="post" class="needs-validation" novalidate>
+    <div class="card shadow-sm p-4">
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label fw-semibold"></label>
+            <input asp-for="Name" class="form-control" placeholder="Ej: Granja Los Pinos" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Location" class="form-label fw-semibold"></label>
+            <input asp-for="Location" class="form-control" placeholder="Ej: Medellín, Antioquia" />
+            <span asp-validation-for="Location" class="text-danger"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Guardar
+        </button>
+        <a asp-action="Index"asp-controller="Farm" class="btn btn-secondary ms-2">Cancelar</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

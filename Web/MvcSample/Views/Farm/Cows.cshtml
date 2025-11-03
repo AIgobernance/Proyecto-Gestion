@@ -1,0 +1,20 @@
+﻿@using Services.Models.CowModels
+
+@{
+    ViewData["Title"] = "Milk Page";
+}
+@model  IList<CowModel> ;
+
+<div class="text-center">
+    <h1 class="display-4">Milk</h1>
+  @foreach(var cow in Model)
+  {
+        <p>@cow.Race</p>
+        <p>@cow.Race</p>
+        <p>@cow.Milk.Farm</p>
+        <p>@cow.Milk.Litters</p>
+        <a asp-controller="Milk" asp-action="Index" asp-all-route-Id=@cow.Milk.Id></a>
+        <br />
+  }
+    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+</div>

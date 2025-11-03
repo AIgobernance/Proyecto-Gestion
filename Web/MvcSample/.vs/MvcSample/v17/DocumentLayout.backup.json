@@ -1,0 +1,426 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{2070EAED-8793-4790-AA35-B5B37C3AA180}|..\\..\\Infrastructure\\Infrastructure\\Infrastructure.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\infrastructure\\infrastructure\\repositories\\farmrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\controllers\\farmcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:controllers\\farmcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C032BDD3-792E-4EE5-80B7-811F520FBA13}|..\\..\\Services\\Services\\Services.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\services\\services\\farmservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\views\\farm\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:views\\farm\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\views\\farm\\addcow.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:views\\farm\\addcow.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C032BDD3-792E-4EE5-80B7-811F520FBA13}|..\\..\\Services\\Services\\Services.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\services\\services\\models\\cowmodels\\addcowmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\views\\farm\\addfarm.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:views\\farm\\addfarm.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C032BDD3-792E-4EE5-80B7-811F520FBA13}|..\\..\\Services\\Services\\Services.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\services\\services\\models\\cowmodels\\cowmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C032BDD3-792E-4EE5-80B7-811F520FBA13}|..\\..\\Services\\Services\\Services.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\services\\services\\models\\farmmodels\\farmmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:views\\shared\\_layout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3F1D9BD1-DFC7-49A9-B1A3-537A2F55A1F2}|..\\..\\Test\\ServicesTest\\ServicesTest.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\test\\servicestest\\farmservicetest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2070EAED-8793-4790-AA35-B5B37C3AA180}|..\\..\\Infrastructure\\Infrastructure\\Infrastructure.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\infrastructure\\infrastructure\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C032BDD3-792E-4EE5-80B7-811F520FBA13}|..\\..\\Services\\Services\\Services.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\services\\services\\dependencyinjection.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{05BA9BAA-2BD7-4DF9-A009-5DDDAB3554C4}|..\\..\\Test\\DomainTest\\DomainTest.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\test\\domaintest\\milktest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8AF33060-9A55-407F-8C57-3FE5AE0CBC62}|..\\..\\Domain\\Domain\\Domain.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\domain\\domain\\milk.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Test\\DomainTest\\DomainTest\\MilkTest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\views\\farm\\cows.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:views\\farm\\cows.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\web\\mvcsample\\controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2A82BDE7-4194-4C20-B168-D6BA8C241F53}|MvcSample.csproj|solutionrelative:controllers\\homecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2070EAED-8793-4790-AA35-B5B37C3AA180}|..\\..\\Infrastructure\\Infrastructure\\Infrastructure.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\infrastructure\\infrastructure\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C032BDD3-792E-4EE5-80B7-811F520FBA13}|..\\..\\Services\\Services\\Services.csproj|c:\\users\\lenovo\\desktop\\mvcsamplefinal\\services\\services\\auxiliaryclass\\maildata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MilkTest\\MulkTest.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 131,
+          "SelectedChildIndex": 4,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{75188d03-9892-4ae2-abf1-207126247ce5}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{13b12e3e-c1b4-4539-9371-4fe9a0d523fc}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "FarmRepository.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Infrastructure\\Infrastructure\\Repositories\\FarmRepository.cs",
+              "RelativeDocumentMoniker": "..\\..\\Infrastructure\\Infrastructure\\Repositories\\FarmRepository.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Infrastructure\\Infrastructure\\Repositories\\FarmRepository.cs",
+              "RelativeToolTip": "..\\..\\Infrastructure\\Infrastructure\\Repositories\\FarmRepository.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAADwvx0AAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-02T03:44:46.786Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "FarmService.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\FarmService.cs",
+              "RelativeDocumentMoniker": "..\\..\\Services\\Services\\FarmService.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\FarmService.cs",
+              "RelativeToolTip": "..\\..\\Services\\Services\\FarmService.cs",
+              "ViewState": "AgIAABwAAAAAAAAAAAAAwDMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-02T03:40:09.294Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "AddCow.cshtml",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Farm\\AddCow.cshtml",
+              "RelativeDocumentMoniker": "Views\\Farm\\AddCow.cshtml",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Farm\\AddCow.cshtml",
+              "RelativeToolTip": "Views\\Farm\\AddCow.cshtml",
+              "ViewState": "AgIAAAIAAAAAAAAAAAAAAB0AAABeAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-02T03:12:37.752Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "AddCowModel.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\Models\\CowModels\\AddCowModel.cs",
+              "RelativeDocumentMoniker": "..\\..\\Services\\Services\\Models\\CowModels\\AddCowModel.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\Models\\CowModels\\AddCowModel.cs",
+              "RelativeToolTip": "..\\..\\Services\\Services\\Models\\CowModels\\AddCowModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwAYAAAARAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-02T02:46:33.171Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "FarmController.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Controllers\\FarmController.cs",
+              "RelativeDocumentMoniker": "Controllers\\FarmController.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Controllers\\FarmController.cs",
+              "RelativeToolTip": "Controllers\\FarmController.cs",
+              "ViewState": "AgIAADsAAAAAAAAAAAAuwFQAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-31T21:34:15.375Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "AddFarm.cshtml",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Farm\\AddFarm.cshtml",
+              "RelativeDocumentMoniker": "Views\\Farm\\AddFarm.cshtml",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Farm\\AddFarm.cshtml",
+              "RelativeToolTip": "Views\\Farm\\AddFarm.cshtml",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-10-31T20:27:44.641Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Program.cs",
+              "RelativeDocumentMoniker": "Program.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Program.cs",
+              "RelativeToolTip": "Program.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAAABgAAAAMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-31T21:31:45.076Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Index.cshtml",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Farm\\Index.cshtml",
+              "RelativeDocumentMoniker": "Views\\Farm\\Index.cshtml",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Farm\\Index.cshtml",
+              "RelativeToolTip": "Views\\Farm\\Index.cshtml",
+              "ViewState": "AgIAABUAAAAAAAAAAAAAACQAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-02T01:02:03.319Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "DependencyInjection.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Infrastructure\\Infrastructure\\DependencyInjection.cs",
+              "RelativeDocumentMoniker": "..\\..\\Infrastructure\\Infrastructure\\DependencyInjection.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Infrastructure\\Infrastructure\\DependencyInjection.cs",
+              "RelativeToolTip": "..\\..\\Infrastructure\\Infrastructure\\DependencyInjection.cs",
+              "ViewState": "AgIAAAMAAAAAAAAAAADwvxMAAAA3AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-02T02:08:47.108Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "CowModel.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\Models\\CowModels\\CowModel.cs",
+              "RelativeDocumentMoniker": "..\\..\\Services\\Services\\Models\\CowModels\\CowModel.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\Models\\CowModels\\CowModel.cs",
+              "RelativeToolTip": "..\\..\\Services\\Services\\Models\\CowModels\\CowModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvxMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-02T02:46:17.458Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "FarmModel.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\Models\\FarmModels\\FarmModel.cs",
+              "RelativeDocumentMoniker": "..\\..\\Services\\Services\\Models\\FarmModels\\FarmModel.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\Models\\FarmModels\\FarmModel.cs",
+              "RelativeToolTip": "..\\..\\Services\\Services\\Models\\FarmModels\\FarmModel.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwAYAAAAvAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-02T01:02:40.123Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "appsettings.Development.json",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\appsettings.Development.json",
+              "RelativeDocumentMoniker": "appsettings.Development.json",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\appsettings.Development.json",
+              "RelativeToolTip": "appsettings.Development.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvxAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-11-01T00:49:36.506Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "_Layout.cshtml",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Shared\\_Layout.cshtml",
+              "RelativeDocumentMoniker": "Views\\Shared\\_Layout.cshtml",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Shared\\_Layout.cshtml",
+              "RelativeToolTip": "Views\\Shared\\_Layout.cshtml",
+              "ViewState": "AgIAAAsAAAAAAAAAAAAAACMAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-01T00:04:10.924Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "FarmServiceTest.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Test\\ServicesTest\\FarmServiceTest.cs",
+              "RelativeDocumentMoniker": "..\\..\\Test\\ServicesTest\\FarmServiceTest.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Test\\ServicesTest\\FarmServiceTest.cs",
+              "RelativeToolTip": "..\\..\\Test\\ServicesTest\\FarmServiceTest.cs",
+              "ViewState": "AgIAABIAAAAAAAAAAAAAwDAAAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-31T20:28:28.666Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "Cows.cshtml",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Farm\\Cows.cshtml",
+              "RelativeDocumentMoniker": "Views\\Farm\\Cows.cshtml",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Views\\Farm\\Cows.cshtml",
+              "RelativeToolTip": "Views\\Farm\\Cows.cshtml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAbAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-10-31T21:32:24.516Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwoAAAB8AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-11-01T00:44:28.927Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "MilkTest.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Test\\DomainTest\\DomainTest\\MilkTest.cs",
+              "RelativeDocumentMoniker": "..\\..\\Test\\DomainTest\\DomainTest\\MilkTest.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Test\\DomainTest\\DomainTest\\MilkTest.cs",
+              "RelativeToolTip": "..\\..\\Test\\DomainTest\\DomainTest\\MilkTest.cs",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-02T00:14:13.919Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "MilkTest.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Test\\DomainTest\\MilkTest.cs",
+              "RelativeDocumentMoniker": "..\\..\\Test\\DomainTest\\MilkTest.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Test\\DomainTest\\MilkTest.cs",
+              "RelativeToolTip": "..\\..\\Test\\DomainTest\\MilkTest.cs",
+              "ViewState": "AgIAACEAAAAAAAAAAAAswAoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-02T00:34:42.987Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "Dependencyinjection.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\Dependencyinjection.cs",
+              "RelativeDocumentMoniker": "..\\..\\Services\\Services\\Dependencyinjection.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\Dependencyinjection.cs",
+              "RelativeToolTip": "..\\..\\Services\\Services\\Dependencyinjection.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwgAAAAKAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-01T00:23:58.726Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "Milk.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Domain\\Domain\\Milk.cs",
+              "RelativeDocumentMoniker": "..\\..\\Domain\\Domain\\Milk.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Domain\\Domain\\Milk.cs",
+              "RelativeToolTip": "..\\..\\Domain\\Domain\\Milk.cs",
+              "ViewState": "AgIAAAsAAAAAAAAAAAAswBoAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-01T01:29:14.381Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "HomeController.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Controllers\\HomeController.cs",
+              "RelativeDocumentMoniker": "Controllers\\HomeController.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MvcSample\\Controllers\\HomeController.cs",
+              "RelativeToolTip": "Controllers\\HomeController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAIA0wBIAAAAMAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-31T21:34:31.889Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "AppDbContext.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Infrastructure\\Infrastructure\\AppDbContext.cs",
+              "RelativeDocumentMoniker": "..\\..\\Infrastructure\\Infrastructure\\AppDbContext.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Infrastructure\\Infrastructure\\AppDbContext.cs",
+              "RelativeToolTip": "..\\..\\Infrastructure\\Infrastructure\\AppDbContext.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-31T23:33:21.284Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "MailData.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\AuxiliaryClass\\MailData.cs",
+              "RelativeDocumentMoniker": "..\\..\\Services\\Services\\AuxiliaryClass\\MailData.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Services\\Services\\AuxiliaryClass\\MailData.cs",
+              "RelativeToolTip": "..\\..\\Services\\Services\\AuxiliaryClass\\MailData.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwYAAAASAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-31T21:24:14.216Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "MulkTest.cs",
+              "DocumentMoniker": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MilkTest\\MulkTest.cs",
+              "RelativeDocumentMoniker": "..\\MilkTest\\MulkTest.cs",
+              "ToolTip": "C:\\Users\\LENOVO\\Desktop\\MVCSampleFinal\\Web\\MilkTest\\MulkTest.cs",
+              "RelativeToolTip": "..\\MilkTest\\MulkTest.cs",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-31T21:15:34.532Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

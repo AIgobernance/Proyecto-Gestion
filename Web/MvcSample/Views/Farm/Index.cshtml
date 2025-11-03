@@ -1,0 +1,50 @@
+﻿@using Services.Models.CowModels
+@using Services.Models.FarmModels
+
+@{
+    ViewData["Title"] = "Granjas";
+}
+@model IList<FarmModel>;
+
+<div class="text-center">
+    <h1 class="display-4">My Farms</h1>
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Cows count</th>
+                <th scope="col">Total milk production</th>
+                <th scope="col">Actions</th>
+
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                int i = 0;
+            }
+            @foreach (var farm in Model)
+            {
+                <tr>
+                    <th scope="row">@(i++)</th>
+                    <td>@farm.Name</td>
+                    <td>@farm.CowCount</td>
+                    <td>@farm.TotalMilkLitters</td>
+                    <td> <a asp-controller="Farm" asp-action="AddCow" asp-route-id="@farm.Id"> Add Cow</a></td>
+                </tr>
+            }
+
+        </tbody>
+    </table>
+        
+      
+      
+  
+    
+</div>
+
+
+<div>
+
+    <td> <a asp-controller="Farm" asp-action="AddFarm" > Add Farm</a></td>
+</div>
