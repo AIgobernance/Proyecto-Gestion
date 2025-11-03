@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GobernanzaIA.Infraestructura")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c727c46db530f1df67a0e369edf0741c69ea3ed5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b5b93b16d2500a9ae61e24e2e0b23735e176bd0f")]
 [assembly: System.Reflection.AssemblyProductAttribute("GobernanzaIA.Infraestructura")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GobernanzaIA.Infraestructura")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
