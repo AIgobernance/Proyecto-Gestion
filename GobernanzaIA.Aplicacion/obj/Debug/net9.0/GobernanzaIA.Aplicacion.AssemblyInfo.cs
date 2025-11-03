@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GobernanzaIA.Aplicacion")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c727c46db530f1df67a0e369edf0741c69ea3ed5")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4583ca862fa0454c4440fd9f8f25bdfb4ad26a54")]
 [assembly: System.Reflection.AssemblyProductAttribute("GobernanzaIA.Aplicacion")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GobernanzaIA.Aplicacion")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
