@@ -1,0 +1,17 @@
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\bin\Debug\net9.0\GobernanzaIA.Infraestructura.deps.json
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\bin\Debug\net9.0\GobernanzaIA.Infraestructura.runtimeconfig.json
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\bin\Debug\net9.0\GobernanzaIA.Infraestructura.dll
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\bin\Debug\net9.0\GobernanzaIA.Infraestructura.pdb
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\bin\Debug\net9.0\GobernanzaIA.Dominio.dll
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\bin\Debug\net9.0\GobernanzaIA.Dominio.pdb
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\GobernanzaIA.Infraestructura.csproj.AssemblyReference.cache
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\GobernanzaIA.Infraestructura.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\GobernanzaIA.Infraestructura.AssemblyInfoInputs.cache
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\GobernanzaIA.Infraestructura.AssemblyInfo.cs
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\GobernanzaIA.Infraestructura.csproj.CoreCompileInputs.cache
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\Gobernan.F0791B6A.Up2Date
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\GobernanzaIA.Infraestructura.dll
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\refint\GobernanzaIA.Infraestructura.dll
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\GobernanzaIA.Infraestructura.pdb
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\GobernanzaIA.Infraestructura.genruntimeconfig.cache
+C:\Users\Miguel Polo\source\repos\GobernanzaIAApp\GobernanzaIA.Infraestructura\obj\Debug\net9.0\ref\GobernanzaIA.Infraestructura.dll
