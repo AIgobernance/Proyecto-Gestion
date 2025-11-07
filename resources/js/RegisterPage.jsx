@@ -27,6 +27,129 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+const styles = `
+:root{
+  --brand:#1f3d93;
+  --brand-2:#2c4fb5;
+  --brand-3:#3d65d4;
+  --bg:#ffffff;
+  --ink:#0b1324;
+  --muted:#5b677a;
+  --panel:#0b142b;
+  --card:#ffffff;
+  --ring:#cfd7e6;
+  --shadow:0 10px 30px rgba(16,24,40,.08), 0 2px 6px rgba(16,24,40,.04);
+}
+
+/* Reset / layout */
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial}
+
+/* Header (alineado con estilo del homepage) */
+.bg-header {
+  background: linear-gradient(90deg, rgba(202,223,251,1) 0%, rgba(232,242,252,1) 100%);
+  border-bottom: 1px solid rgba(238,241,246,1);
+}
+.bg-header .brand-img {
+  background: rgba(13,44,86,0.06);
+  padding: 8px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items:center;
+}
+
+/* Form card centrada y colores coherentes con HomePage */
+.form-card {
+  max-width: 720px;
+  margin: 40px auto;
+  border-radius: 28px;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--brand-2) 0%, var(--brand) 100%);
+  box-shadow: var(--shadow);
+  border: 0;
+  color: #fff;
+}
+
+/* header interno de la tarjeta (titulo) */
+.form-card .card-header {
+  background: transparent;
+  padding: 36px 28px 28px;
+  text-align: center;
+}
+.form-card .card-header .card-title {
+  font-size: 28px;
+  margin: 0 0 6px;
+  color: #ffffff;
+}
+.form-card .card-header .card-description {
+  color: rgba(255,255,255,0.9);
+  font-size: 15px;
+}
+
+/* contenido de la tarjeta */
+.form-card .card-content {
+  background: transparent;
+  padding: 28px;
+  color: #fff;
+}
+
+/* labels, iconos y secciones */
+.form-card label {
+  color: rgba(255,255,255,0.95);
+  font-weight:600;
+}
+.form-card h3 {
+  color: rgba(255,255,255,0.95);
+}
+
+/* Inputs y selects estilo "pill" blanco para contraste */
+.form-card input,
+.form-card textarea,
+.form-card select,
+.form-card .select-trigger {
+  background: #fff !important;
+  color: var(--ink) !important;
+  border-radius: 999px !important;
+  padding: 8px 14px !important;
+  height: 36px !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+  box-shadow: none !important;
+}
+
+/* Ajustes específicos para componentes que usan padding adicional */
+.form-card .relative .pr-10 { padding-right: 2.5rem; }
+
+/* Iconos dentro de labels más claros */
+.form-card svg { color: rgba(255,255,255,0.9); }
+
+/* Checkbox box y info */
+.form-card .bg-blue-50 { background: rgba(255,255,255,0.08); border-radius: 12px; }
+
+/* Botón principal estilo "pill" inverso (fondo blanco) */
+.form-card .create-btn {
+  background: #ffffff !important;
+  color: var(--brand) !important;
+  border-radius: 999px !important;
+  padding: 8px 22px !important;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.12);
+  border: none !important;
+}
+
+/* Texto pequeño e indicaciones */
+.form-card .text-gray-600, .form-card .text-[12px] {
+  color: rgba(255,255,255,0.9);
+}
+
+/* Responsive */
+@media (max-width: 680px) {
+  .form-card { margin: 20px 16px; border-radius:20px; }
+  .form-card .card-header { padding: 24px; }
+  .form-card input, .form-card select { height: 40px; }
+}
+`;
+
 export function RegisterPage({ onBack, onLoginRedirect }) {
   const [showActivation, setShowActivation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -172,6 +295,8 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#cadffb] via-[#e8f2fc] to-white">
+      <style>{styles}</style>
+
       {/* Header */}
       <div className="bg-[#cadffb] border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -187,8 +312,8 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
 
       {/* Main Content */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-[#4d82bc] to-[#5a8fc9] text-white rounded-t-lg">
+        <Card className="card shadow-xl form-card">
+          <CardHeader className="card-header">
             <CardTitle className="text-center text-[32px]">Registro de Usuario</CardTitle>
             <CardDescription className="text-center text-white/90 text-[16px]">
               Complete el formulario para crear su cuenta
@@ -507,7 +632,7 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
               <Button
                 onClick={handleCreateAccount}
                 disabled={isSubmitting}
-                className="w-full md:w-auto px-12 bg-gradient-to-r from-[#4d82bc] to-[#5a8fc9] hover:from-[#3d6a9c] hover:to-[#4a7fb9] shadow-lg"
+                className="create-btn w-full md:w-auto px-6"
                 size="lg"
               >
                 {isSubmitting ? "Creando cuenta..." : "Crear Cuenta"}

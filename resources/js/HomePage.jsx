@@ -76,7 +76,6 @@ const frameworks = [
   
 ];
 
-
 /* ====== ESTILOS VANILLA ====== */
 const styles = `
 :root{
@@ -171,10 +170,19 @@ a{color:inherit;text-decoration:none}
 `;
 
 export default function HomePage() {
-  const handleRegisterUserClick = () => alert("Registrar Usuario");
-  const handleAdminClick = () => alert("Administrador");
-  const handleUserClick = () => alert("Iniciar Sesión Usuario");
-
+  const handleRegisterUserClick = () => {
+    window.location.href = "/register";
+  };
+  const handleUserClick = () => {
+    window.location.href = "/login";
+  };
+  const handleAdminClick = () => {
+    window.location.href = "/admin/register";
+  };
+  const handleAdminLoginClick = () => {
+    window.location.href = "/admin/login";
+  };
+  
   return (
     <div>
       <style>{styles}</style>
@@ -207,7 +215,7 @@ export default function HomePage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onSelect={handleUserClick}>Usuario</DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleAdminClick}>Administrador</DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleAdminLoginClick}>Administrador</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
