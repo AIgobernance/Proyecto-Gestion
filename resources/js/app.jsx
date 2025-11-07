@@ -4,7 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate } from "rea
 
 // Páginas (todas están en resources/js)
 // Públicas
-import { HomePage } from "./HomePage.jsx";
+//import { HomePage } from "./HomePage.jsx";
+import HomePage from "./HomePage.jsx";
 import { LoginPage } from "./LoginPage.jsx";
 import { RegisterPage } from "./RegisterPage.jsx";
 import { AdminLoginPage } from "./AdminLoginPage.jsx";

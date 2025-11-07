@@ -1,56 +1,19 @@
 import * as React from "react";
-import { cn } from "./utils";
 
-/** Slot mínimo (mergea className en el child) */
-function Slot({ children, className, ...props }) {
-  if (React.isValidElement(children)) {
-    return React.cloneElement(children, {
-      ...props,
-      className: cn(children.props.className, className),
-    });
-  }
-  // Si no hay child válido, renderiza un span por defecto
-  return <span className={className} {...props} />;
-}
-
-/** Clases base (igual que tu cva original) */
-const BASE =
-  "inline-flex items-center justify-center rounded-md border px-2 py-0.5 text-xs font-medium w-fit whitespace-nowrap shrink-0 " +
-  "[&>svg]:size-3 gap-1 [&>svg]:pointer-events-none " +
-  "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] " +
-  "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive " +
-  "transition-[color,box-shadow] overflow-hidden";
-
-/** Variantes equivalentes a cva */
-const VARIANTS = {
-  default:
-    "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
-  secondary:
-    "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
-  destructive:
-    "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-  outline:
-    "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
-};
-
-/** Reemplazo de badgeVariants({ variant }) sin cva */
-export function badgeVariants({ variant = "default" } = {}) {
-  return cn(BASE, VARIANTS[variant] ?? VARIANTS.default);
-}
-
-/** Componente Badge con asChild y variant */
-export function Badge({
-  className,
-  variant = "default",
-  asChild = false,
-  ...props
-}) {
-  const Comp = asChild ? Slot : "span";
+export function Badge({ className = "", children, style, ...props }) {
+  const base = {
+    display: "inline-block",
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 600,
+    borderRadius: 999,
+    background: "#edf2ff",
+    color: "#2c50b5",
+    border: "1px solid #d9e5ff",
+  };
   return (
-    <Comp
-      data-slot="badge"
-      className={cn(badgeVariants({ variant }), className)}
-      {...props}
-    />
+    <span className={`badge ${className}`} style={{ ...base, ...style }} {...props}>
+      {children}
+    </span>
   );
 }
