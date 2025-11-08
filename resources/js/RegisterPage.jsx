@@ -84,6 +84,47 @@ label{color:#0b1324;font-weight:600;margin-bottom:6px;display:block}
 /* Acciones */
 .actions{display:flex;flex-direction:column;gap:10px;align-items:center}
 .actions .full{width:100%;max-width:360px}
+
+/* Overlay y panel del Dialog */
+[data-slot="dialog-overlay"]{
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(2, 6, 23, .55);
+  backdrop-filter: blur(2px);
+}
+
+[data-slot="dialog-content"]{
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 51;
+  width: 100%;
+  max-width: 560px;
+  background: #fff;
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 22px;
+}
+
+/* Botón de cierre si tu <Dialog> lo renderiza */
+[data-slot="dialog-close"]{
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  opacity: .7;
+}
+[data-slot="dialog-close"]:hover{ opacity: 1 }
+
+/* Clase accesible para ocultar “Close” */
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
 `;
 
 export function RegisterPage({ onBack, onLoginRedirect }) {
@@ -152,9 +193,7 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
 
   const handleAcceptActivation = () => { setShowActivation(false); setShowSuccess(true); };
 
-  if (showSuccess) return <RegistrationSuccessModal onContinue={onLoginRedirect} />;
-  if (showActivation) return <ActivationLinkModal onAccept={handleAcceptActivation} onBack={() => setShowActivation(false)} />;
-
+  
   return (
     <div>
       <style>{styles}</style>
@@ -177,6 +216,20 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
               Por favor complete todos los campos para crear su cuenta.
             </CardDescription>
           </CardHeader>
+
+          {showActivation && (
+            <ActivationLinkModal
+              open={showActivation}
+              onAccept={handleAcceptActivation}
+              onBack={() => setShowActivation(false)}
+            />
+            )}
+            {showSuccess && (
+            <RegistrationSuccessModal
+              open={showSuccess}
+              onContinue={onLoginRedirect}
+            />
+            )}
 
           <CardContent className="card-content">
             {notice ? <div role="alert" className="alert">{notice}</div> : null}

@@ -1,55 +1,108 @@
 import React from "react";
-import imgLogo from "../assets/logo-principal.jpg";
+import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogClose,
+} from "../ui/dialog";
 
-export function ActivationLinkModal({ onAccept, onBack }) {
+const IconMail = (p) => (
+  <svg viewBox="0 0 24 24" width="64" height="64" stroke="currentColor" fill="none" strokeWidth="2" {...p}>
+    <rect x="3" y="5" width="18" height="14" rx="3" />
+    <path d="M3 7l9 6 9-6" />
+  </svg>
+);
+
+export function ActivationLinkModal({ open = true, onAccept, onBack }) {
   const handleResend = () => {
-    // Aquí podrías invocar tu API de reenvío
-    // Por ahora solo informativo.
     alert("Se ha reenviado el enlace de activación (simulado).");
   };
 
   return (
-    <div className="bg-[#e5e7eb] relative min-h-screen">
-      {/* Header consistente con HomePage */}
-      <div className="bg-[#cadffb] border-b border-gray-200 h-[60px] w-full flex items-center justify-between px-6">
-        <div className="h-[40px] w-[101px]">
-          <img alt="logo" className="max-w-none object-cover pointer-events-none size-full" src={imgLogo} />
-        </div>
-        <button
-          className="bg-white border border-gray-300 rounded-[20px] px-[24px] py-[6px] cursor-pointer hover:bg-gray-50 transition-colors"
-          onClick={onBack}
-        >
-          Volver
-        </button>
-      </div>
+    <Dialog open={open} onOpenChange={(o) => !o && onBack?.()}>
+      <DialogContent className="p-0 overflow-hidden">
+        {/* X solo-ícono */}
+        <DialogClose data-slot="dialog-close" aria-label="Cerrar">
+          <span aria-hidden="true">×</span>
+          <span className="sr-only">Cerrar</span>
+        </DialogClose>
 
-      {/* Modal */}
-      <div className="flex items-center justify-center px-6 py-16">
-        <div className="bg-[#5b9fd8] rounded-[20px] px-[80px] py-[60px] w-full max-w-[580px] shadow-lg">
-          <div className="text-center">
-            <h2 className="text-[28px] text-white mb-4">Enlace de Activación</h2>
-            <p className="text-[14px] text-white mb-8 leading-relaxed">
-              Verifique su correo electrónico<br />para activar la cuenta
-            </p>
-
-            <div className="flex flex-col items-center gap-3">
-              <button
-                className="bg-white rounded-[20px] px-[40px] py-[8px] cursor-pointer hover:bg-gray-100 transition-colors shadow-sm"
-                onClick={handleResend}
+        <Card style={{ border: "none", boxShadow: "none", padding: 0 }}>
+          <CardContent className="p-8">
+            {/* Contenido centrado en columna */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: 12,
+              }}
+            >
+              {/* Ícono */}
+              <div
+                className="relative"
+                style={{
+                  width: 88,
+                  height: 88,
+                  borderRadius: 999,
+                  background: "linear-gradient(135deg,#eef2ff,#e2e8f0)",
+                  display: "grid",
+                  placeItems: "center",
+                  boxShadow: "0 8px 24px rgba(0,0,0,.08)",
+                }}
               >
-                Enviar nuevamente
-              </button>
+                <IconMail />
+              </div>
 
-              <button
-                className="bg-white rounded-[20px] px-[40px] py-[8px] cursor-pointer hover:bg-gray-100 transition-colors shadow-sm"
-                onClick={onAccept}
-              >
-                Aceptar
-              </button>
+              {/* Título y descripción APILADOS */}
+              <div style={{ textAlign: "center", margin: 0 }}>
+                <h3
+                  style={{
+                    display: "block",
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: "#0b1324",
+                    margin: 0,
+                    marginBottom: 4,
+                  }}
+                >
+                  Enlace de Activación
+                </h3>
+                <p
+                  style={{
+                    display: "block",
+                    fontSize: 14,
+                    color: "#334155",
+                    margin: 0,
+                  }}
+                >
+                  Verifique su correo electrónico para activar la cuenta.
+                </p>
+              </div>
+
+              {/* Nota más discreta */}
+              <p style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
+                ¿No llegó el correo? Puede reenviar el enlace.
+              </p>
+
+              {/* Botones centrados */}
+              <div style={{ display: "flex", gap: 10, width: "100%", justifyContent: "center", marginTop: 6, flexWrap: "wrap" }}>
+                <Button onClick={handleResend} className="btn-outline">
+                  Enviar nuevamente
+                </Button>
+                <Button onClick={onAccept} className="btn-primary">
+                  Aceptar
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          </CardContent>
+
+          <DialogFooter className="p-0" />
+        </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

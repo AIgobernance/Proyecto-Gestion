@@ -1,87 +1,87 @@
 import React from "react";
-import imgLogo from "../assets/logo-principal.jpg";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogClose,
+} from "../ui/dialog";
 
-/* Iconos inline */
-const Icon = {
-  Check: (p) => (
-    <svg viewBox="0 0 24 24" width="64" height="64" stroke="currentColor" fill="none" strokeWidth="2.5" {...p}>
-      <circle cx="12" cy="12" r="10" fill="url(#g)" />
-      <polyline points="17 8 10 15 7 12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#22c55e" />
-          <stop offset="100%" stopColor="#16a34a" />
-        </linearGradient>
-      </defs>
-    </svg>
-  ),
-  Mail: (p) => (
-    <svg viewBox="0 0 24 24" width="18" height="18" stroke="#4d82bc" fill="none" strokeWidth="2" {...p}>
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="M3 7l9 6 9-6" />
-    </svg>
-  ),
-};
+// ⬇️ Cambia la ruta/archivo por tu imagen
+import successImg from "../assets/Check.jpg";
 
-export function RegistrationSuccessModal({ onContinue }) {
+export function RegistrationSuccessModal({ open = true, onContinue }) {
   return (
-    <div className="bg-gradient-to-br from-[#cadffb] via-[#e8f2fc] to-white min-h-screen">
-      {/* Header */}
-      <div className="bg-[#cadffb] border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <img alt="Logo" className="h-12 w-auto object-contain" src={imgLogo} />
-        </div>
-      </div>
+    <Dialog open={open} onOpenChange={(o) => !o && onContinue?.()}>
+      <DialogContent className="p-0 overflow-hidden">
+        {/* X solo-ícono */}
+        <DialogClose data-slot="dialog-close" aria-label="Cerrar">
+          <span aria-hidden="true">×</span>
+          <span className="sr-only">Cerrar</span>
+        </DialogClose>
 
-      {/* Content */}
-      <div className="flex items-center justify-center px-6 py-16 min-h-[calc(100vh-80px)]">
-        <div className="w-full max-w-lg">
-          <Card className="shadow-xl">
-            <CardContent className="p-10 text-center space-y-6">
-              <div className="flex justify-center">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-green-400 rounded-full blur-xl opacity-40" />
-                  <div className="relative rounded-full p-4 shadow-lg" style={{ background: "linear-gradient(135deg,#22c55e,#16a34a)" }}>
-                    <Icon.Check />
-                  </div>
-                </div>
+        <Card style={{ border: "none", boxShadow: "none", padding: 0 }}>
+          <CardContent className="p-8">
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: 12,
+              }}
+            >
+              {/* Imagen de éxito */}
+              <div className="relative" style={{ marginBottom: 4 }}>
+                <img
+                  src={successImg}
+                  alt="Cuenta creada con éxito"
+                  width={80}
+                  height={80}
+                  style={{
+                    display: "block",
+                    borderRadius: 12, // usa 999 si la quieres circular
+                    boxShadow: "0 8px 24px rgba(0,0,0,.12)",
+                  }}
+                />
               </div>
 
-              <div className="space-y-2">
-                <h1 className="text-[28px] text-gray-900">¡Registro Exitoso!</h1>
-                <p className="text-[16px] text-gray-600">Tu cuenta ha sido creada correctamente</p>
+              {/* Texto apilado (h3 + p) para evitar fila */}
+              <div style={{ textAlign: "center", margin: 0 }}>
+                <h3
+                  style={{
+                    display: "block",
+                    fontSize: 22,
+                    fontWeight: 800,
+                    color: "#0b1324",
+                    margin: 0,
+                    marginBottom: 4,
+                  }}
+                >
+                  ¡Cuenta creada con éxito!
+                </h3>
+                <p
+                  style={{
+                    display: "block",
+                    fontSize: 14,
+                    color: "#334155",
+                    margin: 0,
+                  }}
+                >
+                  Se creó con éxito la cuenta.
+                </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                <div className="flex items-start gap-3">
-                  <Icon.Mail />
-                  <p className="text-[14px] text-gray-700 leading-relaxed">
-                    Hemos enviado un enlace de activación a tu correo electrónico. Por favor verifica tu bandeja de entrada.
-                  </p>
-                </div>
+              {/* Botón */}
+              <div style={{ width: "100%", marginTop: 12 }}>
+                <Button onClick={onContinue} className="btn-primary" style={{ width: "100%" }}>
+                  Ir al inicio de sesión
+                </Button>
               </div>
-
-              <Button
-                onClick={onContinue}
-                className="w-full"
-                style={{
-                  background: "linear-gradient(90deg,#4d82bc,#5a8fc9)",
-                  color: "#fff",
-                  borderColor: "transparent",
-                }}
-              >
-                Continuar al Inicio de Sesión
-              </Button>
-
-              <p className="text-[12px] text-gray-500">
-                Si no recibes el correo, revisa tu carpeta de spam.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+            </div>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
