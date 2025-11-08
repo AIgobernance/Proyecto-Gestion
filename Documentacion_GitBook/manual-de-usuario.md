@@ -58,6 +58,25 @@ El sistema genera automáticamente una hoja de ruta personalizada con recomendac
 7. El usuario puede visualizar los resultados en pantalla.
 8. Finalmente, puede descargar la hoja de ruta en formato PDF.
 
+### Descripción de módulos del sistema
+
+#### Módulo de Registro
+
+Permite crear una cuenta de usuario y validar la identidad mediante el sistema de doble autenticación (2FA).
+
+* Campos requeridos: nombre, empresa, NIT, tipo de documento, numero de documento, sector, país, tamaño organizacional, correo, teléfono, contraseña.
+* Mensajes automáticos de confirmación (correo o SMS).
+
+#### Módulo de Inicio de Sesión
+
+Permite acceder a la plataforma una vez el usuario está registrado y verificado.
+
+* Permite acceso con credenciales.
+* Autenticación 2FA.
+* Control de acceso a módulos privados según rol (empresa o administrador).
+
+
+
 
 
 
