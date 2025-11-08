@@ -441,7 +441,7 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
                 {isSubmitting ? "Creando cuenta..." : "Crear Cuenta"}
               </button>
               <button className="btn-pill btn-secondary full" onClick={onLoginRedirect}>
-                Inicia sesión aquí
+                Inicia sesión
               </button>
             </div>
           </CardContent>
