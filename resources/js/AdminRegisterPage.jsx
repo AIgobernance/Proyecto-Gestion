@@ -1,35 +1,81 @@
 import React, { useState } from "react";
-import { UserCreatedSuccessModal } from "./UserCreatedSuccessModal";
-import { Input } from "../ui/input";
-import { Checkbox } from "../ui/checkbox";
-import {
-  ArrowLeft,
-  UserCog,
-  Building2,
-  FileText,
-  Hash,
-  Briefcase,
-  Globe,
-  Mail,
-  Phone,
-  Lock,
-  Shield,
-  CheckCircle2,
-} from "lucide-react";
-// 👇 cambia la ruta por la real
 import imgRectangle13 from "../assets/logo-principal.jpg";
+import { Input } from "../ui/input";
+import { UserCreatedSuccessModal } from "./UserCreatedSuccessModal";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "../ui/select";
+
+/* Íconos SVG inline */
+const Icon = {
+  ArrowLeft: (p) => (
+    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2" {...p}>
+      <path d="M12 19l-7-7 7-7" /><path d="M5 12h14" />
+    </svg>
+  ),
+  CheckCircle: (p) => (
+    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" strokeWidth="2" {...p}>
+      <circle cx="12" cy="12" r="10" /><path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
+};
+
+const styles = `
+:root{
+  --brand:#1f3d93; --ink:#0b1324;
+  --shadow:0 10px 30px rgba(16,24,40,.08), 0 2px 6px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box}
+.page{background:#e8f0f8;min-height:100vh;display:flex;flex-direction:column}
+.header{background:#fff;border-bottom:1px solid #e5e7eb;height:64px;display:flex;align-items:center;justify-content:space-between;padding:10px 20px}
+.header img{height:44px;width:auto;object-fit:contain}
+.btn-pill{border:none;border-radius:999px;padding:10px 24px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(15,23,42,.12);background:#eff3ff;color:#173b8f}
+.main{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:24px 16px 40px;background:linear-gradient(180deg, #213e90 0%, #1a2e74 100%)}
+.card{width:100%;max-width:640px;border-radius:22px;background:#fff;color:#0f172a;box-shadow:var(--shadow);border:1px solid #e5e7eb}
+.card-h{padding:18px 22px;border-top-left-radius:22px;border-top-right-radius:22px;background:#fff}
+.card-title{margin:0;font-size:22px;color:#0b1324}
+.card-desc{margin:6px 0 0;color:#334155;font-size:14px}
+.card-c{padding:18px 22px 22px}
+.section-title{color:#0b1324;margin:0 0 8px;font-weight:700;border-bottom:1px solid #e5e7eb;padding-bottom:6px}
+label{color:#0b1324;font-weight:600;margin-bottom:6px;display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:780px){.grid2{grid-template-columns:1fr}}
+.input-like,[data-slot="select-trigger"]{background:#fff;color:var(--ink);border-radius:999px;height:38px;padding:8px 14px;border:1px solid #cbd5e1;width:100%}
+
+/* Dropdown IGUAL al de usuario */
+[data-slot="select-content"]{background:#fff;color:#0b1324;border:1px solid #e5e7eb;border-radius:12px;box-shadow:var(--shadow);padding:6px}
+[data-slot="select-item"]{color:#0b1324;padding:8px 34px 8px 12px;border-radius:8px;cursor:pointer;position:relative}
+[data-slot="select-item"]:hover{background:#eef2ff}
+[data-slot="select-item"]::after{content:"";position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0;transition:opacity .15s}
+[data-slot="select-item"]:hover::after{content:"✓";opacity:1;font-weight:700}
+[data-slot="select-item"][data-state="checked"]::after{content:"✓";opacity:1}
+
+.alert{background:#f8fafc;border:1px solid #e2e8f0;color:#0f172a;border-radius:12px;padding:10px 12px;margin-bottom:8px}
+.text-error{color:#b91c1c;font-size:12px}
+.actions{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:18px}
+.actions .full{width:100%;max-width:360px}
+.btn-primary{background:linear-gradient(90deg,#4d82bc,#5a8fc9);color:#fff}
+.chkbox{appearance:none;-webkit-appearance:none;-moz-appearance:none;width:18px;height:18px;border:2px solid var(--brand);border-radius:4px;display:inline-block;position:relative;background:#fff;vertical-align:middle}
+.chkbox:checked{background:var(--brand);border-color:var(--brand)}
+.chkbox:checked::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:10px;border:2px solid #fff;border-top:0;border-left:0;transform:rotate(45deg)}
+.policies{display:flex;gap:12px;align-items:flex-start;background:#f8fafc;border:1px solid #e2e8f0;color:#0f172a;border-radius:12px;padding:12px 14px}
+`;
 
 export function AdminRegisterPage({ onBack, onLoginRedirect }) {
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [errors, setErrors] = useState({});
 
-  // Estado del formulario
+  // SOLO datos del administrador
   const [formData, setFormData] = useState({
     usuario: "",
-    empresa: "",
     tipoDocumento: "",
     numeroDocumento: "",
-    sector: "",
-    pais: "",
     correo: "",
     telefono: "",
     contrasena: "",
@@ -38,310 +84,167 @@ export function AdminRegisterPage({ onBack, onLoginRedirect }) {
   });
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((p) => ({ ...p, [field]: value }));
+    if (errors[field]) setErrors((e) => ({ ...e, [field]: "" }));
+    if (notice) setNotice("");
   };
 
-  const handleCreateAccount = () => {
-    // Validación básica
-    if (
-      !formData.usuario ||
-      !formData.empresa ||
-      !formData.correo ||
-      !formData.contrasena
-    ) {
-      alert("Por favor complete todos los campos obligatorios");
-      return;
-    }
+  const validate = () => {
+    const e = {};
+    if (!formData.usuario.trim()) e.usuario = "El usuario es requerido";
+    if (!formData.tipoDocumento) e.tipoDocumento = "Seleccione un tipo de documento";
+    if (!formData.numeroDocumento.trim()) e.numeroDocumento = "El número de documento es requerido";
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.correo.trim()) e.correo = "El correo es requerido";
+    else if (!emailRe.test(formData.correo)) e.correo = "Ingrese un correo válido";
+    if (!formData.telefono.trim()) e.telefono = "El teléfono es requerido";
+    else if (formData.telefono.replace(/\D/g, "").length < 10) e.telefono = "Ingrese un teléfono válido";
+    if (!formData.contrasena) e.contrasena = "La contraseña es requerida";
+    else if (formData.contrasena.length < 8) e.contrasena = "Mínimo 8 caracteres";
+    if (!formData.confirmarContrasena) e.confirmarContrasena = "Confirme su contraseña";
+    else if (formData.contrasena !== formData.confirmarContrasena) e.confirmarContrasena = "Las contraseñas no coinciden";
+    if (!formData.aceptaPoliticas) e.aceptaPoliticas = "Debe aceptar las políticas de protección de datos";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
-    if (formData.contrasena !== formData.confirmarContrasena) {
-      alert("Las contraseñas no coinciden");
-      return;
-    }
-
-    if (!formData.aceptaPoliticas) {
-      alert("Debe aceptar las políticas de protección de datos");
-      return;
-    }
-
-    // TODO: Enviar datos al backend
-    console.log("Datos del formulario administrador:", formData);
-    setShowSuccess(true);
+  const handleCreateAccount = async () => {
+    if (!validate()) { setNotice("Por favor corrija los errores en el formulario."); return; }
+    setIsSubmitting(true);
+    try { await new Promise((r) => setTimeout(r, 400)); setShowSuccess(true); }
+    finally { setIsSubmitting(false); }
   };
 
   const handleContinueFromSuccess = () => {
-    // Resetear formulario
-    setFormData({
-      usuario: "",
-      empresa: "",
-      tipoDocumento: "",
-      numeroDocumento: "",
-      sector: "",
-      pais: "",
-      correo: "",
-      telefono: "",
-      contrasena: "",
-      confirmarContrasena: "",
-      aceptaPoliticas: false,
-    });
     setShowSuccess(false);
+    if (onLoginRedirect) onLoginRedirect();
   };
 
   return (
-    <div
-      className="bg-[#e8f0f8] min-h-screen flex flex-col"
-      data-name="Admin Register"
-    >
-      {/* Header */}
-      <div className="bg-[#cadffb] h-[116px] w-full flex items-center justify-between px-8 shadow-md">
-        <div className="h-[113px] w-[287px]">
-          <img
-            alt="Logo"
-            className="h-full w-full object-cover"
-            src={imgRectangle13}
-          />
-        </div>
+    <div className="page">
+      <style>{styles}</style>
 
-        <button
-          onClick={onBack}
-          className="bg-white/90 hover:bg-white rounded-[25px] px-8 py-3 transition-all duration-200 shadow-md hover:shadow-lg flex items-center gap-2"
-        >
-          <ArrowLeft className="w-5 h-5 text-[#4a7ba7]" />
-          <span className="font-['Inter:Regular',_sans-serif] text-[18px] text-[#4a7ba7]">
-            Volver
+      {/* Header: solo logo + volver */}
+      <div className="header">
+        <img src={imgRectangle13} alt="Logo" />
+        <button className="btn-pill" onClick={onBack}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <Icon.ArrowLeft /> Volver
           </span>
         </button>
       </div>
 
-      {/* Main Form Container */}
-      <div className="flex-1 flex items-center justify-center py-8 px-4">
-        <div className="bg-gradient-to-br from-[#5882b8] to-[#4a7ba7] rounded-[40px] w-full max-w-[600px] p-10 shadow-2xl">
-          {/* Título con icono */}
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <UserCog className="w-8 h-8 text-white" />
-            <h1 className="font-['Inter:Regular',_sans-serif] text-[32px] text-center text-white">
-              Registro de Administrador
-            </h1>
+      {/* Contenido */}
+      <div className="main">
+        <div className="card">
+          <div className="card-h">
+            <h1 className="card-title">Registro de Administrador</h1>
+            <p className="card-desc">Complete los datos básicos del administrador.</p>
           </div>
 
-          {/* Row 1: Usuario y Empresa */}
-          <div className="grid grid-cols-2 gap-5 mb-5">
-            <div>
-              <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-                <UserCog className="w-4 h-4" />
-                Usuario:
-              </label>
-              <Input
-                type="text"
-                value={formData.usuario}
-                onChange={(e) =>
-                  handleInputChange("usuario", e.target.value)
-                }
-                className="w-full h-[40px] rounded-[20px] bg-white/95 border-none shadow-sm"
-                placeholder="Ingrese usuario"
+          <div className="card-c">
+            {notice && <div className="alert" role="alert">{notice}</div>}
+
+            {/* Cuenta */}
+            <h3 className="section-title">Información de la cuenta</h3>
+            <div className="grid2">
+              <div>
+                <label htmlFor="usuario">Usuario *</label>
+                <Input id="usuario" className="input-like" value={formData.usuario}
+                  onChange={(e)=>handleInputChange("usuario", e.target.value)} placeholder="Ingrese usuario" />
+                {errors.usuario && <p className="text-error">{errors.usuario}</p>}
+              </div>
+              <div>
+                <label htmlFor="tipoDocumento">Tipo de documento *</label>
+                {/* === Select igual al del usuario === */}
+                <Select value={formData.tipoDocumento} onValueChange={(v)=>handleInputChange("tipoDocumento", v)}>
+                  <SelectTrigger className="input-like" id="tipoDocumento" aria-invalid={!!errors.tipoDocumento}>
+                    <SelectValue placeholder="Seleccione tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CC">Cédula de Ciudadanía</SelectItem>
+                    <SelectItem value="CE">Cédula de Extranjería</SelectItem>
+                    <SelectItem value="Pasaporte">Pasaporte</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.tipoDocumento && <p className="text-error">{errors.tipoDocumento}</p>}
+              </div>
+            </div>
+
+            <div className="grid2" style={{ marginTop: 12 }}>
+              <div>
+                <label htmlFor="numeroDocumento">Número de documento *</label>
+                <Input id="numeroDocumento" className="input-like" value={formData.numeroDocumento}
+                  onChange={(e)=>handleInputChange("numeroDocumento", e.target.value)} placeholder="Número" />
+                {errors.numeroDocumento && <p className="text-error">{errors.numeroDocumento}</p>}
+              </div>
+              <div />
+            </div>
+
+            {/* Contacto */}
+            <h3 className="section-title" style={{ marginTop: 16 }}>Contacto</h3>
+            <div className="grid2">
+              <div>
+                <label htmlFor="correo">Correo *</label>
+                <Input id="correo" type="email" className="input-like" value={formData.correo}
+                  onChange={(e)=>handleInputChange("correo", e.target.value)} placeholder="correo@ejemplo.com" />
+                {errors.correo && <p className="text-error">{errors.correo}</p>}
+              </div>
+              <div>
+                <label htmlFor="telefono">Teléfono *</label>
+                <Input id="telefono" type="tel" className="input-like" value={formData.telefono}
+                  onChange={(e)=>handleInputChange("telefono", e.target.value)} placeholder="+57 300 000 0000" />
+                {errors.telefono && <p className="text-error">{errors.telefono}</p>}
+              </div>
+            </div>
+
+            {/* Seguridad */}
+            <h3 className="section-title" style={{ marginTop: 16 }}>Seguridad</h3>
+            <div className="grid2">
+              <div>
+                <label htmlFor="contrasena">Crear contraseña *</label>
+                <Input id="contrasena" type="password" className="input-like" value={formData.contrasena}
+                  onChange={(e)=>handleInputChange("contrasena", e.target.value)} placeholder="Contraseña (mín. 8)" />
+                {errors.contrasena && <p className="text-error">{errors.contrasena}</p>}
+              </div>
+              <div>
+                <label htmlFor="confirmarContrasena">Confirmar contraseña *</label>
+                <Input id="confirmarContrasena" type="password" className="input-like" value={formData.confirmarContrasena}
+                  onChange={(e)=>handleInputChange("confirmarContrasena", e.target.value)} placeholder="Confirmar" />
+                {errors.confirmarContrasena && <p className="text-error">{errors.confirmarContrasena}</p>}
+              </div>
+            </div>
+
+            {/* Políticas */}
+            <div className="policies" style={{ marginTop: 16 }}>
+              <input
+                id="politicas-admin"
+                type="checkbox"
+                className="chkbox"
+                checked={formData.aceptaPoliticas}
+                onChange={(e)=>handleInputChange("aceptaPoliticas", e.target.checked)}
               />
+              <div>
+                <label htmlFor="politicas-admin" style={{ cursor:"pointer", fontWeight:700 }}>
+                  Acepto las Políticas de Protección de Datos *
+                </label>
+                <small>Al marcar esta casilla, acepto que mis datos sean procesados según la política de privacidad.</small>
+                {errors.aceptaPoliticas && <p className="text-error" style={{ marginTop:6 }}>{errors.aceptaPoliticas}</p>}
+              </div>
             </div>
-            <div>
-              <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-                <Building2 className="w-4 h-4" />
-                Empresa:
-              </label>
-              <Input
-                type="text"
-                value={formData.empresa}
-                onChange={(e) =>
-                  handleInputChange("empresa", e.target.value)
-                }
-                className="w-full h-[40px] rounded-[20px] bg-white/95 border-none shadow-sm"
-                placeholder="Ingrese empresa"
-              />
-            </div>
-          </div>
 
-          {/* Row 2: Tipo de documento y Número */}
-          <div className="grid grid-cols-2 gap-5 mb-5">
-            <div>
-              <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-                <FileText className="w-4 h-4" />
-                Tipo de documento:
-              </label>
-              <select
-                value={formData.tipoDocumento}
-                onChange={(e) =>
-                  handleInputChange("tipoDocumento", e.target.value)
-                }
-                className="w-full h-[40px] rounded-[20px] px-4 bg-white/95 border-none shadow-sm"
-              >
-                <option value="">Seleccionar</option>
-                <option value="CC">Cédula de Ciudadanía</option>
-                <option value="CE">Cédula de Extranjería</option>
-                <option value="Pasaporte">Pasaporte</option>
-                <option value="NIT">NIT</option>
-              </select>
+            {/* Acciones */}
+            <div className="actions">
+              <button className="btn-primary btn-pill full" onClick={handleCreateAccount} disabled={isSubmitting} aria-busy={isSubmitting}>
+                <span style={{ display:"inline-flex", alignItems:"center", gap:8 }}>
+                  <Icon.CheckCircle /> {isSubmitting ? "Creando..." : "Crear Cuenta"}
+                </span>
+              </button>
             </div>
-            <div>
-              <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-                <Hash className="w-4 h-4" />
-                Número de documento:
-              </label>
-              <Input
-                type="text"
-                value={formData.numeroDocumento}
-                onChange={(e) =>
-                  handleInputChange("numeroDocumento", e.target.value)
-                }
-                className="w-full h-[40px] rounded-[20px] bg-white/95 border-none shadow-sm"
-                placeholder="Número"
-              />
-            </div>
-          </div>
-
-          {/* Row 3: Sector y País */}
-          <div className="grid grid-cols-2 gap-5 mb-5">
-            <div>
-              <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-                <Briefcase className="w-4 h-4" />
-                Sector:
-              </label>
-              <select
-                value={formData.sector}
-                onChange={(e) =>
-                  handleInputChange("sector", e.target.value)
-                }
-                className="w-full h-[40px] rounded-[20px] px-4 bg-white/95 border-none shadow-sm"
-              >
-                <option value="">Seleccionar</option>
-                <option value="Tecnología">Tecnología</option>
-                <option value="Financiero">Financiero</option>
-                <option value="Salud">Salud</option>
-                <option value="Educación">Educación</option>
-                <option value="Retail">Retail</option>
-                <option value="Manufactura">Manufactura</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-            <div>
-              <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-                <Globe className="w-4 h-4" />
-                País:
-              </label>
-              <select
-                value={formData.pais}
-                onChange={(e) =>
-                  handleInputChange("pais", e.target.value)
-                }
-                className="w-full h-[40px] rounded-[20px] px-4 bg-white/95 border-none shadow-sm"
-              >
-                <option value="">Seleccionar</option>
-                <option value="Colombia">Colombia</option>
-                <option value="México">México</option>
-                <option value="España">España</option>
-                <option value="Argentina">Argentina</option>
-                <option value="Chile">Chile</option>
-                <option value="Perú">Perú</option>
-                <option value="Otro">Otro</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Correo */}
-          <div className="mb-5">
-            <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-              <Mail className="w-4 h-4" />
-              Correo:
-            </label>
-            <Input
-              type="email"
-              value={formData.correo}
-              onChange={(e) => handleInputChange("correo", e.target.value)}
-              className="w-full h-[40px] rounded-[20px] bg-white/95 border-none shadow-sm"
-              placeholder="correo@ejemplo.com"
-            />
-          </div>
-
-          {/* Teléfono */}
-          <div className="mb-5">
-            <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-              <Phone className="w-4 h-4" />
-              Teléfono:
-            </label>
-            <Input
-              type="tel"
-              value={formData.telefono}
-              onChange={(e) => handleInputChange("telefono", e.target.value)}
-              className="w-full h-[40px] rounded-[20px] bg-white/95 border-none shadow-sm"
-              placeholder="+57 300 000 0000"
-            />
-          </div>
-
-          {/* Contraseñas */}
-          <div className="grid grid-cols-2 gap-5 mb-6">
-            <div>
-              <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-                <Lock className="w-4 h-4" />
-                Crear Contraseña:
-              </label>
-              <Input
-                type="password"
-                value={formData.contrasena}
-                onChange={(e) =>
-                  handleInputChange("contrasena", e.target.value)
-                }
-                className="w-full h-[40px] rounded-[20px] bg-white/95 border-none shadow-sm"
-                placeholder="Contraseña"
-              />
-            </div>
-            <div>
-              <label className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 mb-2">
-                <Lock className="w-4 h-4" />
-                Confirmar Contraseña:
-              </label>
-              <Input
-                type="password"
-                value={formData.confirmarContrasena}
-                onChange={(e) =>
-                  handleInputChange("confirmarContrasena", e.target.value)
-                }
-                className="w-full h-[40px] rounded-[20px] bg-white/95 border-none shadow-sm"
-                placeholder="Confirmar"
-              />
-            </div>
-          </div>
-
-          {/* Checkbox */}
-          <div className="flex items-center justify-center gap-3 mb-8 bg-white/10 p-4 rounded-[20px]">
-            <Checkbox
-              id="politicas-admin"
-              checked={formData.aceptaPoliticas}
-              onCheckedChange={(checked) =>
-                handleInputChange("aceptaPoliticas", checked)
-              }
-              className="border-white data-[state=checked]:bg-white data-[state=checked]:text-[#4a7ba7]"
-            />
-            <label
-              htmlFor="politicas-admin"
-              className="font-['Inter:Regular',_sans-serif] text-[15px] text-white flex items-center gap-2 cursor-pointer"
-            >
-              <Shield className="w-4 h-4" />
-              Acepto Políticas Protección Datos
-            </label>
-          </div>
-
-          {/* Button */}
-          <div className="flex justify-center">
-            <button
-              onClick={handleCreateAccount}
-              className="bg-white hover:bg-gray-100 text-[#4a7ba7] transition-all duration-200 rounded-[25px] px-12 py-3 shadow-lg hover:shadow-xl flex items-center gap-2"
-            >
-              <CheckCircle2 className="w-5 h-5" />
-              <span className="font-['Inter:Regular',_sans-serif] text-[18px]">
-                Crear Cuenta
-              </span>
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Modal de éxito */}
       {showSuccess && (
         <UserCreatedSuccessModal onContinue={handleContinueFromSuccess} />
       )}

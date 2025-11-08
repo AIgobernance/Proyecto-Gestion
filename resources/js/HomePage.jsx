@@ -25,10 +25,20 @@ const IconBlocks = (props) => (
     <rect x="8" y="13" width="8" height="8" rx="2" />
   </svg>
 );
-const IconDoc = (props) => (
+const IconLock = (props) => (
   <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.7" {...props}>
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <path d="M14 2v6h6" />
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+const IconPolicy = (props) => (
+  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="1.7" {...props}>
+    <g transform="translate(-0.5 -0.5) scale(1.15)">
+      <path d="M6 3h7l4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+      <path d="M13 3v4h4" />
+      <circle cx="17" cy="17" r="2.4" />
+      <path d="M16.2 17l.8.8 1-1" strokeLinecap="round" strokeLinejoin="round" />
+    </g>
   </svg>
 );
 
@@ -52,11 +62,18 @@ const frameworks = [
     badge: "UE",
   },
   {
-    icon: IconDoc,
+    icon: IconLock,
     title: "ISO 42001 - 42005",
     desc: "Sistema de gestión para IA responsable; privacidad y evaluación.",
     badge: "Gestión",
   },
+  {
+    icon: IconPolicy,
+    title: "CONPES 4144",
+    desc: "Política nacional de inteligencia artificial.",
+    badge: "Colombia",
+  },
+  
 ];
 
 /* ====== ESTILOS VANILLA ====== */
@@ -113,7 +130,7 @@ a{color:inherit;text-decoration:none}
 .section-blue{background:linear-gradient(180deg,#213e90 0%, #1a2e74 100%);color:#fff;padding:48px 0 64px;margin-top:60px}
 .section-blue h3{font-size:40px;margin:0 0 8px;text-align:center}
 .section-blue .sub{color:#cfe0ff;text-align:center;margin:0 auto 28px;max-width:860px;font-size:18px}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:22px}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:24px;margin-top:22px}
 .card{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:22px;color:#0f172a;border:1px solid #eef2f8}
 .card-h{display:flex;flex-direction:column;align-items:center;text-align:center}
 .icon-wrap{height:58px;width:58px;border-radius:18px;background:#eaf0ff;color:#2c50b5;display:flex;align-items:center;justify-content:center;margin-bottom:14px}
@@ -125,7 +142,7 @@ a{color:inherit;text-decoration:none}
 .footer{background:var(--panel);color:#c6d4f7;margin-top:56px;border-top:1px solid #10204b}
 .footer-top{padding:44px 0}
 .footer-grid{display:grid;grid-template-columns:1.2fr .8fr .8fr;gap:24px}
-.footer h5{margin:0 0 10px;font-size:18px;color:#fff}
+.footer h5{margin:0 0 6px;font-size:18px;color:#fff}
 .f-brand{display:flex;gap:14px;align-items:center}
 .f-brand img{height:42px;border-radius:10px}
 .footer p, .footer a{font-size:14px;color:#c6d4f7}
@@ -136,6 +153,9 @@ a{color:inherit;text-decoration:none}
 .social a{display:inline-flex;height:36px;width:36px;border-radius:50%;background:#21409a;align-items:center;justify-content:center;color:#fff;transition:.15s}
 .social a:hover{transform:translateY(-1px);background:#2b51c2}
 .footer-bottom{border-top:1px solid #162a62;padding:14px 0;text-align:center;font-size:13px}
+.footer-grid > div:last-child {text-align: center;}
+.footer-grid > div:last-child .cta {justify-content: center;}
+.footer-grid > div:last-child .social {justify-content: center;}
 
 /* Responsive */
 @media (max-width: 1100px){
@@ -150,10 +170,19 @@ a{color:inherit;text-decoration:none}
 `;
 
 export default function HomePage() {
-  const handleRegisterUserClick = () => alert("Registrar Usuario");
-  const handleAdminClick = () => alert("Administrador");
-  const handleUserClick = () => alert("Iniciar Sesión Usuario");
-
+  const handleRegisterUserClick = () => {
+    window.location.href = "/register";
+  };
+  const handleUserClick = () => {
+    window.location.href = "/login";
+  };
+  const handleAdminClick = () => {
+    window.location.href = "/admin/register";
+  };
+  const handleAdminLoginClick = () => {
+    window.location.href = "/admin/login";
+  };
+  
   return (
     <div>
       <style>{styles}</style>
@@ -186,7 +215,7 @@ export default function HomePage() {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onSelect={handleUserClick}>Usuario</DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleAdminClick}>Administrador</DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleAdminLoginClick}>Administrador</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -246,7 +275,7 @@ export default function HomePage() {
                 <img src={imgLogo1} alt="AI Governance" />
                 <div>
                   <h5>AI Governance</h5>
-                  <small>EVALUATOR</small>
+                  <h5>Evaluator</h5>
                 </div>
               </div>
               <p style={{marginTop:12}}>
