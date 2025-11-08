@@ -1,18 +1,114 @@
 import React from "react";
-import { User, FileText, LogOut, PlayCircle, BarChart3, TrendingUp, Award, CheckCircle2, Clock, Info } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Badge } from "../ui/badge";
-// 👇 reemplaza esta ruta con tu logo real
 import imgLogo from "../assets/logo-principal.jpg";
+import {
+  User, FileText, LogOut, PlayCircle, BarChart3,
+  TrendingUp, Award, CheckCircle2, Clock, Info
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+
+/* ===== Estilos embebidos ===== */
+const styles = `
+:root{
+  --brand:#1f3d93;
+  --brand-2:#2c4fb5;
+  --ink:#0b1324;
+  --muted:#475569;
+  --ring:#cfd7e6;
+  --shadow:0 10px 30px rgba(16,24,40,.08), 0 2px 6px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box}
+.page{min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#213e90 0%,#1a2e74 100%)}
+
+/* Header */
+.header{background:#fff;border-bottom:1px solid #e5e7eb;height:70px;display:flex;align-items:center;justify-content:space-between;padding:10px 18px}
+.header__logo img{height:46px;width:auto;object-fit:contain}
+.btn-pill{border-radius:999px}
+.btn-ghost{background:#fff;border:1px solid var(--ring);color:var(--ink);padding:10px 18px}
+.btn-ghost:hover{background:#f6f8fc}
+
+/* Layout */
+.main{flex:1}
+.container{max-width:1120px;margin:0 auto;padding:40px 20px}
+
+/* Hero */
+.hero{text-align:center;margin-bottom:28px}
+.hero h1{margin:0 0 8px;font-size:30px;font-weight:800;color:#fff}
+.hero p{margin:0;font-size:14px;color:rgba(255,255,255,.85)}
+
+/* Métricas */
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+@media (max-width: 1024px){ .grid{grid-template-columns:repeat(2,1fr)} }
+@media (max-width: 600px){ .grid{grid-template-columns:1fr} }
+.card{background:#fff;border:1px solid #e9edf5;border-radius:18px;box-shadow:var(--shadow)}
+.card-title{display:flex;align-items:center;gap:10px;font-size:14px;color:#0f172a}
+.icon-badge{background:#eaf0ff;color:#2c50b5;border-radius:14px;padding:8px;display:inline-flex}
+
+/* CTA + Acciones */
+.cols{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-top:20px}
+@media (max-width: 1024px){ .cols{grid-template-columns:1fr} }
+
+/* CTA */
+.cta{border-radius:18px;background:#ffffff;color:#0f172a;box-shadow:var(--shadow);border:1px solid #e9edf5}
+.cta .body{padding:20px}
+.cta h3{margin:0 0 6px;font-size:18px;display:flex;align-items:center;gap:8px;color:#0f172a;font-weight:800}
+.cta p{margin:0 0 10px;color:#0f172a;font-weight:700}   /* <-- texto negro y en negrita */
+
+/* Lista “Detalles” con ícono alineado */
+.bubble{background:#f8fbff;border-radius:16px;padding:16px;border:1px solid #e7eefc}
+.bubble h4{margin:0 0 10px;display:flex;align-items:center;gap:8px;color:#0f172a}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.list li{display:flex;align-items:center;gap:10px;color:#0f172a}
+.list li svg{flex-shrink:0}
+
+/* Botón CTA */
+.btn-primary{
+  background:#fff;color:#4a7ba7;border:1px solid #e7ecf7;
+  padding:12px 20px;border-radius:999px;font-weight:700;
+  box-shadow:0 12px 30px rgba(2,6,23,.15);
+  display:inline-flex;align-items:center;gap:10px;
+  cursor:pointer; transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.btn-primary:hover{background:#f7f9ff; transform:translateY(-1px); box-shadow:0 16px 36px rgba(2,6,23,.2)}
+.btn-primary:active{transform:translateY(0)}
+
+/* Acciones rápidas (mismo tamaño) */
+.quick{background:#fff;border:1px solid #e9edf5;border-radius:18px;box-shadow:var(--shadow)}
+.quick .item{
+  width:100%; display:flex;align-items:center;gap:14px;
+  border-radius:14px; padding:16px 18px;
+  background:linear-gradient(90deg,#f7faff,#eef4ff);
+  border:1px solid #e5edff; cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+  min-height:96px; box-sizing:border-box;
+}
+.quick .item + .item{margin-top:12px}
+.quick .item:hover{transform:translateY(-1px); box-shadow:0 10px 24px rgba(2,6,23,.14); border-color:#d7e3ff}
+.quick .ico{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;background:#2b51c2;color:#fff;border-radius:12px;flex-shrink:0}
+.quick .txt{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.quick .txt h4{margin:0;font-size:15px;color:#173b8f;font-weight:800}
+.quick .txt small{display:block;color:#5b677a;font-size:13px;line-height:1.2}
+
+/* Info */
+.info{margin-top:18px;border-radius:18px;background:linear-gradient(90deg,#eef2ff,#f5f8ff);border:0;box-shadow:var(--shadow)}
+.info .wrap{display:flex;gap:14px;align-items:flex-start;padding:18px}
+.info .dot{background:#cdd9ff;color:#2744a8;border-radius:12px;padding:10px;display:inline-flex}
+.info h5{margin:0 0 6px;color:#173b8f;font-size:16px}
+.info p{margin:0;color:#334155;font-size:14px;line-height:1.6}
+
+.quick .txt.centered{
+  align-items:center;      /* centra el h4 y el small como columna */
+  text-align:center;       /* alinea el texto al centro */
+}
+`;
 
 export function DashboardPage({
-  username = "Usuario",
-  onLogout,
-  onViewEvaluations,
-  onStartEvaluation,
-  onViewProfile,
+  username = "juan",
+  onLogout = () => window.location.assign("/login"),
+  onViewEvaluations = () => window.location.assign("/evaluations"),
+  onStartEvaluation = () => window.location.assign("/evaluation/start"),
+  onViewProfile = () => window.location.assign("/profile"),
 }) {
-  // Datos de ejemplo para el dashboard
   const userStats = {
     totalEvaluations: 3,
     lastEvaluation: "15 Oct 2024",
@@ -21,264 +117,186 @@ export function DashboardPage({
   };
 
   return (
-    <div className="bg-gradient-to-br from-[#e8f0f8] to-[#f0f7ff] relative min-h-screen">
+    <div className="page">
+      <style>{styles}</style>
+
       {/* Header */}
-      <div className="bg-[#cadffb] h-[116px] w-full flex items-center justify-between px-6">
-        {/* Logo */}
-        <div className="h-[113px] w-[287px]">
-          <img
-            alt="Logo"
-            className="max-w-none object-cover pointer-events-none size-full"
-            src={imgLogo}
-          />
+      <header className="header">
+        <div className="header__logo">
+          <img src={imgLogo} alt="AI Governance Evaluator" />
         </div>
 
-        {/* Opciones del header */}
-        <div className="flex items-center gap-3">
-          {/* Botón de perfil de usuario */}
-          <button
-            className="flex items-center gap-2 bg-white/80 hover:bg-white rounded-[20px] px-4 py-2 transition-all duration-200 shadow-sm hover:shadow-md group"
-            onClick={onViewProfile}
-          >
-            <User className="w-4 h-4 text-[#4a7ba7]" />
-            <span className="font-['Inter:Regular',_sans-serif] font-normal text-[14px] text-black group-hover:text-[#4a7ba7] transition-colors">
-              {username}
-            </span>
-          </button>
-
-          {/* Separador visual */}
-          <div className="h-8 w-px bg-[#93b8dc]" />
-
-          {/* Botón Ver Evaluaciones */}
-          <button
-            className="flex items-center gap-2 bg-transparent hover:bg-white/50 rounded-[20px] px-4 py-2 transition-all duration-200 group"
-            onClick={onViewEvaluations}
-          >
-            <FileText className="w-4 h-4 text-[#4a7ba7]" />
-            <span className="font-['Inter:Regular',_sans-serif] font-normal text-[14px] text-black group-hover:text-[#4a7ba7] transition-colors">
-              Ver Evaluaciones
-            </span>
-          </button>
-
-          {/* Botón Cerrar Sesión */}
-          <button
-            className="flex items-center gap-2 bg-[#f87171]/90 hover:bg-[#ef4444] rounded-[20px] px-4 py-2 transition-all duration-200 shadow-sm hover:shadow-md group"
-            onClick={onLogout}
-          >
-            <LogOut className="w-4 h-4 text-white" />
-            <span className="font-['Inter:Regular',_sans-serif] font-normal text-[14px] text-white">
-              Cerrar Sesión
-            </span>
-          </button>
+        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+          <Button className="btn-pill btn-ghost" onClick={onViewProfile}>
+            <User className="w-4 h-4 me-2" style={{color:"#173b8f"}} />
+            <span className="capitalize">{username}</span>
+          </Button>
+          <Button className="btn-pill btn-ghost" onClick={onViewEvaluations}>
+            <FileText className="w-4 h-4 me-2" style={{color:"#173b8f"}} />
+            Ver Evaluaciones
+          </Button>
+          <Button className="btn-pill" style={{background:"#ef4444",color:"#fff"}} onClick={onLogout}>
+            <LogOut className="w-4 h-4 me-2" />
+            Cerrar Sesión
+          </Button>
         </div>
-      </div>
+      </header>
 
-      {/* Contenido principal */}
-      <div className="container mx-auto px-6 py-10 max-w-7xl">
-        {/* Título de bienvenida */}
-        <div className="mb-10">
-          <h1 className="font-['Inter:Regular',_sans-serif] text-[36px] text-[#1e3a8a] mb-2">
-            Bienvenido, {username}
-          </h1>
-          <p className="font-['Inter:Regular',_sans-serif] text-[16px] text-gray-600">
-            Panel de control del Evaluador de Gobernanza de IA
-          </p>
-        </div>
+      {/* Contenido */}
+      <main className="main">
+        <div className="container">
+          {/* Bienvenida */}
+          <section className="hero">
+            <h1>Bienvenido, <span className="capitalize">{username}</span></h1>
+            <p>Panel de control del Evaluador de Gobernanza de IA</p>
+          </section>
 
-        {/* Cards de estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Evaluaciones Totales */}
-          <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-[16px]">
-                <div className="bg-blue-100 p-2 rounded-lg">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                </div>
-                Evaluaciones
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-[32px] text-[#1e3a8a] mb-1">{userStats.totalEvaluations}</div>
-              <p className="text-[13px] text-gray-500">Completadas</p>
-            </CardContent>
-          </Card>
+          {/* Métricas */}
+          <section className="grid">
+            <Card className="card">
+              <CardHeader className="pb-2">
+                <CardTitle className="card-title">
+                  <span className="icon-badge"><FileText className="w-5 h-5" /></span>
+                  Evaluaciones
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.totalEvaluations}</div>
+                <CardDescription className="text-slate-500 text-xs mt-1">Completadas</CardDescription>
+              </CardContent>
+            </Card>
 
-          {/* Última evaluación */}
-          <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-[16px]">
-                <div className="bg-purple-100 p-2 rounded-lg">
-                  <Clock className="w-5 h-5 text-purple-600" />
-                </div>
-                Última Evaluación
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-[18px] text-[#1e3a8a] mb-1">{userStats.lastEvaluation}</div>
-              <p className="text-[13px] text-gray-500">Fecha reciente</p>
-            </CardContent>
-          </Card>
-
-          {/* Score Promedio */}
-          <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-[16px]">
-                <div className="bg-green-100 p-2 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                </div>
-                Score Promedio
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-[32px] text-[#1e3a8a] mb-1">{userStats.averageScore}%</div>
-              <p className="text-[13px] text-gray-500">Nivel de madurez</p>
-            </CardContent>
-          </Card>
-
-          {/* Tasa de Completitud */}
-          <Card className="border-none shadow-lg hover:shadow-xl transition-all duration-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-[16px]">
-                <div className="bg-orange-100 p-2 rounded-lg">
-                  <Award className="w-5 h-5 text-orange-600" />
-                </div>
-                Completitud
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-[32px] text-[#1e3a8a] mb-1">{userStats.completionRate}%</div>
-              <p className="text-[13px] text-gray-500">Cuestionarios</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sección principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Nueva Evaluación */}
-          <Card className="lg:col-span-2 border-none shadow-xl bg-gradient-to-br from-[#5882b8] to-[#4a7ba7]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white text-[24px]">
-                <PlayCircle className="w-7 h-7" />
-                Nueva Evaluación de Gobernanza
-              </CardTitle>
-              <CardDescription className="text-white/90 text-[15px]">
-                Evalúa el nivel de madurez de tu organización en gobernanza de IA
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-[20px] p-6">
-                <h3 className="text-white text-[18px] mb-3 flex items-center gap-2">
-                  <Info className="w-5 h-5" />
-                  Sobre la Evaluación
-                </h3>
-                <ul className="space-y-2 text-white/90 text-[14px]">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>50 preguntas estructuradas en 5 dimensiones clave</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Basado en marcos internacionales (ISO 27090, ISO 42001, NIS2)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Resultados detallados con gráficos y recomendaciones</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <span>Tiempo estimado: 15-20 minutos</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                className="w-full bg-white hover:bg-gray-100 text-[#4a7ba7] rounded-[25px] px-8 py-4 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-3"
-                onClick={onStartEvaluation}
-              >
-                <PlayCircle className="w-6 h-6" />
-                <span className="font-['Inter:Regular',_sans-serif] text-[18px]">
-                  Iniciar Nueva Evaluación
-                </span>
-              </button>
-            </CardContent>
-          </Card>
-
-          {/* Acciones rápidas */}
-          <Card className="border-none shadow-xl">
-            <CardHeader>
-              <CardTitle className="text-[20px] text-[#1e3a8a]">Acciones Rápidas</CardTitle>
-              <CardDescription>Accede a tus opciones principales</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <button
-                onClick={onViewEvaluations}
-                className="w-full bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-[20px] p-4 transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md"
-              >
-                <div className="bg-blue-500 p-2 rounded-lg">
-                  <BarChart3 className="w-5 h-5 text-white" />
-                </div>
-                <div className="text-left">
-                  <div className="font-['Inter:Regular',_sans-serif] text-[15px] text-[#1e3a8a]">
-                    Ver Evaluaciones
-                  </div>
-                  <div className="text-[12px] text-gray-600">Historial completo</div>
-                </div>
-              </button>
-
-              <button
-                onClick={onViewProfile}
-                className="w-full bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 rounded-[20px] p-4 transition-all duration-200 flex items-center gap-3 shadow-sm hover:shadow-md"
-              >
-                <div className="bg-purple-500 p-2 rounded-lg">
-                  <User className="w-5 h-5 text-white" />
-                </div>
-                <div className="text-left">
-                  <div className="font-['Inter:Regular',_sans-serif] text-[15px] text-[#1e3a8a]">
-                    Mi Perfil
-                  </div>
-                  <div className="text-[12px] text-gray-600">Configuración</div>
-                </div>
-              </button>
-
-              <div className="bg-gradient-to-r from-green-50 to-green-100 rounded-[20px] p-4 mt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Award className="w-5 h-5 text-green-600" />
-                  <span className="font-['Inter:Regular',_sans-serif] text-[15px] text-green-800">
-                    Nivel Actual
+            <Card className="card">
+              <CardHeader className="pb-2">
+                <CardTitle className="card-title">
+                  <span className="icon-badge" style={{background:"#f1eaff",color:"#7a4fd6"}}>
+                    <Clock className="w-5 h-5" />
                   </span>
-                </div>
-                <Badge className="bg-green-600 text-white hover:bg-green-700">
-                  Intermedio
-                </Badge>
-                <p className="text-[12px] text-gray-600 mt-2">
-                  Continúa evaluando para mejorar tu nivel de gobernanza
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  Última Evaluación
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div style={{fontSize:18,color:"#173b8f",fontWeight:700}}>{userStats.lastEvaluation}</div>
+                <CardDescription className="text-slate-500 text-xs mt-1">Fecha reciente</CardDescription>
+              </CardContent>
+            </Card>
 
-        {/* Información adicional */}
-        <Card className="mt-6 border-none shadow-lg bg-gradient-to-r from-indigo-50 to-blue-50">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="bg-indigo-100 p-3 rounded-lg">
-                <Info className="w-6 h-6 text-indigo-600" />
-              </div>
-              <div>
-                <h3 className="font-['Inter:Regular',_sans-serif] text-[18px] text-[#1e3a8a] mb-2">
-                  Sobre el Evaluador de Gobernanza de IA
+            <Card className="card">
+              <CardHeader className="pb-2">
+                <CardTitle className="card-title">
+                  <span className="icon-badge" style={{background:"#e9fbf0",color:"#1b9a59"}}>
+                    <TrendingUp className="w-5 h-5" />
+                  </span>
+                  Score Promedio
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.averageScore}%</div>
+                <CardDescription className="text-slate-500 text-xs mt-1">Nivel de madurez</CardDescription>
+              </CardContent>
+            </Card>
+
+            <Card className="card">
+              <CardHeader className="pb-2">
+                <CardTitle className="card-title">
+                  <span className="icon-badge" style={{background:"#fff6e5",color:"#b26a05"}}>
+                    <Award className="w-5 h-5" />
+                  </span>
+                  Completitud
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.completionRate}%</div>
+                <CardDescription className="text-slate-500 text-xs mt-1">Cuestionarios</CardDescription>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* CTA + Acciones */}
+          <section className="cols">
+            {/* CTA */}
+            <Card className="cta">
+              <div className="body">
+                <h3>
+                  <PlayCircle className="w-5 h-5" />
+                  Nueva Evaluación de Gobernanza
                 </h3>
-                <p className="text-[14px] text-gray-700 leading-relaxed">
-                  Esta herramienta te permite evaluar el nivel de madurez de tu organización en gobernanza de inteligencia artificial,
-                  basándose en marcos de referencia internacionales como ISO 27090, ISO 23894, NIS2/AI Act, ISO 42001-42005 y CONPES 4144.
-                  Los resultados te proporcionarán una visión clara de tus fortalezas y áreas de mejora.
+
+                {/* Texto en negro y negrita */}
+                <p><strong>Evalúa el nivel de madurez de tu organización en gobernanza de IA</strong></p>
+
+                <div className="bubble">
+                  <h4><Info className="w-5 h-5" /> Detalles</h4>
+
+                  {/* Lista con iconos alineados */}
+                  <ul className="list">
+                    <li><CheckCircle2 className="w-5 h-5" /> <span>50 preguntas en 5 dimensiones</span></li>
+                    <li><CheckCircle2 className="w-5 h-5" /> <span>Basado en ISO 27090 DIS - 27091, ISO 23894, NIS2 / AI Act, ISO 42001 - 42005, CONPES 4144</span></li>
+                    <li><CheckCircle2 className="w-5 h-5" /> <span>Resultados con gráficos y recomendaciones</span></li>
+                    <li><CheckCircle2 className="w-5 h-5" /> <span>Tiempo estimado: 15–20 minutos</span></li>
+                  </ul>
+                </div>
+
+                <div style={{marginTop:16}}>
+                  <button className="btn-primary" onClick={onStartEvaluation} aria-label="Iniciar nueva evaluación">
+                    <PlayCircle className="w-5 h-5" />
+                    Iniciar Nueva Evaluación
+                  </button>
+                </div>
+              </div>
+            </Card>
+
+            {/* Acciones rápidas */}
+            <Card className="quick">
+              <CardHeader>
+                <CardTitle style={{color:"#173b8f"}}>Acciones Rápidas</CardTitle>
+                <CardDescription>Accede a tus opciones principales</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <button className="item" onClick={onViewEvaluations}>
+                  <span className="ico"><BarChart3 className="w-5 h-5" /></span>
+                  <div className="txt">
+                    <h4>Ver Evaluaciones</h4>
+                    <small>Historial completo y resultados</small>
+                  </div>
+                </button>
+
+                <button className="item" onClick={onViewProfile}>
+                  <span className="ico" style={{background:"#7c3aed"}}><User className="w-5 h-5" /></span>
+                  <div className="txt">
+                    <h4>Mi Perfil</h4>
+                    <small>Datos y configuración</small>
+                  </div>
+                </button>
+
+                <div className="item" style={{background:"linear-gradient(90deg,#ecfdf5,#def7ec)"}}>
+                <span className="ico" style={{background:"#10b981"}}><Award className="w-5 h-5" /></span>
+                <div className="txt centered">  
+                  <h4>Nivel Actual</h4>
+                  <small>Intermedio — ¡sigue mejorando!</small>
+                </div>
+              </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Info extra */}
+          <Card className="info">
+            <div className="wrap">
+              <span className="dot"><Info className="w-5 h-5" /></span>
+              <div>
+                <h5>Sobre el Evaluador de Gobernanza de IA</h5>
+                <p>
+                  Evalúa la madurez de tu organización con base en marcos como ISO 27090 DIS - 27091, ISO 23894, NIS2 / AI Act, ISO 42001 - 42005, CONPES 4144.
+                  Obtén recomendaciones prácticas y una visión clara de fortalezas y áreas de mejora.
                 </p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      </main>
     </div>
   );
 }
+
+export default DashboardPage;
