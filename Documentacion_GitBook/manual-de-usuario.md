@@ -13,9 +13,9 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 * Organización: Representa a una empresa usuaria. Puede registrarse, iniciar sesión, realizar la evaluación de gobernanza, cargar documentación, visualizar resultados y descargar su hoja de ruta.
 * Administrador: Usuario con privilegios de gestión y supervisión general. Puede registrarse, iniciar sesión, visualizar estadísticas en un dashboard descriptivo y administrar usuarios.
 
-### Requisitos del sistema
+### Requisitos del Sistema
 
-#### Requisitos técnicos mínimos:
+#### Requisitos Técnicos Mínimos:
 
 * Navegador web actualizado (Google Chrome, Edge, Firefox o Safari).
 * Conexión estable a Internet.
@@ -27,9 +27,9 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 * Contar con un usuario registrado y verificado.
 * Poseer documentos o políticas internas de IA (opcional, para carga en la evaluación).
 
-### Acceso al sistema
+### Acceso al Sistema
 
-#### Ingreso al portal
+#### Ingreso al Portal
 
 1. Descargar el repositorio en [https://github.com/AIgobernance/Proyecto-Gestion](https://github.com/AIgobernance/Proyecto-Gestion)
 2. Abrir el repositorio y desplegar terminal.
@@ -57,7 +57,7 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 4. Ingrese el código en la pantalla de validación.
 5. Su cuenta quedará activa y podrá iniciar sesión.
 
-### Inicio de sesión
+### Inicio de Sesión
 
 1. Diríjase a la pantalla de Inicio de sesión.
 2. Ingrese su correo electrónico y contraseña.
@@ -98,13 +98,13 @@ Permite acceder a la plataforma una vez el usuario está registrado y verificado
 Es el núcleo del sistema.
 
 * Presenta un formulario dinámico desarrollado en React.
-* Permite subir documentos de respaldo (PDF, DOCX, XLSX) con un máximo de 2MB.
+* Permite subir documentos de respaldo (PDF) con un máximo de 2MB.
 * Al finalizar, los datos se envían al backend Laravel → n8n → IA.
 
 #### Módulo de Documentación
 
 * Permite subir documentos que respalden políticas o prácticas de IA.
-* Archivos válidos: <mark style="color:blue;">.pdf</mark>, <mark style="color:blue;">.docx</mark>, <mark style="color:blue;">.xlsx</mark>.
+* Archivos válidos: <mark style="color:blue;">.pdf</mark>.
 * Cada archivo se asocia a una evaluación registrada.
 
 #### Módulo de Resultados
@@ -130,14 +130,14 @@ Muestra el resultado analizado por la IA, incluyendo:
 4. Ingrese el código en la pantalla de validación.
 5. Su cuenta quedará activa y podrá iniciar sesión.
 
-### Inicio de sesión
+### Inicio de Sesión
 
 1. Diríjase a la pantalla de Inicio de sesión.
 2. Ingrese su correo electrónico y contraseña.
 3. Código de validación de segundo factor (2FA) por medio de correo electrónico (vía SMTP) o por SMS (vía proveedor de mensajería).
 4. Accederá al panel principal del aplicativo.
 
-#### Panel principal
+#### Panel Principal
 
 Al iniciar sesión, el Administrador accede a un **panel de control** con acceso a las siguientes opciones:
 
@@ -152,7 +152,7 @@ Al iniciar sesión, el Administrador accede a un **panel de control** con acceso
 * Seleccionar opciones del panel.
 * Cerrar sesión
 
-### Descripción de Módulos del sistema
+### Descripción de Módulos del Sistema
 
 #### Modulo de Dashboards Descriptivos
 
@@ -179,19 +179,19 @@ El aplicativo emplea autenticación 2FA (autenticación de doble factor) para re
 
 ## Recomendaciones Generales
 
-### **Para las organizaciones:**
+### **Para las Organizaciones:**
 
 * Mantenga su información empresarial actualizada.
 * Guarde sus hojas de ruta descargadas para seguimiento.
 * Verifique los canales 2FA configurados antes de iniciar sesión.
 
-### **Para el administrador:**
+### **Para el Administrador:**
 
 * Supervise el número de usuarios activos y registros nuevos.
 * Mantenga la base de datos y el servidor de autenticación actualizados.
 * Use el dashboard para analizar el crecimiento del uso del sistema.
 
-## Soporte técnico
+## Soporte Técnico
 
 Para consultas o asistencia:
 
