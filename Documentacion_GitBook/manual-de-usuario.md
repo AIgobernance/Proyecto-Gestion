@@ -1,6 +1,6 @@
 # Manual de Usuario
 
-### Introducción
+## Introducción
 
 El presente manual tiene como objetivo guiar al usuario en el uso del aplicativo web “Gobernanza de IA en las Empresas”, una herramienta digital que permite realizar evaluaciones sobre la gestión ética, legal y técnica de la inteligencia artificial dentro de una organización.
 
@@ -170,5 +170,29 @@ El panel presenta información visual en tiempo real sobre el uso del sistema:
 * Puede eliminar usuarios inactivos o duplicados.
 * Cada modificación queda registrada en la base de datos.
 
+## Seguridad y Autenticación
 
+El aplicativo emplea autenticación 2FA (autenticación de doble factor) para reforzar la seguridad de las cuentas, permitiendo al usuario elegir entre:
 
+* Código enviado por correo electrónico (SMTP).
+* Código enviado por SMS.
+
+## Recomendaciones Generales
+
+### **Para las organizaciones:**
+
+* Mantenga su información empresarial actualizada.
+* Guarde sus hojas de ruta descargadas para seguimiento.
+* Verifique los canales 2FA configurados antes de iniciar sesión.
+
+### **Para el administrador:**
+
+* Supervise el número de usuarios activos y registros nuevos.
+* Mantenga la base de datos y el servidor de autenticación actualizados.
+* Use el dashboard para analizar el crecimiento del uso del sistema.
+
+## Soporte técnico
+
+Para consultas o asistencia:
+
+<mark style="color:blue;">pgestionti@gmail.com</mark>\
