@@ -35,11 +35,11 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 2. Abrir el repositorio y desplegar terminal.
 3. En la terminal escribir "npm run dev"
 
-<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
 4. Abrir otra pestañas en la terminal y escribir el comando "php artisan serve".
 
-<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 5. Entrar al link que proporciona la terminal.
 6. Seleccionar una de las siguientes opciones:
@@ -47,7 +47,15 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
    * **Registrarse** (si es la primera vez que accede).
 7. Seleccionar rol (Administrador o Usuario).
 
+<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+
 ## Manual de Director de TI
+
+### Interfaz Principal del Aplicativo
+
+En esta sección se visualizan los marcos y se selecciona la acción a seguir.
+
+<figure><img src=".gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
 
 ### Registro de Usuario
 
@@ -57,12 +65,80 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 4. Ingrese el código en la pantalla de validación.
 5. Su cuenta quedará activa y podrá iniciar sesión.
 
+#### Formulario de Registro
+
+<figure><img src=".gitbook/assets/image (3).png" alt=""><figcaption></figcaption></figure>
+
+#### Activación de Cuenta (SMTP)
+
+<figure><img src=".gitbook/assets/image (6).png" alt=""><figcaption></figcaption></figure>
+
+#### Confirmación de Creación de Cuenta
+
+<figure><img src=".gitbook/assets/image (7).png" alt=""><figcaption></figcaption></figure>
+
 ### Inicio de Sesión
 
 1. Diríjase a la pantalla de Inicio de sesión.
 2. Ingrese su correo electrónico y contraseña.
 3. Código de validación de segundo factor (2FA) por medio de correo electrónico (vía SMTP) o por SMS (vía proveedor de mensajería).
 4. Accederá al panel principal del aplicativo.
+
+#### Formulario Inicio de Sesión
+
+<figure><img src=".gitbook/assets/image (8).png" alt=""><figcaption></figcaption></figure>
+
+#### Verificación en Dos Pasos (2FA)
+
+<figure><img src=".gitbook/assets/image (9).png" alt=""><figcaption></figcaption></figure>
+
+#### Código de Verificación
+
+<figure><img src=".gitbook/assets/image (10).png" alt=""><figcaption></figcaption></figure>
+
+#### Panel Principal
+
+<figure><img src=".gitbook/assets/image (11).png" alt=""><figcaption></figcaption></figure>
+
+#### Creación de Nueva Evaluación y Acciones Rapidas
+
+<figure><img src=".gitbook/assets/image (13).png" alt=""><figcaption></figcaption></figure>
+
+#### Formulario de Evaluación
+
+
+
+#### Visualización de Resultados
+
+
+
+#### Hoja de Ruta Personalizada
+
+
+
+#### Historial de Evaluaciones
+
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 134954.png" alt=""><figcaption></figcaption></figure>
+
+### Restablecimiento de Contraseña
+
+<figure><img src=".gitbook/assets/circu (1).png" alt=""><figcaption></figcaption></figure>
+
+#### Datos para Restablecimiento
+
+
+
+#### Verificación de Doble Factor (2FA)
+
+<figure><img src=".gitbook/assets/image (22).png" alt=""><figcaption></figcaption></figure>
+
+#### Código de Restablecimiento
+
+<figure><img src=".gitbook/assets/image (23).png" alt=""><figcaption></figcaption></figure>
+
+#### Confirmación de Restablecimiento
+
+<figure><img src=".gitbook/assets/image (24).png" alt=""><figcaption></figcaption></figure>
 
 ### Flujo General de Uso
 
@@ -85,6 +161,8 @@ Permite crear una cuenta de usuario y validar la identidad mediante el sistema d
 * Campos requeridos: nombre, empresa, NIT, tipo de documento, numero de documento, sector, país, tamaño organizacional, correo, teléfono, contraseña.
 * Mensajes automáticos de confirmación (correo o SMS).
 
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 132203.png" alt=""><figcaption></figcaption></figure>
+
 #### Módulo de Inicio de Sesión
 
 Permite acceder a la plataforma una vez el usuario está registrado y verificado.
@@ -92,6 +170,8 @@ Permite acceder a la plataforma una vez el usuario está registrado y verificado
 * Permite acceso con credenciales.
 * Autenticación 2FA.
 * Control de acceso a módulos privados según rol (empresa o administrador).
+
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 133154.png" alt=""><figcaption></figcaption></figure>
 
 #### Módulo de Evaluación
 
@@ -101,11 +181,15 @@ Es el núcleo del sistema.
 * Permite subir documentos de respaldo (PDF) con un máximo de 2MB.
 * Al finalizar, los datos se envían al backend Laravel → n8n → IA.
 
+
+
 #### Módulo de Documentación
 
 * Permite subir documentos que respalden políticas o prácticas de IA.
 * Archivos válidos: <mark style="color:blue;">.pdf</mark>.
 * Cada archivo se asocia a una evaluación registrada.
+
+
 
 #### Módulo de Resultados
 
@@ -114,13 +198,29 @@ Muestra el resultado analizado por la IA, incluyendo:
 * Puntaje de gobernanza general.
 * Gráficas y visualizaciones interactivas.
 
+
+
 #### Módulo de Hoja de Ruta
 
 * Permite descargar el documento PDF con las recomendaciones personalizadas.
 * El PDF se genera automáticamente desde la IA vía n8n y se guarda en el servidor.
 * El usuario puede acceder con un botón “Descargar hoja de ruta” en la vista de resultados.
 
+
+
+#### Modulo de Historial de Evaluaciones
+
+Muestra las evaluaciones completadas, las pendientes, cuantas evaluaciones ha realizado, puntuación de los resultados por evaluación y promedio entre estos, ultima evaluación realizada y filtros de fecha.
+
+<figure><img src=".gitbook/assets/image (12).png" alt=""><figcaption></figcaption></figure>
+
 ## Manual de Administrador
+
+### Interfaz Principal del Aplicativo
+
+En esta sección se visualizan los marcos y se selecciona la acción a seguir.
+
+<figure><img src=".gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
 
 ### Registro de Usuario
 
@@ -130,6 +230,14 @@ Muestra el resultado analizado por la IA, incluyendo:
 4. Ingrese el código en la pantalla de validación.
 5. Su cuenta quedará activa y podrá iniciar sesión.
 
+#### Formulario de Registro
+
+<figure><img src=".gitbook/assets/image (14).png" alt=""><figcaption></figcaption></figure>
+
+#### Verificación por Correo
+
+
+
 ### Inicio de Sesión
 
 1. Diríjase a la pantalla de Inicio de sesión.
@@ -137,13 +245,49 @@ Muestra el resultado analizado por la IA, incluyendo:
 3. Código de validación de segundo factor (2FA) por medio de correo electrónico (vía SMTP) o por SMS (vía proveedor de mensajería).
 4. Accederá al panel principal del aplicativo.
 
-#### Panel Principal
+#### Formulario de Inicio de Sesión
+
+<figure><img src=".gitbook/assets/image (16).png" alt=""><figcaption></figcaption></figure>
+
+#### Verificación en Dos Pasos (2FA)
+
+<figure><img src=".gitbook/assets/image (15).png" alt=""><figcaption></figcaption></figure>
+
+#### Código de Verificación
+
+<figure><img src=".gitbook/assets/image (10).png" alt=""><figcaption></figcaption></figure>
+
+### Panel Principal
 
 Al iniciar sesión, el Administrador accede a un **panel de control** con acceso a las siguientes opciones:
 
 * Dashboard descriptivo con métricas globales del sistema (número de usuarios registrados, evaluaciones enviadas, tráfico de acceso, etc.).
 * Gestión de usuarios (ver, editar o eliminar cuentas).
 * Cerrar sesión.
+
+#### Panel
+
+
+
+### Restablecimiento de Contraseña
+
+<figure><img src=".gitbook/assets/circulito.png" alt=""><figcaption></figcaption></figure>
+
+#### Datos para Restablecimiento
+
+<figure><img src=".gitbook/assets/image (17).png" alt=""><figcaption></figcaption></figure>
+
+#### Verificación de Doble Factor (2FA)
+
+<figure><img src=".gitbook/assets/image (18).png" alt=""><figcaption></figcaption></figure>
+
+#### Código de Restablecimiento
+
+<figure><img src=".gitbook/assets/image (19).png" alt=""><figcaption></figcaption></figure>
+
+#### Confirmación de Restablecimiento
+
+<figure><img src=".gitbook/assets/image (20).png" alt=""><figcaption></figcaption></figure>
 
 ### Flujo General de Uso
 
@@ -163,6 +307,8 @@ El panel presenta información visual en tiempo real sobre el uso del sistema:
 * Estado de autenticaciones 2FA (por correo o SMS).
 * Actividad general de los usuarios.
 
+
+
 #### Modulo de Administración de Usuarios
 
 * El administrador puede ver el listado completo de organizaciones registradas.
@@ -170,12 +316,22 @@ El panel presenta información visual en tiempo real sobre el uso del sistema:
 * Puede eliminar usuarios inactivos o duplicados.
 * Cada modificación queda registrada en la base de datos.
 
+
+
 ## Seguridad y Autenticación
 
 El aplicativo emplea autenticación 2FA (autenticación de doble factor) para reforzar la seguridad de las cuentas, permitiendo al usuario elegir entre:
 
 * Código enviado por correo electrónico (SMTP).
 * Código enviado por SMS.
+
+#### Verificación en Dos Pasos (2FA)
+
+<figure><img src=".gitbook/assets/image (15).png" alt=""><figcaption></figcaption></figure>
+
+#### Código de Verificación
+
+<figure><img src=".gitbook/assets/image (10).png" alt=""><figcaption></figcaption></figure>
 
 ## Recomendaciones Generales
 
