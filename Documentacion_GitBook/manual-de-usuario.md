@@ -51,6 +51,8 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 
 ## Manual de Director de TI
 
+Este manual describe los pasos a seguir para la correcta utilización del sistema, primero se muestran las interfaces en orden de utilización pero para información mas especifica de cada parte del sistema hay una sección mas adelante llamada descripción de módulos del sistema.
+
 ### Interfaz Principal del Aplicativo
 
 En esta sección se visualizan los marcos y se selecciona la acción a seguir.
@@ -100,7 +102,7 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 <figure><img src=".gitbook/assets/image (11).png" alt=""><figcaption></figcaption></figure>
 
-#### Creación de Nueva Evaluación y Acciones Rapidas
+#### Creación de Nueva Evaluación y Acciones Rápidas
 
 <figure><img src=".gitbook/assets/image (13).png" alt=""><figcaption></figcaption></figure>
 
@@ -120,13 +122,23 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 <figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 134954.png" alt=""><figcaption></figcaption></figure>
 
+#### Actualización Perfil Empresarial
+
+<figure><img src=".gitbook/assets/circul.png" alt=""><figcaption></figcaption></figure>
+
+#### Datos a Actualizar
+
+<figure><img src=".gitbook/assets/image (25).png" alt=""><figcaption></figcaption></figure>
+
 ### Restablecimiento de Contraseña
+
+Para el restablecimiento de contraseña desde el inicio de sesión seguir los pasos a continuación.
 
 <figure><img src=".gitbook/assets/circu (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Datos para Restablecimiento
 
-
+<figure><img src=".gitbook/assets/image (27).png" alt=""><figcaption></figcaption></figure>
 
 #### Verificación de Doble Factor (2FA)
 
@@ -158,8 +170,8 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 Permite crear una cuenta de usuario y validar la identidad mediante el sistema de doble autenticación (2FA).
 
-* Campos requeridos: nombre, empresa, NIT, tipo de documento, numero de documento, sector, país, tamaño organizacional, correo, teléfono, contraseña.
-* Mensajes automáticos de confirmación (correo o SMS).
+* Campos requeridos: nombre que se visualiza en la plataforma, empresa que desea hacer la evaluación, NIT de la empresa, tipo de documento de la persona que va a crear la cuenta, numero de documento, el sector se refiere a la ubicación de la empresa, país donde se ubica la empresa, tamaño organizacional, correo donde se mandara la verificación, teléfono que utilizara la verificación, contraseña que usara para iniciar sesión.
+* Activación de cuenta mediante un servicio externo de correo (SMTP).
 
 <figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 132203.png" alt=""><figcaption></figcaption></figure>
 
@@ -167,9 +179,8 @@ Permite crear una cuenta de usuario y validar la identidad mediante el sistema d
 
 Permite acceder a la plataforma una vez el usuario está registrado y verificado.
 
-* Permite acceso con credenciales.
-* Autenticación 2FA.
-* Control de acceso a módulos privados según rol (empresa o administrador).
+* Permite acceso con credenciales (Usuario que se creo en el registro y su contraseña).
+* Autenticación 2FA (código de autenticación).
 
 <figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 133154.png" alt=""><figcaption></figcaption></figure>
 
@@ -177,8 +188,8 @@ Permite acceder a la plataforma una vez el usuario está registrado y verificado
 
 Es el núcleo del sistema.
 
-* Presenta un formulario dinámico desarrollado en React.
-* Permite subir documentos de respaldo (PDF) con un máximo de 2MB.
+* Presenta un formulario dinámico desarrollado en React (Responder la pregunta de a cuerdo a lo que se adapte en la organización).
+* Permite subir documentos de respaldo (PDF) con un máximo de 2MB, estos documentos son si aplican gobernanza en las organizaciones.
 * Al finalizar, los datos se envían al backend Laravel → n8n → IA.
 
 
@@ -188,6 +199,7 @@ Es el núcleo del sistema.
 * Permite subir documentos que respalden políticas o prácticas de IA.
 * Archivos válidos: <mark style="color:blue;">.pdf</mark>.
 * Cada archivo se asocia a una evaluación registrada.
+* Permite subir documentos de respaldo (PDF) con un máximo de 2MB, estos documentos son si aplican gobernanza en las organizaciones.
 
 
 
@@ -195,7 +207,7 @@ Es el núcleo del sistema.
 
 Muestra el resultado analizado por la IA, incluyendo:
 
-* Puntaje de gobernanza general.
+* Puntaje de gobernanza general, porcentaje de cumplimiento de los marcos.
 * Gráficas y visualizaciones interactivas.
 
 
@@ -214,7 +226,21 @@ Muestra las evaluaciones completadas, las pendientes, cuantas evaluaciones ha re
 
 <figure><img src=".gitbook/assets/image (12).png" alt=""><figcaption></figcaption></figure>
 
+#### Modulo de Actualización de Datos
+
+En este modulo podremos actualizar la información del perfil empresarial, las opciones que tiene este modelo son el nombre del usuario, el correo, el teléfono, además de restablecimiento de contraseña.
+
+<figure><img src=".gitbook/assets/image (26).png" alt=""><figcaption></figcaption></figure>
+
+#### Modulo de Restablecimiento
+
+Este modulo se enfoca en aquellos usuarios que olvidaron su contraseña. El restablecimiento pide el usuario y verifica la identidad con una confirmación por medio de un codigo enviado por SMS o SMTP.
+
+<figure><img src=".gitbook/assets/image (28).png" alt=""><figcaption></figcaption></figure>
+
 ## Manual de Administrador
+
+Este manual muestra las funcionalidades del administrador de manera secuencial, para especificaciones de cada interfaz revisar los detalles de los módulos.
 
 ### Interfaz Principal del Aplicativo
 
@@ -271,6 +297,8 @@ Al iniciar sesión, el Administrador accede a un **panel de control** con acceso
 
 ### Restablecimiento de Contraseña
 
+Si el usuario olvida su contraseña puede restablecerla siguiendo los pasos a continuación.
+
 <figure><img src=".gitbook/assets/circulito.png" alt=""><figcaption></figcaption></figure>
 
 #### Datos para Restablecimiento
@@ -298,6 +326,21 @@ Al iniciar sesión, el Administrador accede a un **panel de control** con acceso
 
 ### Descripción de Módulos del Sistema
 
+#### Módulo de Registro
+
+Permite crear una cuenta de usuario y validar la identidad mediante el sistema de doble autenticación (2FA).
+
+* Campos requeridos: nombre que se visualiza en la plataforma, tipo de documento de la persona que va a crear la cuenta, numero de documento, correo donde se mandara la activación, teléfono que utilizara la verificación, contraseña que usara para iniciar sesión.
+* Activación de cuenta mediante un servicio externo de correo (SMTP).
+
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 140338.png" alt=""><figcaption></figcaption></figure>
+
+#### Modulo de Inicio de Sesión
+
+Este modulo nos permite ingresar las credenciales creadas en el registro para acceder a la plataforma (usuario y contraseña), también se observa el restablecimiento de contraseña.
+
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 141955.png" alt=""><figcaption></figcaption></figure>
+
 #### Modulo de Dashboards Descriptivos
 
 El panel presenta información visual en tiempo real sobre el uso del sistema:
@@ -317,6 +360,12 @@ El panel presenta información visual en tiempo real sobre el uso del sistema:
 * Cada modificación queda registrada en la base de datos.
 
 
+
+#### Modulo de Restablecimiento de Contraseña
+
+En este modulo se reestablece la contraseña desde el inicio de sesión, pide el usuario con el que accedes a la plataforma y luego te pide una nueva contraseña, para verificación de la identidad esta la autenticación de dos factores.
+
+<figure><img src=".gitbook/assets/image (29).png" alt=""><figcaption></figcaption></figure>
 
 ## Seguridad y Autenticación
 
