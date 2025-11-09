@@ -1,7 +1,7 @@
 # Table of contents
 
 * [Introducción](README.md)
-* [Arquitectura del Sistema](arquitectura-del-sistema.md)
+* [Arquitectura](arquitectura.md)
 * [Componentes Principales](componentes-principales.md)
 * [Flujo de Evaluación con IA](flujo-de-evaluacion-con-ia.md)
 * [Pruebas](pruebas.md)
