@@ -6,6 +6,13 @@ El presente manual tiene como objetivo guiar al usuario en el uso del aplicativo
 
 El sistema genera automáticamente una hoja de ruta personalizada con recomendaciones y acciones de mejora, basadas en los resultados de la evaluación y el análisis implementado con los marcos normativos.
 
+El sistema cuenta con dos roles principales: Organizaciones y Administrador.
+
+### Roles del Sistema
+
+* Organización: Representa a una empresa usuaria. Puede registrarse, iniciar sesión, realizar la evaluación de gobernanza, cargar documentación, visualizar resultados y descargar su hoja de ruta.
+* Administrador: Usuario con privilegios de gestión y supervisión general. Puede registrarse, iniciar sesión, visualizar estadísticas en un dashboard descriptivo y administrar usuarios.
+
 ### Requisitos del sistema
 
 #### Requisitos técnicos mínimos:
@@ -24,19 +31,29 @@ El sistema genera automáticamente una hoja de ruta personalizada con recomendac
 
 #### Ingreso al portal
 
-1. Abrir el navegador y acceder a la URL del sistema:\
-   **https://gobernanza-ia.empresa.com**
-2. Seleccionar una de las siguientes opciones:
+1. Descargar el repositorio en [https://github.com/AIgobernance/Proyecto-Gestion](https://github.com/AIgobernance/Proyecto-Gestion)
+2. Abrir el repositorio y desplegar terminal.
+3. En la terminal escribir "npm run dev"
+
+<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+
+4. Abrir otra pestañas en la terminal y escribir el comando "php artisan serve".
+
+<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+
+5. Entrar al link que proporciona la terminal.
+6. Seleccionar una de las siguientes opciones:
    * **Iniciar sesión** (si ya tiene cuenta).
    * **Registrarse** (si es la primera vez que accede).
+7. Seleccionar rol (Administrador o Usuario).
 
-### Registro de usuario
+## Manual de Director de TI
+
+### Registro de Usuario
 
 1. Ingrese los datos de la empresa y del representante responsable.
 2. Proporcione su correo electrónico y número de teléfono.
-3. Recibirá un código de verificación (2FA):
-   * Por correo electrónico (vía SMTP).
-   * O por SMS (vía proveedor de mensajería).
+3. Recibirá un código de verificación por medio de correo electrónico (SMTP).
 4. Ingrese el código en la pantalla de validación.
 5. Su cuenta quedará activa y podrá iniciar sesión.
 
@@ -44,10 +61,10 @@ El sistema genera automáticamente una hoja de ruta personalizada con recomendac
 
 1. Diríjase a la pantalla de Inicio de sesión.
 2. Ingrese su correo electrónico y contraseña.
-3. Valide el segundo factor (2FA).
+3. Código de validación de segundo factor (2FA) por medio de correo electrónico (vía SMTP) o por SMS (vía proveedor de mensajería).
 4. Accederá al panel principal del aplicativo.
 
-### Flujo general de uso
+### Flujo General de Uso
 
 1. Iniciar sesión en la plataforma.
 2. Acceder al módulo de Evaluación.
@@ -56,9 +73,10 @@ El sistema genera automáticamente una hoja de ruta personalizada con recomendac
 5. El sistema enviará las respuestas a n8n, que coordina el análisis con una IA evaluadora.
 6. La IA genera un puntaje global y una hoja de ruta personalizada.
 7. El usuario puede visualizar los resultados en pantalla.
-8. Finalmente, puede descargar la hoja de ruta en formato PDF.
+8. Descargar la hoja de ruta en formato PDF.
+9. Finalmente, cerrar sesión.
 
-### Descripción de módulos del sistema
+### Descripción de Módulos del Sistema
 
 #### Módulo de Registro
 
@@ -75,11 +93,82 @@ Permite acceder a la plataforma una vez el usuario está registrado y verificado
 * Autenticación 2FA.
 * Control de acceso a módulos privados según rol (empresa o administrador).
 
+#### Módulo de Evaluación
 
+Es el núcleo del sistema.
 
+* Presenta un formulario dinámico desarrollado en React.
+* Permite subir documentos de respaldo (PDF, DOCX, XLSX) con un máximo de 2MB.
+* Al finalizar, los datos se envían al backend Laravel → n8n → IA.
 
+#### Módulo de Documentación
 
+* Permite subir documentos que respalden políticas o prácticas de IA.
+* Archivos válidos: <mark style="color:blue;">.pdf</mark>, <mark style="color:blue;">.docx</mark>, <mark style="color:blue;">.xlsx</mark>.
+* Cada archivo se asocia a una evaluación registrada.
 
+#### Módulo de Resultados
+
+Muestra el resultado analizado por la IA, incluyendo:
+
+* Puntaje de gobernanza general.
+* Gráficas y visualizaciones interactivas.
+
+#### Módulo de Hoja de Ruta
+
+* Permite descargar el documento PDF con las recomendaciones personalizadas.
+* El PDF se genera automáticamente desde la IA vía n8n y se guarda en el servidor.
+* El usuario puede acceder con un botón “Descargar hoja de ruta” en la vista de resultados.
+
+## Manual de Administrador
+
+### Registro de Usuario
+
+1. Ingrese datos personales.
+2. Proporcione su correo electrónico y número de teléfono.
+3. Recibirá un código de verificación por medio de correo electrónico (SMTP).
+4. Ingrese el código en la pantalla de validación.
+5. Su cuenta quedará activa y podrá iniciar sesión.
+
+### Inicio de sesión
+
+1. Diríjase a la pantalla de Inicio de sesión.
+2. Ingrese su correo electrónico y contraseña.
+3. Código de validación de segundo factor (2FA) por medio de correo electrónico (vía SMTP) o por SMS (vía proveedor de mensajería).
+4. Accederá al panel principal del aplicativo.
+
+#### Panel principal
+
+Al iniciar sesión, el Administrador accede a un **panel de control** con acceso a las siguientes opciones:
+
+* Dashboard descriptivo con métricas globales del sistema (número de usuarios registrados, evaluaciones enviadas, tráfico de acceso, etc.).
+* Gestión de usuarios (ver, editar o eliminar cuentas).
+* Cerrar sesión.
+
+### Flujo General de Uso
+
+* Iniciar sesión en la plataforma.
+* Visualizar panel principal.
+* Seleccionar opciones del panel.
+* Cerrar sesión
+
+### Descripción de Módulos del sistema
+
+#### Modulo de Dashboards Descriptivos
+
+El panel presenta información visual en tiempo real sobre el uso del sistema:
+
+* Cantidad de organizaciones registradas.
+* Número total de evaluaciones completadas.
+* Estado de autenticaciones 2FA (por correo o SMS).
+* Actividad general de los usuarios.
+
+#### Modulo de Administración de Usuarios
+
+* El administrador puede ver el listado completo de organizaciones registradas.
+* Puede editar información básica (estado, correo, tipo de autenticación).
+* Puede eliminar usuarios inactivos o duplicados.
+* Cada modificación queda registrada en la base de datos.
 
 
 

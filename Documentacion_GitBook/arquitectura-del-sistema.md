@@ -13,5 +13,5 @@ El sistema se basa en una arquitectura por capas.
 
 #### Diagrama de la Arquitectura:
 
-<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (2).png" alt=""><figcaption></figcaption></figure>
 
