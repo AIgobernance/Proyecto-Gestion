@@ -19,7 +19,7 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 
 * Navegador web actualizado (Google Chrome, Edge, Firefox o Safari).
 * Conexión estable a Internet.
-* Resolución mínima recomendada: 1366x768 px (corregir).
+* Resolución mínima recomendada: 1366x768 px.
 * Acceso a correo electrónico y teléfono móvil (para validación 2FA).
 
 #### **Requisitos de Acceso:**
