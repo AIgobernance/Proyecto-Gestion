@@ -48,5 +48,5 @@ En conjunto, este flujo garantiza una comunicación eficiente entre todas las ca
 
 #### Diagrama de La Arquitectura:
 
-
+<figure><img src=".gitbook/assets/Imagen de WhatsApp 2025-11-10 a las 19.55.21_b4386831.jpg" alt=""><figcaption></figcaption></figure>
 
