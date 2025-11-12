@@ -1,226 +1,235 @@
+// resources/js/GeneralDashboardPage.jsx
 import React from "react";
 import imgLogo from "../assets/logo-principal.jpg";
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import {
-  Users,
-  ClipboardCheck,
-  FileText,
-  Download,
-  Filter,
-  TrendingUp,
-  ArrowLeft,
-  BarChart3,
-  Activity,
-  Calendar,
-  ChevronDown,
-  AlertCircle,
-  Award,
+  Users, ClipboardCheck, FileText, Download, Filter, TrendingUp, ArrowLeft,
+  BarChart3, Activity, Calendar as CalIcon, ChevronDown, AlertCircle, Award,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { motion } from "motion/react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
-import { Button } from "../ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
-export function GeneralDashboardPage({ onBack }) {
-  // Datos para gráficos
-  const userTrendData = [
-    { month: "Ene", users: 45 },
-    { month: "Feb", users: 58 },
-    { month: "Mar", users: 72 },
-    { month: "Abr", users: 95 },
-    { month: "May", users: 112 },
-    { month: "Jun", users: 130 },
-  ];
+/* ===== Estilos coherentes + FIX Select (portal) y Tabs centradas ===== */
+const styles = `
+:root{
+  --brand:#1f3d93; --brand-2:#2c4fb5; --ink:#0b1324;
+  --ring:#cfd7e6; --shadow:0 10px 30px rgba(16,24,40,.08), 0 2px 6px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box}
+.page{min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#213e90 0%,#1a2e74 100%)}
 
-  const evaluationsPerMonthData = [
-    { month: "Ene", evaluations: 85 },
-    { month: "Feb", evaluations: 70 },
-    { month: "Mar", evaluations: 55 },
-    { month: "Abr", evaluations: 95 },
-    { month: "May", evaluations: 110 },
-  ];
+/* Header */
+.header{background:#fff;border-bottom:1px solid #e5e7eb;height:70px;display:flex;align-items:center;justify-content:space-between;padding:10px 18px}
+.header__logo img{height:46px;width:auto;object-fit:contain}
+.btn-ghost{background:#fff;border:1px solid var(--ring);color:#173b8f;padding:10px 18px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;font-weight:800}
+.btn-ghost:hover{background:#f6f8fc}
 
-  const documentTypeData = [
-    { name: "ISO 42001", value: 30, color: "#3b82f6" },
-    { name: "NIS2/AI Act", value: 25, color: "#8b5cf6" },
-    { name: "CONPES 4144", value: 20, color: "#ec4899" },
-    { name: "ISO 27090", value: 25, color: "#10b981" },
-  ];
+/* Contenido */
+.container{max-width:1180px;margin:0 auto;padding:28px 16px;overflow:visible}
 
-  const documentsPerMonthData = [
-    { month: "Ene", documents: 50 },
-    { month: "Feb", documents: 75 },
-    { month: "Mar", documents: 60 },
-    { month: "Abr", documents: 85 },
-    { month: "May", documents: 92 },
-  ];
+/* Barra superior (título y subtítulo) */
+.page-title{display:flex;align-items:center;gap:10px;color:#0f172a;font-weight:900;font-size:22px;margin:0}
+.page-hint{color:#e6eefc;font-weight:600;font-size:15px;margin:6px 0 10px}
 
-  // Datos de actividad reciente
-  const recentActivity = [
-    { user: "Ana García", action: "Completó evaluación ISO 42001", time: "Hace 2 horas" },
-    { user: "Carlos López", action: "Generó reporte NIS2", time: "Hace 3 horas" },
-    { user: "María Rodríguez", action: "Inició evaluación", time: "Hace 5 horas" },
-  ];
+/* KPI Cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width: 960px){ .kpi-grid{grid-template-columns:1fr} }
+.card{background:#fff;border:1px solid #e9edf5;border-radius:18px;box-shadow:var(--shadow)}
+.icon-pill{background:#4d82bc;color:#fff;border-radius:16px;padding:10px;display:inline-flex}
 
-  const handleDownload = (chartName) => {
-    console.log(`Descargando ${chartName}`);
-    // Implementar lógica de descarga
-  };
+/* Toolbar filtros */
+.toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  background:#fff;border:1px solid #e9edf5;border-radius:18px;
+  box-shadow:var(--shadow);padding:10px 12px;margin:18px 0;
+  overflow: visible;
+}
+.toolbar-left{display:flex;align-items:center;gap:10px}
+.btn-outline{background:#fff;border:1px solid var(--ring);color:#0f172a;padding:10px 14px;border-radius:12px;display:inline-flex;align-items:center;gap:8px}
+.btn-outline:hover{background:#f7f9ff}
 
-  // KPIs con comparación
-  const kpiData = {
-    users: { current: 130, previous: 95, percentChange: 36.8 },
-    evaluations: { current: 110, previous: 85, percentChange: 29.4 },
-    documents: { current: 92, previous: 75, percentChange: 22.7 },
-  };
+/* ====== Ajustes Select (nuestro ui/select hace portal + anclado) ====== */
+[data-slot="select-trigger"]{ position:relative; z-index:10; }
+[data-slot="select-content"]{
+  /* El ui/select ya lo porta a body y calcula posición.
+     Aquí solo estética consistente del menú. */
+  background:#fff; color:#0b1324; border:1px solid #e5e7eb;
+  border-radius:12px; box-shadow:0 18px 40px rgba(2,6,23,.20), 0 6px 14px rgba(2,6,23,.10);
+  padding:6px;
+}
+[data-slot="select-item"]{
+  color:#0b1324; padding:10px 34px 10px 12px; border-radius:8px; cursor:pointer; position:relative;
+}
+[data-slot="select-item"]:hover{ background:#eef2ff; }
+[data-slot="select-item"][data-state="checked"]::after{
+  content:"✓"; position:absolute; right:10px; top:50%; transform:translateY(-50%);
+  opacity:1; font-weight:700;
+}
+
+/* ====== TABS centradas y del mismo tamaño ====== */
+.tabs-wrap{display:flex;justify-content:center;margin:0 0 16px}
+.tabs-list{
+  display:flex !important; gap:12px;
+  background:#fff;border:1px solid #e9edf5;border-radius:999px;box-shadow:var(--shadow);
+  padding:6px; width:fit-content;
+}
+.tabs-trigger{
+  border-radius:999px;padding:12px 18px;font-weight:800;color:#173b8f;
+  min-width: 220px; text-align:center; display:inline-flex; align-items:center; justify-content:center;
+}
+.tabs-trigger[data-state="active"]{ background:linear-gradient(90deg,#4d82bc,#5a8fc9); color:#fff; }
+
+/* Grids de charts */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width: 1020px){ .charts{grid-template-columns:1fr} }
+
+/* Botón Primario */
+.btn-primary{
+  background:linear-gradient(90deg,#4d82bc,#5a8fc9); color:#fff; border:none;
+  border-radius:999px; padding:10px 16px; font-weight:800;
+  display:inline-flex;align-items:center;gap:8px; cursor:pointer;
+  box-shadow:0 12px 28px rgba(2,6,23,.18);
+}
+.btn-primary:hover{filter:brightness(1.02)}
+`;
+
+/* ===== Datos de ejemplo ===== */
+const userTrendData = [
+  { month: "Ene", users: 45 }, { month: "Feb", users: 58 }, { month: "Mar", users: 72 },
+  { month: "Abr", users: 95 }, { month: "May", users: 112 }, { month: "Jun", users: 130 },
+];
+
+const evaluationsPerMonthData = [
+  { month: "Ene", evaluations: 85 }, { month: "Feb", evaluations: 70 }, { month: "Mar", evaluations: 55 },
+  { month: "Abr", evaluations: 95 }, { month: "May", evaluations: 110 },
+];
+
+const documentTypeData = [
+  { name: "ISO 42001", value: 30, color: "#3b82f6" },
+  { name: "NIS2/AI Act", value: 25, color: "#8b5cf6" },
+  { name: "CONPES 4144", value: 20, color: "#ec4899" },
+  { name: "ISO 27090", value: 25, color: "#10b981" },
+];
+
+const documentsPerMonthData = [
+  { month: "Ene", documents: 50 }, { month: "Feb", documents: 75 }, { month: "Mar", documents: 60 },
+  { month: "Abr", documents: 85 }, { month: "May", documents: 92 },
+];
+
+const recentActivity = [
+  { user: "Ana García", action: "Completó evaluación ISO 42001", time: "Hace 2 horas" },
+  { user: "Carlos López", action: "Generó reporte NIS2", time: "Hace 3 horas" },
+  { user: "María Rodríguez", action: "Inició evaluación", time: "Hace 5 horas" },
+];
+
+const kpiData = {
+  users: { current: 130, percentChange: 36.8 },
+  evaluations: { current: 110, percentChange: 29.4 },
+  documents: { current: 92, percentChange: 22.7 },
+};
+
+export default function GeneralDashboardPage({
+  onBack = () =>
+    (window.history.length > 1
+      ? window.history.back()
+      : window.location.assign("/admin/dashboard")),
+}) {
+  const handleDownload = (name) => console.log("Descargando", name);
 
   return (
-    <div className="bg-gradient-to-br from-[#e8f0f8] to-[#f0f7ff] min-h-screen">
+    <div className="page">
+      <style>{styles}</style>
+
       {/* Header */}
-      <div className="bg-[#cadffb] h-[116px] w-full flex items-center justify-between px-8 shadow-md">
-        {/* Logo */}
-        <div className="w-[180px] h-[90px]">
-          <img alt="AI Governance Evaluator" className="w-full h-full object-contain" src={imgLogo} />
+      <header className="header">
+        <div className="header__logo">
+          <img src={imgLogo} alt="AI Governance Evaluator" />
         </div>
-
-        {/* Título central con icono */}
-        <div className="flex-1 text-center">
-          <div className="flex items-center justify-center gap-3">
-            <BarChart3 className="w-8 h-8 text-[#1e3a8a]" />
-            <h1 className="font-['Inter:Regular',_sans-serif] text-[28px] text-[#1e3a8a]">
-              Dashboard General
-            </h1>
-          </div>
-          <p className="text-[14px] text-gray-600 mt-1">Análisis y métricas del sistema</p>
-        </div>
-
-        {/* Botón Volver */}
-        <button
-          onClick={onBack}
-          className="bg-white hover:bg-gray-100 transition-all duration-200 rounded-[20px] px-8 py-2 font-['Inter:Regular',_sans-serif] text-[16px] text-[#1e3a8a] shadow-md hover:shadow-lg flex items-center gap-2"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Volver
+        <h1 className="page-title">
+          <BarChart3 className="w-5 h-5" style={{color:"#4d82bc"}} />
+          Dashboard general
+        </h1>
+        <button className="btn-ghost" onClick={onBack}>
+          <ArrowLeft className="w-4 h-4" /> Volver
         </button>
-      </div>
+      </header>
 
       {/* Contenido */}
-      <div className="container mx-auto px-8 py-8 max-w-7xl">
-        {/* Tarjetas de métricas KPI mejoradas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {/* Usuarios Registrados */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-            <Card className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-blue-100 overflow-hidden group">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-[16px] text-gray-700">Usuarios Registrados</CardTitle>
-                  <div className="bg-blue-500 p-3 rounded-[15px] group-hover:scale-110 transition-transform">
-                    <Users className="w-6 h-6 text-white" />
-                  </div>
-                </div>
+      <main className="container">
+        <p className="page-hint">Análisis y métricas del sistema</p>
+
+        {/* KPIs */}
+        <section className="kpi-grid">
+          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.25}}>
+            <Card className="card">
+              <CardHeader style={{padding:"16px 18px 8px"}}>
+                <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span style={{color:"#5b677a",fontSize:14}}>Usuarios registrados</span>
+                  <span className="icon-pill"><Users className="w-5 h-5" /></span>
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-[42px] text-[#1e3a8a] mb-1">{kpiData.users.current}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" />
-                        +{kpiData.users.percentChange}%
-                      </Badge>
-                      <span className="text-[12px] text-gray-600">vs. mes anterior</span>
-                    </div>
-                  </div>
+              <CardContent style={{padding:18}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontSize:38,color:"#173b8f",fontWeight:900}}>{kpiData.users.current}</div>
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
+                    <TrendingUp className="w-3 h-3" /> +{kpiData.users.percentChange}%
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Evaluaciones Completadas */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Card className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-purple-50 to-purple-100 overflow-hidden group">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-[16px] text-gray-700">Evaluaciones Completadas</CardTitle>
-                  <div className="bg-purple-500 p-3 rounded-[15px] group-hover:scale-110 transition-transform">
-                    <ClipboardCheck className="w-6 h-6 text-white" />
-                  </div>
-                </div>
+          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.25,delay:.05}}>
+            <Card className="card">
+              <CardHeader style={{padding:"16px 18px 8px"}}>
+                <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span style={{color:"#5b677a",fontSize:14}}>Evaluaciones completadas</span>
+                  <span className="icon-pill" style={{background:"#7a4fd6"}}><ClipboardCheck className="w-5 h-5" /></span>
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-[42px] text-[#1e3a8a] mb-1">{kpiData.evaluations.current}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" />
-                        +{kpiData.evaluations.percentChange}%
-                      </Badge>
-                      <span className="text-[12px] text-gray-600">vs. mes anterior</span>
-                    </div>
-                  </div>
+              <CardContent style={{padding:18}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontSize:38,color:"#173b8f",fontWeight:900}}>{kpiData.evaluations.current}</div>
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
+                    <TrendingUp className="w-3 h-3" /> +{kpiData.evaluations.percentChange}%
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Documentos Generados */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-green-50 to-green-100 overflow-hidden group">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-[16px] text-gray-700">Documentos Generados</CardTitle>
-                  <div className="bg-green-500 p-3 rounded-[15px] group-hover:scale-110 transition-transform">
-                    <FileText className="w-6 h-6 text-white" />
-                  </div>
-                </div>
+          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.25,delay:.1}}>
+            <Card className="card">
+              <CardHeader style={{padding:"16px 18px 8px"}}>
+                <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                  <span style={{color:"#5b677a",fontSize:14}}>Documentos generados</span>
+                  <span className="icon-pill" style={{background:"#10b981"}}><FileText className="w-5 h-5" /></span>
+                </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between">
-                  <div>
-                    <p className="text-[42px] text-[#1e3a8a] mb-1">{kpiData.documents.current}</p>
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100 flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" />
-                        +{kpiData.documents.percentChange}%
-                      </Badge>
-                      <span className="text-[12px] text-gray-600">vs. mes anterior</span>
-                    </div>
-                  </div>
+              <CardContent style={{padding:18}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{fontSize:38,color:"#173b8f",fontWeight:900}}>{kpiData.documents.current}</div>
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
+                    <TrendingUp className="w-3 h-3" /> +{kpiData.documents.percentChange}%
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
-        </div>
+        </section>
 
-        {/* Barra de herramientas - Filtros y acciones */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="flex items-center justify-between mb-8 bg-white rounded-[20px] px-6 py-4 shadow-md"
-        >
-          <div className="flex items-center gap-4">
-            {/* Selector de período */}
+        {/* Toolbar: filtros/estado */}
+        <section className="toolbar">
+          <div className="toolbar-left">
             <Select defaultValue="month">
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="btn-outline" style={{width:180}}>
                 <SelectValue placeholder="Seleccionar período" />
               </SelectTrigger>
               <SelectContent>
@@ -231,23 +240,18 @@ export function GeneralDashboardPage({ onBack }) {
               </SelectContent>
             </Select>
 
-            {/* Botón de filtros avanzados */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Filter className="w-4 h-4" />
-                  Filtros Avanzados
-                  <ChevronDown className="w-4 h-4" />
-                </Button>
+                <button className="btn-outline">
+                  <Filter className="w-4 h-4" /> Filtros avanzados <ChevronDown className="w-4 h-4" />
+                </button>
               </PopoverTrigger>
               <PopoverContent className="w-80">
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-medium mb-2">Tipo de Marco</h4>
                     <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todos los marcos" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Todos los marcos" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="iso42001">ISO 42001</SelectItem>
@@ -259,9 +263,7 @@ export function GeneralDashboardPage({ onBack }) {
                   <div>
                     <h4 className="font-medium mb-2">Estado</h4>
                     <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todos los estados" />
-                      </SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Todos los estados" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
                         <SelectItem value="completed">Completadas</SelectItem>
@@ -269,281 +271,203 @@ export function GeneralDashboardPage({ onBack }) {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button className="w-full">Aplicar Filtros</Button>
+                  <button className="btn-primary" style={{width:"100%"}}>Aplicar filtros</button>
                 </div>
               </PopoverContent>
             </Popover>
           </div>
 
-          <div className="flex items-center gap-2 text-[14px] text-gray-600">
-            <Calendar className="w-4 h-4" />
-            <span>
-              Última actualización: Hoy,{" "}
-              {new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
-            </span>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,color:"#5b677a"}}>
+            <CalIcon className="w-4 h-4" />
+            <span>Última actualización: Hoy, {new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}</span>
           </div>
-        </motion.div>
+        </section>
 
-        {/* Tabs para organizar contenido */}
-        <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-2 bg-white shadow-md">
-            <TabsTrigger value="analytics" className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4" />
-              Analíticas
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="flex items-center gap-2">
-              <Activity className="w-4 h-4" />
-              Actividad Reciente
-            </TabsTrigger>
-          </TabsList>
+        {/* Tabs centradas */}
+        <div className="tabs-wrap">
+          <Tabs defaultValue="analytics" className="space-y-6" style={{width:"100%"}}>
+            <TabsList className="tabs-list">
+              <TabsTrigger value="analytics" className="tabs-trigger">
+                <BarChart3 className="w-4 h-4" /> Analíticas
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="tabs-trigger">
+                <Activity className="w-4 h-4" /> Actividad Reciente
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Tab de Analíticas */}
-          <TabsContent value="analytics" className="space-y-8">
-            {/* Gráficos - Primera fila */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-            >
-              {/* Tendencia de Usuarios Registrados */}
-              <Card className="border-none shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-[18px]">
-                      <TrendingUp className="w-5 h-5 text-blue-600" />
-                      Tendencia de Usuarios Registrados
-                    </span>
-                    <Badge variant="outline" className="text-blue-600">
-                      6 meses
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>Crecimiento mensual de usuarios en la plataforma</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <LineChart data={userTrendData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="month" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="users"
-                        stroke="#3b82f6"
-                        strokeWidth={3}
-                        dot={{ fill: "#3b82f6", r: 5 }}
-                        activeDot={{ r: 7 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                  <div className="flex justify-center mt-4">
-                    <Button onClick={() => handleDownload("Tendencia de Usuarios")} variant="outline" className="flex items-center gap-2">
-                      <Download className="w-4 h-4" />
-                      Descargar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Analíticas */}
+            <TabsContent value="analytics" className="space-y-6">
+              <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="charts">
+                {/* Tendencia de Usuarios */}
+                <Card className="card">
+                  <CardHeader>
+                    <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:18}}>
+                        <TrendingUp className="w-5 h-5" style={{color:"#4d82bc"}} />
+                        Tendencia de usuarios
+                      </span>
+                      <Badge variant="outline" className="text-blue-600">6 meses</Badge>
+                    </CardTitle>
+                    <CardDescription>Crecimiento mensual de usuarios en la plataforma</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={userTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="month" stroke="#6b7280" />
+                        <YAxis stroke="#6b7280" />
+                        <Tooltip contentStyle={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:8}} />
+                        <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={3} dot={{fill:"#3b82f6",r:5}} activeDot={{r:7}} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div style={{display:"flex",justifyContent:"center",marginTop:12}}>
+                      <button className="btn-outline" onClick={()=>handleDownload("Tendencia de Usuarios")}>
+                        <Download className="w-4 h-4" /> Descargar
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Evaluaciones Completadas por Mes */}
-              <Card className="border-none shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-[18px]">
-                      <ClipboardCheck className="w-5 h-5 text-purple-600" />
-                      Evaluaciones Completadas por Mes
-                    </span>
-                    <Badge variant="outline" className="text-purple-600">
-                      5 meses
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>Número de evaluaciones finalizadas mensualmente</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={evaluationsPerMonthData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="month" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Bar dataKey="evaluations" radius={[10, 10, 0, 0]} fill="#8b5cf6" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="flex justify-center mt-4">
-                    <Button onClick={() => handleDownload("Evaluaciones por Mes")} variant="outline" className="flex items-center gap-2">
-                      <Download className="w-4 h-4" />
-                      Descargar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                {/* Evaluaciones por Mes */}
+                <Card className="card">
+                  <CardHeader>
+                    <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:18}}>
+                        <ClipboardCheck className="w-5 h-5" style={{color:"#7a4fd6"}} />
+                        Evaluaciones por mes
+                      </span>
+                      <Badge variant="outline" className="text-purple-600">5 meses</Badge>
+                    </CardTitle>
+                    <CardDescription>Número de evaluaciones finalizadas mensualmente</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={evaluationsPerMonthData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="month" stroke="#6b7280" />
+                        <YAxis stroke="#6b7280" />
+                        <Tooltip contentStyle={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:8}} />
+                        <Bar dataKey="evaluations" radius={[10,10,0,0]} fill="#8b5cf6" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div style={{display:"flex",justifyContent:"center",marginTop:12}}>
+                      <button className="btn-outline" onClick={()=>handleDownload("Evaluaciones por Mes")}>
+                        <Download className="w-4 h-4" /> Descargar
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-            {/* Gráficos - Segunda fila */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-            >
-              {/* Distribución de Documentos por Marco */}
-              <Card className="border-none shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-[18px]">
-                      <Award className="w-5 h-5 text-pink-600" />
-                      Distribución por Marco de Gobernanza
-                    </span>
-                  </CardTitle>
-                  <CardDescription>Proporción de documentos según marco de referencia</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart>
-                      <Pie
-                        data={documentTypeData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={3}
-                        dataKey="value"
-                      >
-                        {documentTypeData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="flex justify-center mt-4">
-                    <Button onClick={() => handleDownload("Distribución de Marcos")} variant="outline" className="flex items-center gap-2">
-                      <Download className="w-4 h-4" />
-                      Descargar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="charts">
+                {/* Distribución por Marco */}
+                <Card className="card">
+                  <CardHeader>
+                    <CardTitle style={{display:"flex",alignItems:"center",gap:8,fontSize:18}}>
+                      <Award className="w-5 h-5" style={{color:"#ec4899"}} />
+                      Distribución por marco de gobernanza
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <PieChart>
+                        <Pie data={documentTypeData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3} dataKey="value">
+                          {documentTypeData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                        </Pie>
+                        <Tooltip contentStyle={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:8}} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div style={{display:"flex",justifyContent:"center",marginTop:12}}>
+                      <button className="btn-outline" onClick={()=>handleDownload("Distribución de Marcos")}>
+                        <Download className="w-4 h-4" /> Descargar
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Distribución de documentos por Mes */}
-              <Card className="border-none shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-[18px]">
-                      <FileText className="w-5 h-5 text-green-600" />
-                      Documentos Generados por Mes
-                    </span>
-                    <Badge variant="outline" className="text-green-600">5 meses</Badge>
-                  </CardTitle>
-                  <CardDescription>Evolución de la generación de documentos mensuales</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={documentsPerMonthData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="month" stroke="#6b7280" />
-                      <YAxis stroke="#6b7280" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "white",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                        }}
-                      />
-                      <Bar dataKey="documents" radius={[10, 10, 0, 0]} fill="#10b981" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="flex justify-center mt-4">
-                    <Button onClick={() => handleDownload("Documentos por Mes")} variant="outline" className="flex items-center gap-2">
-                      <Download className="w-4 h-4" />
-                      Descargar
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </TabsContent>
+                {/* Documentos por Mes */}
+                <Card className="card">
+                  <CardHeader>
+                    <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:18}}>
+                        <FileText className="w-5 h-5" style={{color:"#10b981"}} />
+                        Documentos por mes
+                      </span>
+                      <Badge variant="outline" className="text-green-600">5 meses</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={documentsPerMonthData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="month" stroke="#6b7280" />
+                        <YAxis stroke="#6b7280" />
+                        <Tooltip contentStyle={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:8}} />
+                        <Bar dataKey="documents" radius={[10,10,0,0]} fill="#10b981" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div style={{display:"flex",justifyContent:"center",marginTop:12}}>
+                      <button className="btn-outline" onClick={()=>handleDownload("Documentos por Mes")}>
+                        <Download className="w-4 h-4" /> Descargar
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
 
-          {/* Tab de Actividad Reciente */}
-          <TabsContent value="activity">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-              <Card className="border-none shadow-xl">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-[20px]">
-                    <Activity className="w-6 h-6 text-blue-600" />
-                    Actividad Reciente del Sistema
-                  </CardTitle>
-                  <CardDescription>Últimas acciones realizadas por los usuarios</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {recentActivity.map((activity, index) => (
-                      <div
-                        key={index}
-                        className="flex items-start gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-[15px] hover:shadow-md transition-shadow"
-                      >
-                        <div className="bg-blue-500 p-2 rounded-full">
-                          <ClipboardCheck className="w-5 h-5 text-white" />
+            {/* Actividad reciente */}
+            <TabsContent value="activity">
+              <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.25}}>
+                <Card className="card">
+                  <CardHeader>
+                    <CardTitle style={{display:"flex",alignItems:"center",gap:8,fontSize:20}}>
+                      <Activity className="w-5 h-5" style={{color:"#4d82bc"}} />
+                      Actividad reciente del sistema
+                    </CardTitle>
+                    <CardDescription>Últimas acciones realizadas por los usuarios</CardDescription>
+                  </CardHeader>
+                  <CardContent style={{padding:18}}>
+                    <div style={{display:"grid",gap:12}}>
+                      {recentActivity.map((a, i) => (
+                        <div key={i} style={{
+                          display:"flex",alignItems:"center",gap:12,
+                          background:"linear-gradient(90deg,#f6faff,#f3f0ff)", border:"1px solid #e9edf5",
+                          borderRadius:16,padding:12
+                        }}>
+                          <span className="icon-pill"><ClipboardCheck className="w-4 h-4" /></span>
+                          <div style={{flex:1}}>
+                            <div style={{color:"#173b8f",fontWeight:700}}>{a.user}</div>
+                            <div style={{color:"#475569",fontSize:14}}>{a.action}</div>
+                          </div>
+                          <Badge variant="outline" className="text-gray-600">{a.time}</Badge>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-[15px] text-[#1e3a8a]">
-                            <span className="font-medium">{activity.user}</span>
-                          </p>
-                          <p className="text-[14px] text-gray-600">{activity.action}</p>
-                        </div>
-                        <Badge variant="outline" className="text-gray-600">
-                          {activity.time}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
 
-                  {/* Alerta informativa */}
-                  <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-[10px]">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <h4 className="text-[15px] text-yellow-800 font-medium mb-1">Nota sobre la actividad</h4>
-                        <p className="text-[14px] text-yellow-700">
-                          Se muestra la actividad de las últimas 24 horas. Para ver el historial completo,
-                          descarga el reporte detallado.
-                        </p>
+                    <div style={{marginTop:16,background:"#fff6db",border:"1px solid #fde68a",borderRadius:12,padding:12}}>
+                      <div style={{display:"flex",alignItems:"flex-start",gap:8,color:"#a16207"}}>
+                        <AlertCircle className="w-5 h-5" />
+                        <div>
+                          <div style={{fontWeight:800}}>Nota sobre la actividad</div>
+                          <div style={{fontSize:14}}>Se muestra la actividad de las últimas 24 horas. Para ver el historial completo, descarga el reporte detallado.</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex justify-center mt-6">
-                    <Button className="flex items-center gap-2">
-                      <Download className="w-4 h-4" />
-                      Descargar Reporte de Actividad
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </TabsContent>
-        </Tabs>
-      </div>
+                    <div style={{display:"flex",justifyContent:"center",marginTop:14}}>
+                      <button className="btn-primary">
+                        <Download className="w-4 h-4" /> Descargar reporte de actividad
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </main>
     </div>
   );
 }

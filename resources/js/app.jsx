@@ -1,10 +1,9 @@
 // resources/js/app.jsx
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useLocation } from "react-router-dom";
 
 // Páginas (todas están en resources/js)
 // Públicas
-//import { HomePage } from "./HomePage.jsx";
 import HomePage from "./HomePage.jsx";
 import { LoginPage } from "./LoginPage.jsx";
 import { RegisterPage } from "./RegisterPage.jsx";
@@ -19,12 +18,9 @@ import { EvaluationCompletedPage } from "./EvaluationCompletedPage.jsx";
 import { UserProfilePage } from "./UserProfilePage.jsx";
 
 // Admin autenticado
-import { AdminDashboardPage } from "./AdminDashboardPage.jsx";
-import { GeneralDashboardPage } from "./GeneralDashboardPage.jsx";
+import AdminDashboardPage from "./AdminDashboardPage.jsx";
+import  GeneralDashboardPage  from "./GeneralDashboardPage.jsx";
 import { UserManagementPage } from "./UserManagementPage.jsx";
-
-// (Los modales como VerificationMethodModal, CodeVerificationModal, etc. no son rutas;
-// se usan dentro de las páginas. No es necesario enrutarlos.)
 
 /* =========================================================================
    Guardas sencillos (puedes reemplazar por tu lógica real de auth/roles)
@@ -41,10 +37,26 @@ function useAuth() {
 const AuthContext = React.createContext(null);
 const useAuthCtx = () => React.useContext(AuthContext);
 
+/* === ARREGLO PRINCIPAL ===
+   Detectamos si la ruta es /admin* para enviar al login correcto.
+*/
 function ProtectedRoute({ children, allowRoles = ["user", "admin"] }) {
   const { user } = useAuthCtx();
-  if (!user) return <Navigate to="/login" replace />;
-  if (!allowRoles.includes(user.role)) return <Navigate to="/" replace />;
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith("/admin");
+
+  if (!user) {
+    return <Navigate to={isAdminRoute ? "/admin/login" : "/login"} replace />;
+  }
+  if (!allowRoles.includes(user.role)) {
+    // Usuario logueado pero con rol inválido para la vista
+    return (
+      <Navigate
+        to={user.role === "admin" ? "/admin/dashboard" : "/dashboard"}
+        replace
+      />
+    );
+  }
   return children ?? <Outlet />;
 }
 
@@ -237,9 +249,9 @@ export default function App() {
                     auth.logout();
                     navigate("/");
                   }}
-                  onViewEvaluations={() => navigate("/evaluations")}
-                  onStartEvaluation={() => navigate("/evaluation/start")}
-                  onViewProfile={() => navigate("/profile")}
+                  onGoUsers={() => navigate("/admin/users")}
+                  onGoAnalytics={() => navigate("/admin/analytics")}
+                  onGoHome={() => navigate("/admin/dashboard")}
                 />
               }
             />
