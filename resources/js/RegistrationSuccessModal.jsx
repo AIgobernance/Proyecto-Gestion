@@ -1,87 +1,111 @@
 import React from "react";
-import { Button } from "../ui/button";
-import { Card, CardContent } from "../ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogClose,
-} from "../ui/dialog";
 
-// ⬇️ Cambia la ruta/archivo por tu imagen
-import successImg from "../assets/Check.jpg";
 
-export function RegistrationSuccessModal({ open = true, onContinue }) {
+export function RegistrationSuccessModal({ onContinue }) {
+
+  React.useEffect(() => {
+  document.body.style.overflow = "hidden";
+  return () => {
+    document.body.style.overflow = "auto";
+  };
+}, []);
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onContinue?.()}>
-      <DialogContent className="p-0 overflow-hidden">
-        {/* X solo-ícono */}
-        <DialogClose data-slot="dialog-close" aria-label="Cerrar">
-          <span aria-hidden="true">×</span>
-          <span className="sr-only">Cerrar</span>
-        </DialogClose>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.45)",
+        backdropFilter: "blur(3px)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 9999,
+      }}
+    >
+      <div
+        style={{
+          width: "90%",
+          maxWidth: "460px",
+          background: "white",
+          borderRadius: "22px",
+          padding: "34px",
+          textAlign: "center",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+          position: "relative",
+        }}
+      >
+        {/* Icon */}
+        <div
+          style={{
+            width: "86px",
+            height: "86px",
+            background: "#e6f9ed",
+            borderRadius: "100px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            margin: "0 auto 18px",
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="44"
+            height="44"
+            stroke="#22c55e"
+            fill="none"
+            strokeWidth="2.2"
+          >
+            <polyline points="20 6 10 17 5 12" />
+          </svg>
+        </div>
 
-        <Card style={{ border: "none", boxShadow: "none", padding: 0 }}>
-          <CardContent className="p-8">
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-                gap: 12,
-              }}
-            >
-              {/* Imagen de éxito */}
-              <div className="relative" style={{ marginBottom: 4 }}>
-                <img
-                  src={successImg}
-                  alt="Cuenta creada con éxito"
-                  width={80}
-                  height={80}
-                  style={{
-                    display: "block",
-                    borderRadius: 12, // usa 999 si la quieres circular
-                    boxShadow: "0 8px 24px rgba(0,0,0,.12)",
-                  }}
-                />
-              </div>
+        {/* Title */}
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: 700,
+            marginBottom: "8px",
+          }}
+        >
+          ¡Cuenta creada con éxito!
+        </h2>
 
-              {/* Texto apilado (h3 + p) para evitar fila */}
-              <div style={{ textAlign: "center", margin: 0 }}>
-                <h3
-                  style={{
-                    display: "block",
-                    fontSize: 22,
-                    fontWeight: 800,
-                    color: "#0b1324",
-                    margin: 0,
-                    marginBottom: 4,
-                  }}
-                >
-                  ¡Cuenta creada con éxito!
-                </h3>
-                <p
-                  style={{
-                    display: "block",
-                    fontSize: 14,
-                    color: "#334155",
-                    margin: 0,
-                  }}
-                >
-                  Se creó con éxito la cuenta.
-                </p>
-              </div>
+        <p style={{ fontSize: "15px", color: "#475569", marginBottom: "24px" }}>
+          Se creó con éxito la cuenta.
+        </p>
 
-              {/* Botón */}
-              <div style={{ width: "100%", marginTop: 12 }}>
-                <Button onClick={onContinue} className="btn-primary" style={{ width: "100%" }}>
-                  Ir al inicio de sesión
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </DialogContent>
-    </Dialog>
+        {/* Button */}
+        <button
+          onClick={onContinue}
+          style={{
+            width: "100%",
+            padding: "12px 0",
+            borderRadius: "14px",
+            background: "#f1f5f9",
+            border: "1px solid #cbd5e1",
+            fontWeight: "600",
+            fontSize: "15px",
+          }}
+        >
+          Ir al inicio de sesión
+        </button>
+
+        {/* Close X */}
+        <button
+          onClick={onContinue}
+          style={{
+            position: "absolute",
+            right: "14px",
+            top: "14px",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            opacity: 0.7,
+          }}
+        >
+          ✕
+        </button>
+      </div>
+    </div>
   );
 }
