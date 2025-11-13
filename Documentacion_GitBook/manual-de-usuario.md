@@ -266,7 +266,11 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 #### Verificación por Correo
 
+<figure><img src=".gitbook/assets/image (30).png" alt=""><figcaption></figcaption></figure>
 
+#### Confirmación de Creación de Cuenta
+
+<figure><img src=".gitbook/assets/image (31).png" alt=""><figcaption></figcaption></figure>
 
 ### Inicio de Sesión
 
