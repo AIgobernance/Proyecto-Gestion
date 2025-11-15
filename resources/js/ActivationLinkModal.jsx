@@ -1,108 +1,133 @@
 import React from "react";
-import { Button } from "../ui/button";
-import { Card, CardContent } from "../ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogClose,
-} from "../ui/dialog";
+import imgLogo from "../assets/logo-principal.jpg";
 
-const IconMail = (p) => (
-  <svg viewBox="0 0 24 24" width="64" height="64" stroke="currentColor" fill="none" strokeWidth="2" {...p}>
-    <rect x="3" y="5" width="18" height="14" rx="3" />
-    <path d="M3 7l9 6 9-6" />
-  </svg>
-);
 
-export function ActivationLinkModal({ open = true, onAccept, onBack }) {
-  const handleResend = () => {
-    alert("Se ha reenviado el enlace de activación (simulado).");
+
+export function ActivationLinkModal({ onAccept, onBack }) {
+
+  React.useEffect(() => {
+  document.body.style.overflow = "hidden";
+  return () => {
+    document.body.style.overflow = "auto";
   };
+}, []);
+
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onBack?.()}>
-      <DialogContent className="p-0 overflow-hidden">
-        {/* X solo-ícono */}
-        <DialogClose data-slot="dialog-close" aria-label="Cerrar">
-          <span aria-hidden="true">×</span>
-          <span className="sr-only">Cerrar</span>
-        </DialogClose>
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "blur",
+        backdropFilter: "blur(3px)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 9999,
+      }}
+    >
+      <div
+        style={{
+          width: "90%",
+          maxWidth: "460px",
+          background: "white",
+          borderRadius: "22px",
+          padding: "32px",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+          textAlign: "center",
+          position: "relative",
+        }}
+      >
+        {/* Icon */}
+        <div
+          style={{
+            width: "82px",
+            height: "82px",
+            background: "#eef4ff",
+            borderRadius: "100px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            margin: "0 auto 20px",
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="42"
+            height="42"
+            stroke="#2a4fb8"
+            fill="none"
+            strokeWidth="1.7"
+          >
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="M3 7l9 6 9-6" />
+          </svg>
+        </div>
 
-        <Card style={{ border: "none", boxShadow: "none", padding: 0 }}>
-          <CardContent className="p-8">
-            {/* Contenido centrado en columna */}
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-                gap: 12,
-              }}
-            >
-              {/* Ícono */}
-              <div
-                className="relative"
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: 999,
-                  background: "linear-gradient(135deg,#eef2ff,#e2e8f0)",
-                  display: "grid",
-                  placeItems: "center",
-                  boxShadow: "0 8px 24px rgba(0,0,0,.08)",
-                }}
-              >
-                <IconMail />
-              </div>
+        {/* Title */}
+        <h2
+          style={{
+            fontSize: "24px",
+            fontWeight: "700",
+            marginBottom: "6px",
+          }}
+        >
+          Enlace de Activación
+        </h2>
 
-              {/* Título y descripción APILADOS */}
-              <div style={{ textAlign: "center", margin: 0 }}>
-                <h3
-                  style={{
-                    display: "block",
-                    fontSize: 22,
-                    fontWeight: 800,
-                    color: "#0b1324",
-                    margin: 0,
-                    marginBottom: 4,
-                  }}
-                >
-                  Enlace de Activación
-                </h3>
-                <p
-                  style={{
-                    display: "block",
-                    fontSize: 14,
-                    color: "#334155",
-                    margin: 0,
-                  }}
-                >
-                  Verifique su correo electrónico para activar la cuenta.
-                </p>
-              </div>
+        <p style={{ fontSize: "15px", color: "#475569", marginBottom: "14px" }}>
+          Verifique su correo electrónico para activar la cuenta.
+        </p>
 
-              {/* Nota más discreta */}
-              <p style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>
-                ¿No llegó el correo? Puede reenviar el enlace.
-              </p>
+        <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "22px" }}>
+          ¿No llegó el correo? Puede reenviar el enlace.
+        </p>
 
-              {/* Botones centrados */}
-              <div style={{ display: "flex", gap: 10, width: "100%", justifyContent: "center", marginTop: 6, flexWrap: "wrap" }}>
-                <Button onClick={handleResend} className="btn-outline">
-                  Enviar nuevamente
-                </Button>
-                <Button onClick={onAccept} className="btn-primary">
-                  Aceptar
-                </Button>
-              </div>
-            </div>
-          </CardContent>
+        {/* Buttons */}
+        <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+          <button
+            onClick={() => alert("Se reenvió el enlace (simulado).")}
+            style={{
+              padding: "10px 22px",
+              borderRadius: "14px",
+              border: "1px solid #cbd5e1",
+              background: "white",
+              fontWeight: "500",
+            }}
+          >
+            Enviar nuevamente
+          </button>
 
-          <DialogFooter className="p-0" />
-        </Card>
-      </DialogContent>
-    </Dialog>
+          <button
+            onClick={onAccept}
+            style={{
+              padding: "10px 22px",
+              borderRadius: "14px",
+              background: "#2f5ac7",
+              color: "white",
+              fontWeight: "600",
+            }}
+          >
+            Aceptar
+          </button>
+        </div>
+
+        {/* Close X */}
+        <button
+          onClick={onBack}
+          style={{
+            position: "absolute",
+            right: "14px",
+            top: "14px",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            opacity: 0.7,
+          }}
+        >
+          ✕
+        </button>
+      </div>
+    </div>
   );
 }

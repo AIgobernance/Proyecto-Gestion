@@ -1,30 +1,52 @@
 import React from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
+import { Card, CardContent } from "../ui/card";
+import {
+  Dialog,
+  DialogContent,
+} from "../ui/dialog";
+import successImg from "../assets/Check.jpg";
 
-export function UserCreatedSuccessModal({ onContinue }) {
+export function UserCreatedSuccessModal({ open = true, onContinue }) {
   return (
-    <Dialog open={true} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle className="text-center text-[28px] mb-4">
-            Usuario creado con éxito
-          </DialogTitle>
+    <Dialog open={open} onOpenChange={(state) => !state && onContinue?.()}>
+      <DialogContent className="p-0 overflow-hidden rounded-2xl max-w-md">
+        <Card style={{ border: "none", boxShadow: "none", padding: 0 }}>
+          <CardContent className="p-8">
+            <div className="flex flex-col items-center text-center gap-4">
 
-          <DialogDescription className="text-center text-[16px] px-4 leading-relaxed text-gray-600">
-            El nuevo usuario ha sido registrado correctamente en el sistema.
-          </DialogDescription>
-        </DialogHeader>
+              <div className="relative mb-1">
+                <img
+                  src={successImg}
+                  alt="Cuenta creada con éxito"
+                  width={80}
+                  height={80}
+                  style={{
+                    display: "block",
+                    borderRadius: 12,
+                    boxShadow: "0 8px 24px rgba(0,0,0,.12)",
+                  }}
+                />
+              </div>
 
-        <div className="flex justify-center pt-4 pb-2">
-          <Button
-            className="w-full bg-gradient-to-r from-[#4d82bc] to-[#5a8fc9] hover:from-[#3d6a9c] hover:to-[#4a7fb9] shadow-lg transition-all"
-            size="lg"
-            onClick={onContinue}
-          >
-            Continuar
-          </Button>
-        </div>
+              <h3 className="text-[22px] font-bold text-gray-900">
+                ¡Cuenta creada con éxito!
+              </h3>
+
+              <p className="text-[14px] text-gray-600">
+                El administrador ha sido registrado correctamente.
+              </p>
+
+              <Button
+                onClick={onContinue}
+                className="btn-primary"
+                style={{ width: "100%" }}
+              >
+                Continuar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </DialogContent>
     </Dialog>
   );

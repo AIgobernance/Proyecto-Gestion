@@ -1,237 +1,359 @@
-import React from "react";
-import imgLogo from "../assets/club-deportivo-alvear-de-general-alvear.svg";
+import React, { useMemo, useState } from "react";
+import imgLogo from "../assets/logo-principal.jpg";
 import { motion } from "motion/react";
 import {
   FileText,
-  Calendar,
+  Calendar as CalIcon,
   Award,
   TrendingUp,
   LogOut,
   ChevronRight,
   Clock,
+  X,
+  ChevronDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
 import { Progress } from "../ui/progress";
+import { Calendar } from "../ui/calendar";
 
-// Datos de ejemplo - en una aplicación real vendrían de una API
+/* ===== Estilos ===== */
+const styles = `
+:root{
+  --brand:#1f3d93; --brand-2:#2c4fb5; --ink:#0b1324;
+  --ring:#cfd7e6; --shadow:0 10px 30px rgba(16,24,40,.08), 0 2px 6px rgba(16,24,40,.04);
+}
+*{box-sizing:border-box}
+.page{min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(180deg,#213e90 0%,#1a2e74 100%)}
+
+/* Header */
+.header{background:#fff;border-bottom:1px solid #e5e7eb;height:70px;display:flex;align-items:center;justify-content:space-between;padding:10px 18px}
+.header__logo img{height:46px;width:auto;object-fit:contain}
+.btn-ghost{background:#fff;border:1px solid var(--ring);color:var(--ink);padding:10px 18px;border-radius:999px}
+.btn-ghost:hover{background:#f6f8fc}
+
+/* Contenido */
+.container{max-width:1120px;margin:0 auto;padding:28px 16px}
+
+/* Tarjetas resumen */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width: 900px){ .grid{grid-template-columns:1fr} }
+.card{background:#fff;border:1px solid #e9edf5;border-radius:18px;box-shadow:var(--shadow)}
+.metric{display:flex;align-items:center;justify-content:space-between}
+.metric .num{font-size:32px;color:#173b8f;font-weight:800}
+.bubble{background:#eaf0ff;border-radius:999px;padding:10px;display:inline-flex;color:#2b51c2}
+
+/* Filtros */
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:18px;margin-bottom:10px}
+.filter-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#fff;border:1px solid var(--ring);color:#173b8f;
+  padding:10px 14px;border-radius:999px;font-weight:800;cursor:pointer;
+  box-shadow:0 6px 18px rgba(2,6,23,.06);
+}
+.filter-pill:hover{background:#f7f9ff}
+.subtle{background:#fff;border:1px solid var(--ring);color:#0f172a;padding:8px 14px;border-radius:999px;cursor:pointer}
+.subtle:hover{background:#f7f9ff}
+
+/* Popups */
+.pop{position:relative}
+.pop-panel{
+  position:absolute; z-index:40; top:52px; left:0;
+  background:#fff;border:1px solid #e9edf5;border-radius:16px;box-shadow:0 24px 64px rgba(2,6,23,.28);
+  padding:10px; min-width:280px;
+}
+.pop-actions{display:flex;justify-content:space-between;align-items:center;padding:8px 6px 2px;gap:8px}
+.pop-apply{
+  background:linear-gradient(90deg,#4d82bc,#5a8fc9); color:#fff; border:none;
+  border-radius:999px; padding:8px 14px; font-weight:800; cursor:pointer;
+}
+.pop-clear{background:#fff;border:1px solid var(--ring);border-radius:999px;padding:8px 12px;font-weight:800;color:#173b8f;cursor:pointer}
+
+/* Popup año */
+.year-list{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px}
+.year-item{
+  text-align:center;border:1px solid #e9edf5;border-radius:12px;padding:8px;cursor:pointer;
+  background:linear-gradient(90deg,#f7faff,#eef4ff);
+  font-weight:800;color:#173b8f;
+}
+.year-item:hover{box-shadow:0 8px 18px rgba(2,6,23,.12)}
+
+/* Listado */
+.list-card{background:#fff;border:1px solid #e9edf5;border-radius:18px;box-shadow:var(--shadow)}
+.item{border:2px solid transparent;border-radius:16px;transition:border-color .15s ease, box-shadow .15s ease;cursor:pointer}
+.item:hover{border-color:#cfe0ff;box-shadow:0 10px 28px rgba(2,6,23,.14)}
+.item .title{font-size:18px;color:#0f172a;margin:0 0 2px}
+.row{display:flex;align-items:center;gap:6px;color:#475569;font-size:14px}
+
+/* Badge de score */
+.badge{border-radius:999px;padding:6px 10px;font-weight:800;color:#fff}
+.badge--excelente{background:#10b981}
+.badge--bueno{background:#3b82f6}
+.badge--regular{background:#f59e0b}
+.badge--mejora{background:#ef4444}
+
+/* Botón primario “pill” */
+.btn-primary{
+  background:linear-gradient(90deg,#4d82bc,#5a8fc9); color:#fff;
+  border-radius:999px; padding:10px 16px; font-weight:800; border:none;
+  display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 12px 28px rgba(2,6,23,.18); cursor:pointer;
+}
+.btn-primary:hover{filter:brightness(1.02)}
+`;
+
+/* Datos de ejemplo */
 const MOCK_EVALUATIONS = [
-  {
-    id: 1,
-    name: "Evaluación ISO 27090",
-    date: "15/10/2024",
-    time: "14:30",
-    score: 95,
-    framework: "ISO 27090",
-    status: "Completada",
-  },
-  {
-    id: 2,
-    name: "Evaluación NIS2/AI Act",
-    date: "20/09/2024",
-    time: "10:15",
-    score: 85,
-    framework: "NIS2/AI Act",
-    status: "Completada",
-  },
-  {
-    id: 3,
-    name: "Evaluación ISO 42001",
-    date: "05/08/2024",
-    time: "16:45",
-    score: 78,
-    framework: "ISO 42001",
-    status: "Completada",
-  },
+  { id: 1, name: "Evaluación ISO 27090", date: "15/10/2024", time: "14:30", score: 95, framework: "ISO 27090", status: "Completada" },
+  { id: 2, name: "Evaluación NIS2/AI Act", date: "20/09/2024", time: "10:15", score: 85, framework: "NIS2/AI Act", status: "Completada" },
+  { id: 3, name: "Evaluación ISO 42001", date: "05/08/2024", time: "16:45", score: 78, framework: "ISO 42001", status: "Completada" },
 ];
 
+/* Utils */
+const parseDMY = (str) => { const [d, m, y] = str.split("/").map(Number); return new Date(y, m - 1, d); };
+const formatDMY = (d) => d ? `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}` : "";
+
+/* Badge score */
 const getScoreBadge = (score) => {
-  if (score >= 90)
-    return { label: "Excelente", variant: "default", color: "bg-green-500" };
-  if (score >= 75)
-    return { label: "Bueno", variant: "secondary", color: "bg-blue-500" };
-  if (score >= 60)
-    return { label: "Regular", variant: "outline", color: "bg-yellow-500" };
-  return { label: "Necesita Mejora", variant: "destructive", color: "bg-red-500" };
+  if (score >= 90) return { label: "Excelente", cls: "badge--excelente" };
+  if (score >= 75) return { label: "Bueno", cls: "badge--bueno" };
+  if (score >= 60) return { label: "Regular", cls: "badge--regular" };
+  return { label: "Mejora", cls: "badge--mejora" };
 };
 
-export function ViewEvaluationsPage({ onExit, onViewResults }) {
-  const avgScore = Math.round(
-    MOCK_EVALUATIONS.reduce((acc, ev) => acc + ev.score, 0) /
-      MOCK_EVALUATIONS.length
-  );
+export function ViewEvaluationsPage({
+  onExit = () => window.location.assign("/dashboard"),
+  onViewResults = (id) => window.location.assign(`/evaluation/${id}/completed`),
+}) {
+  /* ====== Filtros ====== */
+  // Fecha (rango)
+  const [openCal, setOpenCal] = useState(false);
+  const [tempRange, setTempRange] = useState({ from: undefined, to: undefined });
+  const [range, setRange] = useState({ from: undefined, to: undefined });
+
+  const applyRange = () => { setRange(tempRange); setOpenCal(false); };
+  const clearRange = () => {
+    setTempRange({ from: undefined, to: undefined });
+    setRange({ from: undefined, to: undefined });
+    setOpenCal(false);
+  };
+
+  // Año (atajo)
+  const [openYear, setOpenYear] = useState(false);
+  const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i); // últimos 10 años
+  const applyYear = (year) => {
+    const from = new Date(year, 0, 1);
+    const to = new Date(year, 11, 31);
+    setTempRange({ from, to });
+    setRange({ from, to });
+    setOpenYear(false);
+  };
+
+  /* Filtrado */
+  const filtered = useMemo(() => {
+    if (!range.from && !range.to) return MOCK_EVALUATIONS;
+    return MOCK_EVALUATIONS.filter((ev) => {
+      const d = parseDMY(ev.date);
+      if (range.from && d < new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate())) return false;
+      if (range.to && d > new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate())) return false;
+      return true;
+    });
+  }, [range]);
+
+  const avgScore = filtered.length
+    ? Math.round(filtered.reduce((acc, ev) => acc + ev.score, 0) / filtered.length)
+    : 0;
 
   return (
-    <div className="bg-gradient-to-br from-gray-50 via-blue-50/30 to-gray-50 min-h-screen">
+    <div className="page">
+      <style>{styles}</style>
+
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <img alt="Logo" className="h-14 w-auto object-contain" src={imgLogo} />
+      <header className="header">
+        <div className="header__logo"><img src={imgLogo} alt="AI Governance Evaluator" /></div>
+        <h1 style={{display:"flex",alignItems:"center",gap:8,margin:0,color:"#0f172a",fontSize:20,fontWeight:800}}>
+          <FileText className="w-5 h-5" style={{color:"#4d82bc"}} />
+          Mis Evaluaciones
+        </h1>
+        <button className="btn-ghost" onClick={onExit} aria-label="Salir">
+          <LogOut className="w-4 h-4" style={{marginRight:8,color:"#173b8f"}} />
+          Salir
+        </button>
+      </header>
 
-          <h1 className="text-[24px] text-gray-900 flex items-center gap-2">
-            <FileText className="h-6 w-6 text-[#4d82bc]" />
-            Mis Evaluaciones
-          </h1>
+      {/* Contenido */}
+      <main className="container">
+        {/* Resumen */}
+        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} className="grid">
+          <Card className="card"><CardContent style={{padding:18}}>
+            <div className="metric">
+              <div>
+                <div style={{color:"#5b677a",fontSize:14,marginBottom:4}}>Total Evaluaciones</div>
+                <div className="num">{filtered.length}</div>
+              </div>
+              <span className="bubble"><FileText className="w-6 h-6" /></span>
+            </div>
+          </CardContent></Card>
 
-          <Button variant="outline" onClick={onExit} className="gap-2">
-            <LogOut className="h-4 w-4" />
-            Salir
-          </Button>
-        </div>
-      </div>
+          <Card className="card"><CardContent style={{padding:18}}>
+            <div className="metric">
+              <div>
+                <div style={{color:"#5b677a",fontSize:14,marginBottom:4}}>Puntuación Promedio</div>
+                <div className="num">{avgScore}%</div>
+              </div>
+              <span className="bubble" style={{background:"#e9fbf0",color:"#1b9a59"}}><TrendingUp className="w-6 h-6" /></span>
+            </div>
+          </CardContent></Card>
 
-      {/* Contenido principal */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Resumen de estadísticas */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-        >
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[14px] text-gray-600 mb-1">Total Evaluaciones</p>
-                  <p className="text-[32px] text-gray-900">{MOCK_EVALUATIONS.length}</p>
-                </div>
-                <div className="bg-blue-100 rounded-full p-3">
-                  <FileText className="h-8 w-8 text-[#4d82bc]" />
+          <Card className="card"><CardContent style={{padding:18}}>
+            <div className="metric">
+              <div>
+                <div style={{color:"#5b677a",fontSize:14,marginBottom:4}}>Última Evaluación</div>
+                <div style={{fontSize:18,color:"#173b8f",fontWeight:700}}>
+                  {filtered.length ? filtered[0].date : "—"}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[14px] text-gray-600 mb-1">Puntuación Promedio</p>
-                  <p className="text-[32px] text-gray-900">{avgScore}%</p>
-                </div>
-                <div className="bg-green-100 rounded-full p-3">
-                  <TrendingUp className="h-8 w-8 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[14px] text-gray-600 mb-1">Última Evaluación</p>
-                  <p className="text-[18px] text-gray-900">
-                    {MOCK_EVALUATIONS[0].date}
-                  </p>
-                </div>
-                <div className="bg-purple-100 rounded-full p-3">
-                  <Calendar className="h-8 w-8 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <span className="bubble" style={{background:"#f3ecff",color:"#7a4fd6"}}><CalIcon className="w-6 h-6" /></span>
+            </div>
+          </CardContent></Card>
         </motion.div>
 
-        {/* Lista de evaluaciones */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="h-5 w-5 text-[#4d82bc]" />
-                Historial de Evaluaciones
+        {/* Filtros */}
+        <div className="filters">
+          {/* Fecha (rango) */}
+          <div className="pop">
+            <button className="filter-pill" onClick={() => { setOpenCal((v) => !v); setOpenYear(false); }}>
+              <CalIcon className="w-4 h-4" />
+              {range.from || range.to
+                ? `${range.from ? formatDMY(range.from) : "…"} — ${range.to ? formatDMY(range.to) : "…"}`
+                : "Fecha"}
+            </button>
+
+            {openCal && (
+              <div className="pop-panel" onClick={(e) => e.stopPropagation()}>
+                <div style={{padding:"6px 8px 0",color:"#0f172a",fontWeight:800}}>
+                  Selecciona rango de fechas
+                </div>
+
+                {/* Mes a mes + dropdown de mes/año */}
+                <Calendar
+                  mode="range"
+                  selected={tempRange}
+                  onSelect={setTempRange}
+                  numberOfMonths={1}                // <-- 1 mes visible
+                  captionLayout="dropdown"          // <-- dropdown mes y año
+                  fromYear={new Date().getFullYear() - 9}
+                  toYear={new Date().getFullYear() + 1}
+                />
+
+                <div className="pop-actions">
+                  <button className="pop-clear" onClick={clearRange}>
+                    <X className="w-4 h-4" style={{marginRight:6}} /> Limpiar
+                  </button>
+                  <button className="pop-apply" onClick={applyRange}>
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Año (atajo rápido) */}
+          <div className="pop">
+            <button className="filter-pill" onClick={() => { setOpenYear((v)=>!v); setOpenCal(false); }}>
+              <CalIcon className="w-4 h-4" />
+              Año
+              <ChevronDown className="w-4 h-4" />
+            </button>
+            {openYear && (
+              <div className="pop-panel" onClick={(e)=>e.stopPropagation()}>
+                <div style={{padding:"6px 8px 0",color:"#0f172a",fontWeight:800}}>
+                  Filtrar por año
+                </div>
+                <div className="year-list">
+                  {years.map((y) => (
+                    <button key={y} className="year-item" onClick={() => applyYear(y)}>
+                      {y}
+                    </button>
+                  ))}
+                </div>
+                <div className="pop-actions" style={{justifyContent:"flex-end"}}>
+                  <button className="pop-clear" onClick={clearRange}>
+                    <X className="w-4 h-4" style={{marginRight:6}} /> Limpiar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {(range.from || range.to) && (
+            <button className="subtle" onClick={clearRange}>Limpiar filtros</button>
+          )}
+        </div>
+
+        {/* Historial */}
+        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: 0.05 }} style={{marginTop:6}}>
+          <Card className="list-card">
+            <CardHeader style={{padding:"16px 18px 8px"}}>
+              <CardTitle style={{display:"flex",alignItems:"center",gap:8,color:"#173b8f",fontSize:18}}>
+                <Award className="w-5 h-5" /> Historial de Evaluaciones
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {MOCK_EVALUATIONS.map((evaluation, index) => {
-                const badge = getScoreBadge(evaluation.score);
 
+            <CardContent style={{padding:18,display:"grid",gap:12}}>
+              {filtered.map((ev, i) => {
+                const badge = getScoreBadge(ev.score);
                 return (
-                  <motion.div
-                    key={evaluation.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.1 * index }}
-                  >
-                    <Card className="hover:shadow-lg transition-all cursor-pointer border-2 hover:border-[#4d82bc]/50">
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between gap-4">
-                          {/* Información principal */}
-                          <div className="flex-1 space-y-3">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1">
-                                <h3 className="text-[18px] text-gray-900 mb-1">
-                                  {evaluation.name}
-                                </h3>
-                                <div className="flex items-center gap-4 text-[14px] text-gray-600">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-4 w-4" />
-                                    {evaluation.date}
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="h-4 w-4" />
-                                    {evaluation.time}
-                                  </div>
-                                </div>
+                  <motion.div key={ev.id} initial={{opacity:0, x:-12}} animate={{opacity:1, x:0}} transition={{duration:0.22, delay:0.05*i}}>
+                    <div className="item" style={{padding:16,background:"#fff"}}>
+                      <div style={{display:"flex",alignItems:"stretch",gap:16}}>
+                        {/* Columna info */}
+                        <div style={{flex:1,display:"grid",gap:10}}>
+                          <div style={{display:"flex",alignItems:"start",justifyContent:"space-between",gap:12}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <h3 className="title">{ev.name}</h3>
+                              <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+                                <div className="row"><CalIcon className="w-4 h-4" /> {ev.date}</div>
+                                <div className="row"><Clock className="w-4 h-4" /> {ev.time}</div>
                               </div>
-
-                              <Badge className={`${badge.color} text-white`}>
-                                {badge.label}
-                              </Badge>
                             </div>
-
-                            {/* Barra de progreso */}
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between text-[14px]">
-                                <span className="text-gray-600">Puntuación</span>
-                                <span className="text-gray-900">{evaluation.score}%</span>
-                              </div>
-                              <Progress value={evaluation.score} className="h-2" />
-                            </div>
-
-                            <div className="flex items-center gap-2 text-[13px] text-gray-500">
-                              <FileText className="h-4 w-4" />
-                              <span>Marco: {evaluation.framework}</span>
-                            </div>
+                            <span className={`badge ${badge.cls}`}>{badge.label}</span>
                           </div>
 
-                          {/* Botón de ver resultados */}
-                          <Button
-                            onClick={() => onViewResults(evaluation.id)}
-                            className="bg-gradient-to-r from-[#4d82bc] to-[#5a8fc9] hover:from-[#3d6a9c] hover:to-[#4a7fb9] gap-2"
-                          >
-                            Ver Resultados
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
+                          {/* Progreso */}
+                          <div style={{display:"grid",gap:6}}>
+                            <div style={{display:"flex",justifyContent:"space-between",fontSize:14}}>
+                              <span style={{color:"#475569"}}>Puntuación</span>
+                              <span style={{color:"#0f172a"}}>{ev.score}%</span>
+                            </div>
+                            <Progress value={ev.score} className="h-2" />
+                          </div>
+
+                          <div className="row"><FileText className="w-4 h-4" /> <span>Marco: {ev.framework}</span></div>
                         </div>
-                      </CardContent>
-                    </Card>
+
+                        {/* Acción */}
+                        <div style={{display:"flex",alignItems:"center"}}>
+                          <button className="btn-primary" onClick={() => onViewResults(ev.id)}>
+                            Ver Resultados <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </motion.div>
                 );
               })}
+
+              {filtered.length === 0 && (
+                <div style={{textAlign:"center",padding:"36px 8px",color:"#5b677a"}}>
+                  No hay evaluaciones dentro del filtro seleccionado.
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
-
-        {/* Mensaje cuando no hay evaluaciones */}
-        {MOCK_EVALUATIONS.length === 0 && (
-          <Card className="mt-8">
-            <CardContent className="py-16 text-center">
-              <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-[20px] text-gray-900 mb-2">No tienes evaluaciones</h3>
-              <p className="text-[14px] text-gray-600">
-                Completa tu primera evaluación para ver los resultados aquí
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      </main>
     </div>
   );
 }
+
+export default ViewEvaluationsPage;

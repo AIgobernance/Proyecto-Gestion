@@ -159,7 +159,8 @@ body {
 /* Modal genérico */
 .modal {
   position: fixed; inset: 0; display: grid; place-items: center; padding: 24px;
-  background: color-mix(in oklab, #000 38%, transparent);
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(4px);
   animation: fadeUp .25s ease both;
 }
 .modal__panel {
