@@ -873,6 +873,14 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
   };
 
   const handleSubmitEvaluation = async (allAnswers, isRetry = false) => {
+    // Validar que todas las preguntas estén respondidas
+    const preguntasRespondidas = Object.keys(allAnswers).length;
+    if (preguntasRespondidas < TOTAL_QUESTIONS) {
+      const preguntasPendientes = TOTAL_QUESTIONS - preguntasRespondidas;
+      setSubmitError(`Debes responder todas las preguntas antes de finalizar. Te faltan ${preguntasPendientes} pregunta${preguntasPendientes > 1 ? 's' : ''}.`);
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
     setShowRetry(false);
@@ -1178,11 +1186,16 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                   maxFiles={3}
                   maxSizeMB={2}
                   uploadedFile={documents[Math.floor(currentIndex / 10)]}
+                  evaluationId={evaluationId}
                   onUpload={(documentData) => {
                     setDocuments(prev => ({
                       ...prev,
                       [Math.floor(currentIndex / 10)]: documentData
                     }));
+                    // Actualizar evaluationId si viene en la respuesta
+                    if (documentData.id_evaluacion && !evaluationId) {
+                      setEvaluationId(documentData.id_evaluacion);
+                    }
                   }}
                   disabled={isSubmitting}
                 />
@@ -1264,7 +1277,7 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                   ) : (
                     <span className="eval-nav__center--ok">
                       <CheckCircle size={14} />
-                      Respuesta seleccionada
+                      Respuesta seleccionada ({answeredCount}/{TOTAL_QUESTIONS})
                     </span>
                   )}
                 </div>
@@ -1274,6 +1287,13 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                   className="btn-nav btn-nav--next"
                   onClick={handleNext}
                   disabled={selected === null || isSubmitting}
+                  title={
+                    selected === null 
+                      ? "Debes seleccionar una respuesta para continuar" 
+                      : currentIndex === TOTAL_QUESTIONS - 1 && answeredCount < TOTAL_QUESTIONS
+                        ? `Te faltan ${TOTAL_QUESTIONS - answeredCount} pregunta${TOTAL_QUESTIONS - answeredCount > 1 ? 's' : ''} por responder`
+                        : ""
+                  }
                 >
                   {isSubmitting ? (
                     <>
@@ -1282,8 +1302,16 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                     </>
                   ) : currentIndex === TOTAL_QUESTIONS - 1 ? (
                     <>
-                      Finalizar
-                      <ArrowRight size={16} />
+                      {answeredCount < TOTAL_QUESTIONS ? (
+                        <>
+                          Finalizar ({answeredCount}/{TOTAL_QUESTIONS})
+                        </>
+                      ) : (
+                        <>
+                          Finalizar
+                          <ArrowRight size={16} />
+                        </>
+                      )}
                     </>
                   ) : (
                     <>

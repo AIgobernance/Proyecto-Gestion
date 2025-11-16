@@ -8,7 +8,8 @@ export function DocumentUpload({
   maxSizeMB = 2, 
   maxFiles = 3,
   currentFileIndex = 0,
-  disabled = false 
+  disabled = false,
+  evaluationId = null // ID de la evaluación actual
 }) {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -49,6 +50,11 @@ export function DocumentUpload({
       const formData = new FormData();
       formData.append('documento', file);
       formData.append('indice', currentFileIndex);
+      
+      // Incluir id_evaluacion si está disponible
+      if (evaluationId) {
+        formData.append('id_evaluacion', evaluationId);
+      }
 
       const token = document.head?.querySelector('meta[name="csrf-token"]');
       if (token) {

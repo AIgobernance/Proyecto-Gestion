@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Database\Models\EvaluacionRepository;
 use Database\Models\RespuestasRepository;
 use Database\Models\ResultadosRepository;
+use Database\Models\DocumentosAdjuntosRepository;
 use App\Services\N8nService;
 
 class EvaluationController extends Controller
@@ -15,17 +16,20 @@ class EvaluationController extends Controller
     protected EvaluacionRepository $evaluacionRepository;
     protected RespuestasRepository $respuestasRepository;
     protected ResultadosRepository $resultadosRepository;
+    protected DocumentosAdjuntosRepository $documentosRepository;
     protected N8nService $n8nService;
 
     public function __construct(
         EvaluacionRepository $evaluacionRepository,
         RespuestasRepository $respuestasRepository,
         ResultadosRepository $resultadosRepository,
+        DocumentosAdjuntosRepository $documentosRepository,
         N8nService $n8nService
     ) {
         $this->evaluacionRepository = $evaluacionRepository;
         $this->respuestasRepository = $respuestasRepository;
         $this->resultadosRepository = $resultadosRepository;
+        $this->documentosRepository = $documentosRepository;
         $this->n8nService = $n8nService;
     }
 
@@ -557,6 +561,7 @@ class EvaluationController extends Controller
             $request->validate([
                 'documento' => 'required|file|mimes:pdf|max:2048', // 2MB máximo
                 'indice' => 'required|integer|min:0|max:2', // Índice del documento (0, 1, 2)
+                'id_evaluacion' => 'nullable|integer', // ID de evaluación (opcional)
             ]);
 
             // Obtener el usuario de la sesión
@@ -568,8 +573,38 @@ class EvaluationController extends Controller
                 ], 401);
             }
 
+            $userId = $userData['id'] ?? $userData['Id'] ?? null;
+            if (!$userId) {
+                return response()->json([
+                    'error' => 'ID de usuario no encontrado'
+                ], 400);
+            }
+
             $file = $request->file('documento');
             $indice = $request->input('indice');
+            $idEvaluacion = $request->input('id_evaluacion');
+
+            // Si no se proporciona id_evaluacion, buscar la evaluación incompleta del usuario
+            if (!$idEvaluacion) {
+                $evaluacionIncompleta = $this->evaluacionRepository->obtenerIncompletaPorUsuario($userId, 50);
+                if ($evaluacionIncompleta) {
+                    $idEvaluacion = $evaluacionIncompleta['Id_Evaluacion'];
+                } else {
+                    // Si no hay evaluación incompleta, crear una nueva
+                    $idEvaluacion = $this->evaluacionRepository->crear([
+                        'Id_Usuario' => $userId,
+                        'Estado' => 'En proceso',
+                    ]);
+                }
+            } else {
+                // Verificar que la evaluación pertenece al usuario
+                $evaluacion = $this->evaluacionRepository->obtenerPorId($idEvaluacion);
+                if (!$evaluacion || $evaluacion['Id_Usuario'] != $userId) {
+                    return response()->json([
+                        'error' => 'Evaluación no encontrada o no autorizada'
+                    ], 404);
+                }
+            }
 
             // Generar nombre único para el archivo
             $nombreOriginal = $file->getClientOriginalName();
@@ -579,6 +614,27 @@ class EvaluationController extends Controller
             // Guardar el archivo en storage/app/public/evaluations/documents
             $rutaArchivo = $file->storeAs('evaluations/documents', $nombreArchivo, 'public');
 
+            // Guardar en la base de datos (tabla Documentos_Adjuntos)
+            try {
+                $idDocumento = $this->documentosRepository->guardar(
+                    $idEvaluacion,
+                    $nombreArchivo,
+                    'pdf' // Tipo siempre "pdf"
+                );
+
+                Log::info('Documento guardado en BD', [
+                    'id_documento' => $idDocumento,
+                    'id_evaluacion' => $idEvaluacion,
+                    'nombre_archivo' => $nombreArchivo
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('No se pudo guardar documento en BD, pero el archivo se subió', [
+                    'error' => $e->getMessage(),
+                    'ruta' => $rutaArchivo
+                ]);
+                // Continuar aunque falle el guardado en BD
+            }
+
             // Obtener la URL pública del archivo
             $urlArchivo = asset('storage/' . $rutaArchivo);
 
@@ -586,7 +642,8 @@ class EvaluationController extends Controller
                 'nombre_original' => $nombreOriginal,
                 'nombre_archivo' => $nombreArchivo,
                 'ruta' => $rutaArchivo,
-                'indice' => $indice
+                'indice' => $indice,
+                'id_evaluacion' => $idEvaluacion
             ]);
 
             return response()->json([
@@ -598,6 +655,7 @@ class EvaluationController extends Controller
                     'url' => $urlArchivo,
                     'indice' => $indice,
                     'tamaño' => $file->getSize(),
+                    'id_evaluacion' => $idEvaluacion,
                 ]
             ], 200);
 

@@ -567,6 +567,17 @@ class EvaluacionRepository
                 
                 $totalRespuestas = $respuestasRepository->contarPorEvaluacion($idEvaluacion);
                 
+                // Si tiene exactamente 50 respuestas, considerarla completada (aunque el estado no lo indique)
+                if ($totalRespuestas >= $totalPreguntas) {
+                    // Actualizar el estado a "Completada" si no lo está
+                    if ($estado !== 'Completada' && $estado !== 'Completado') {
+                        DB::table($this->table)
+                            ->where('Id_Evaluacion', $idEvaluacion)
+                            ->update(['Estado' => 'Completada']);
+                    }
+                    continue; // Saltar evaluaciones completadas
+                }
+                
                 // Si tiene menos respuestas que el total esperado, está incompleta
                 if ($totalRespuestas < $totalPreguntas) {
                     $evalArray = (array) $evaluacion;
