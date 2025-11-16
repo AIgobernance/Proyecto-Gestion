@@ -8,7 +8,6 @@ import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../ui/dialog";
 import { UploadPhotoModal } from "./UploadPhotoModal";
 import { PasswordResetSuccessModal } from "./PasswordResetSuccessModal";
 
@@ -119,58 +118,6 @@ label{color:#0b1324;font-weight:700;margin-bottom:6px;display:block}
   overflow:hidden;
 }
 
-/* Modal de éxito mejorado */
-.modal-success-close{
-  position:absolute; top:12px; right:12px;
-  width:36px;height:36px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;
-  display:inline-flex;align-items:center;justify-content:center; cursor:pointer;
-  z-index:10;
-  transition:background .15s ease;
-}
-.modal-success-close:hover{ background:#f7f9ff }
-
-.modal-success-head{
-  padding:28px 28px 12px;
-  display:flex;flex-direction:column;align-items:center;gap:14px;
-}
-
-.modal-success-icon{
-  width:72px;height:72px;border-radius:50%;
-  background:linear-gradient(135deg,#e8fff3,#f5fff9);
-  color:#129c55;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 10px 26px rgba(18,156,85,.18);
-}
-
-.modal-success-title{
-  margin:0;font-size:24px;font-weight:900;color:#0f172a;text-align:center;
-}
-
-.modal-success-desc{
-  margin:0;font-size:15px;color:#334155;text-align:center;
-}
-
-.modal-success-body{
-  padding:16px 28px 28px;
-}
-
-.modal-success-btn{
-  width:100%;
-  background:linear-gradient(90deg,#4d82bc,#5a8fc9);
-  color:#fff;
-  border-radius:999px;
-  padding:12px 20px;
-  font-weight:800;
-  border:none;
-  cursor:pointer;
-  box-shadow:0 12px 30px rgba(2,6,23,.18);
-  transition:filter .15s ease;
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-}
-
-.modal-success-btn:hover{
-  filter:brightness(1.02);
-}
 `;
 
 /* ======================== Componente ======================== */
@@ -999,35 +946,77 @@ export function UserManagementPage({ onBack }) {
       </main>
 
       {/* ===== Modal Éxito: Crear Usuario ===== */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="max-w-[520px] p-0">
-          <DialogTitle className="sr-only">Usuario creado</DialogTitle>
-          <DialogDescription className="sr-only">Usuario creado con éxito</DialogDescription>
+      {showSuccessModal && (
+        <>
+          <style>{`
+            .overlay-user-success{
+              position:fixed; inset:0; z-index:60;
+              background:rgba(10,15,30,.55);
+              backdrop-filter:blur(2.5px);
+              display:flex; align-items:center; justify-content:center;
+              padding:16px;
+            }
+            .card-user-success{
+              width:100%; max-width:520px;
+              background:#fff; border:1px solid #e9edf5;
+              border-radius:24px; box-shadow:0 24px 64px rgba(2,6,23,.28);
+              position:relative; overflow:hidden;
+            }
+            .user-success-close{
+              position:absolute; top:12px; right:12px;
+              width:36px;height:36px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;
+              display:inline-flex;align-items:center;justify-content:center; cursor:pointer;
+              z-index:10;
+              transition:background .15s ease;
+            }
+            .user-success-close:hover{ background:#f7f9ff }
 
-          <button 
-            className="modal-success-close" 
-            aria-label="Cerrar" 
-            onClick={handleContinueAfterSuccess}
-          >
-            <X className="w-5 h-5" style={{color:"#64748b"}} />
-          </button>
+            .user-success-head{ padding:28px 28px 12px; display:flex;flex-direction:column;align-items:center;gap:14px}
+            .user-success-icon{
+              width:72px;height:72px;border-radius:50%;
+              background:linear-gradient(135deg,#e8fff3,#f5fff9);
+              color:#129c55; display:flex;align-items:center;justify-content:center;
+              box-shadow:0 10px 26px rgba(18,156,85,.18);
+            }
+            .user-success-title{margin:0;font-size:24px;font-weight:900;color:#0f172a;text-align:center}
+            .user-success-desc{margin:0;font-size:15px;color:#334155;text-align:center}
 
-          <div className="modal-success-head">
-            <div className="modal-success-icon">
-              <CheckCircle2 className="w-9 h-9" />
+            .user-success-body{padding:16px 28px 28px}
+            .user-success-btn{
+              width:100%;
+              background:linear-gradient(90deg,#4d82bc,#5a8fc9); color:#fff;
+              border-radius:999px; padding:12px 20px; font-weight:800; border:none; cursor:pointer;
+              box-shadow:0 12px 30px rgba(2,6,23,.18);
+              transition:filter .15s ease;
+              display:inline-flex;align-items:center;justify-content:center;gap:8px;
+            }
+            .user-success-btn:hover{ filter:brightness(1.02) }
+          `}</style>
+
+          <div className="overlay-user-success" role="dialog" aria-modal="true" onClick={(e)=>e.stopPropagation()}>
+            <div className="card-user-success">
+              <button className="user-success-close" aria-label="Cerrar" onClick={handleContinueAfterSuccess}>
+                <X className="w-5 h-5" style={{color:"#64748b"}} />
+              </button>
+
+              <div className="user-success-head">
+                <div className="user-success-icon">
+                  <CheckCircle2 className="w-9 h-9" />
+                </div>
+                <h3 className="user-success-title">¡Usuario creado con éxito!</h3>
+                <p className="user-success-desc">El usuario fue agregado a la plataforma correctamente.</p>
+              </div>
+
+              <div className="user-success-body">
+                <button className="user-success-btn" onClick={handleContinueAfterSuccess}>
+                  <CheckCircle2 className="w-5 h-5" />
+                  Continuar
+                </button>
+              </div>
             </div>
-            <h3 className="modal-success-title">¡Usuario creado con éxito!</h3>
-            <p className="modal-success-desc">El usuario fue agregado a la plataforma correctamente.</p>
           </div>
-
-          <div className="modal-success-body">
-            <button className="modal-success-btn" onClick={handleContinueAfterSuccess}>
-              <CheckCircle2 className="w-5 h-5" />
-              Continuar
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
 
       {/* ===== Modal Éxito: Restablecer Contraseña ===== */}
       {showPasswordResetSuccessModal && (

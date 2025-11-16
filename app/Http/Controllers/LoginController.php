@@ -35,11 +35,18 @@ class LoginController extends Controller
         }
 
         try {
-            // Primero verificar si el usuario existe y está activo
-            $usuarioBD = $this->usuarioRepository->obtenerPorCorreo($request->username);
-            if (!$usuarioBD) {
-                $usuarioBD = $this->usuarioRepository->obtenerPorNombreUsuario($request->username);
-            }
+            // Optimización: buscar usuario una sola vez usando OR (evita consultas duplicadas)
+            $usuarioBD = \Illuminate\Support\Facades\DB::table('usuario')
+                ->select([
+                    'Id', 'Nombre_Usuario', 'Correo', 'Contrasena', 'Rol', 'Activate',
+                    'Empresa', 'NIT', 'Tipo_Documento', 'Numero_Documento',
+                    'Sector', 'Pais', 'Telefono', 'Foto_Perfil'
+                ])
+                ->where(function($query) use ($request) {
+                    $query->where('Correo', $request->username)
+                          ->orWhere('Nombre_Usuario', $request->username);
+                })
+                ->first();
             
             // Si el usuario existe, verificar si está activo
             if ($usuarioBD) {
@@ -56,13 +63,6 @@ class LoginController extends Controller
                     $isActive = ((int)$activateValue == 1);
                 }
                 
-                Log::info('Verificación previa de estado Activate en LoginController', [
-                    'correo' => $usuarioBD->Correo ?? 'NO_CORREO',
-                    'activate_raw' => $activateValue,
-                    'activate_type' => gettype($activateValue),
-                    'isActive' => $isActive
-                ]);
-                
                 if (!$isActive) {
                     return response()->json([
                         'message' => 'Usuario desactivado',
@@ -73,9 +73,11 @@ class LoginController extends Controller
             }
             
             // Intentar autenticar al usuario usando Factory Method
+            // Pasar $usuarioBD para evitar consulta duplicada
             $usuario = $this->usuarioRepository->autenticar(
                 $request->username,
-                $request->password
+                $request->password,
+                $usuarioBD // Pasar el usuario ya obtenido
             );
 
             if (!$usuario) {
@@ -88,12 +90,34 @@ class LoginController extends Controller
             // Obtener datos del usuario usando el método toArray() de la interfaz
             $userData = $usuario->toArray();
             
-            // Asegurar que el ID esté presente (puede ser null en algunos casos)
+            // Asegurar que el ID esté presente (usar el usuarioBD ya obtenido)
             if (!isset($userData['id']) || $userData['id'] === null) {
-                // Si no hay ID en toArray(), obtenerlo directamente de la BD
-                $usuarioBD = $this->usuarioRepository->obtenerPorCorreo($userData['correo']);
-                if ($usuarioBD) {
-                    $userData['id'] = $usuarioBD->Id ?? $usuarioBD->id ?? null;
+                if ($usuarioBD && isset($usuarioBD->Id)) {
+                    $userData['id'] = $usuarioBD->Id;
+                } elseif (isset($userData['correo'])) {
+                    // Solo hacer consulta adicional si realmente es necesario
+                    $usuarioBD = $this->usuarioRepository->obtenerPorCorreo($userData['correo']);
+                    if ($usuarioBD) {
+                        $userData['id'] = $usuarioBD->Id ?? $usuarioBD->id ?? null;
+                    }
+                }
+            }
+
+            // Actualizar la fecha de última conexión
+            if (isset($userData['id']) && $userData['id'] !== null) {
+                try {
+                    $this->usuarioRepository->actualizar($userData['id'], [
+                        'Fecha_Ultima_Conexion' => now()
+                    ]);
+                    Log::info('Fecha de última conexión actualizada', [
+                        'user_id' => $userData['id']
+                    ]);
+                } catch (\Exception $e) {
+                    // No fallar el login si no se puede actualizar la fecha
+                    Log::warning('No se pudo actualizar la fecha de última conexión', [
+                        'user_id' => $userData['id'] ?? 'NO_ID',
+                        'error' => $e->getMessage()
+                    ]);
                 }
             }
 

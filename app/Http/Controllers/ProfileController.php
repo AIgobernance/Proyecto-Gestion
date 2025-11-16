@@ -38,26 +38,30 @@ class ProfileController extends Controller
             // El ID puede estar en diferentes campos dependiendo de cómo se guardó
             $userId = $userData['id'] ?? $userData['Id'] ?? null;
 
+            if (!$userId && isset($userData['correo'])) {
+                // Si no hay ID en la sesión, buscar por correo y actualizar sesión
+                $usuario = $this->usuarioRepository->obtenerPorCorreo($userData['correo']);
+                if ($usuario && isset($usuario->Id)) {
+                    $userId = $usuario->Id;
+                    // Actualizar la sesión con el ID encontrado
+                    $userData['id'] = $userId;
+                    $request->session()->put('user', $userData);
+                    $request->session()->save();
+                }
+            }
+            
             if (!$userId) {
-                // Si no hay ID en la sesión, intentar buscar por correo
-                if (isset($userData['correo'])) {
-                    Log::info('Buscando usuario por correo porque no hay ID en sesión', ['correo' => $userData['correo']]);
-                    $usuario = $this->usuarioRepository->obtenerPorCorreo($userData['correo']);
-                    if ($usuario) {
-                        $userId = $usuario->Id ?? $usuario->id ?? null;
-                    }
-                }
-                
-                if (!$userId) {
-                    Log::warning('Usuario autenticado pero sin ID en sesión', ['userData' => $userData]);
-                    return response()->json([
-                        'message' => 'Error: No se pudo identificar al usuario'
-                    ], 400);
-                }
+                Log::warning('Usuario autenticado pero sin ID en sesión', ['userData' => array_keys($userData)]);
+                return response()->json([
+                    'message' => 'Error: No se pudo identificar al usuario'
+                ], 400);
             }
 
             // Obtener datos completos del usuario desde la BD
-            $usuario = $this->usuarioRepository->obtenerPorId($userId);
+            // Optimización: si ya tenemos el usuario de la búsqueda anterior, reutilizarlo
+            if (!isset($usuario)) {
+                $usuario = $this->usuarioRepository->obtenerPorId($userId);
+            }
 
             if (!$usuario) {
                 return response()->json([
@@ -112,28 +116,23 @@ class ProfileController extends Controller
             // El ID puede estar en diferentes campos dependiendo de cómo se guardó
             $userId = $userData['id'] ?? $userData['Id'] ?? null;
 
+            if (!$userId && isset($userData['correo'])) {
+                // Si no hay ID en la sesión, buscar por correo y actualizar sesión
+                $usuario = $this->usuarioRepository->obtenerPorCorreo($userData['correo']);
+                if ($usuario && isset($usuario->Id)) {
+                    $userId = $usuario->Id;
+                    // Actualizar la sesión con el ID encontrado
+                    $userData['id'] = $userId;
+                    $request->session()->put('user', $userData);
+                    $request->session()->save();
+                }
+            }
+            
             if (!$userId) {
-                // Si no hay ID en la sesión, intentar buscar por correo
-                if (isset($userData['correo'])) {
-                    Log::info('Buscando usuario por correo para actualizar perfil', ['correo' => $userData['correo']]);
-                    $usuario = $this->usuarioRepository->obtenerPorCorreo($userData['correo']);
-                    if ($usuario) {
-                        $userId = $usuario->Id ?? $usuario->id ?? null;
-                        // Actualizar la sesión con el ID encontrado
-                        if ($userId) {
-                            $userData['id'] = $userId;
-                            $request->session()->put('user', $userData);
-                            $request->session()->save();
-                        }
-                    }
-                }
-                
-                if (!$userId) {
-                    Log::warning('Usuario autenticado pero sin ID en sesión al actualizar', ['userData' => $userData]);
-                    return response()->json([
-                        'message' => 'Error: No se pudo identificar al usuario'
-                    ], 400);
-                }
+                Log::warning('Usuario autenticado pero sin ID en sesión al actualizar', ['userData' => array_keys($userData)]);
+                return response()->json([
+                    'message' => 'Error: No se pudo identificar al usuario'
+                ], 400);
             }
 
             // Validar los datos del formulario
@@ -154,13 +153,20 @@ class ProfileController extends Controller
                 ], 422);
             }
 
-            // Verificar si el correo ya está en uso por otro usuario
-            $usuarioExistente = $this->usuarioRepository->obtenerPorCorreo($request->email);
-            if ($usuarioExistente && ($usuarioExistente->Id != $userId)) {
-                return response()->json([
-                    'message' => 'El correo electrónico ya está en uso',
-                    'errors' => ['email' => ['Este correo ya está registrado']]
-                ], 422);
+            // Verificar si el correo ya está en uso por otro usuario (solo si cambió el correo)
+            if ($request->email !== ($userData['correo'] ?? '')) {
+                // Optimización: usar exists() en lugar de obtener el usuario completo
+                $correoExiste = \Illuminate\Support\Facades\DB::table('usuario')
+                    ->where('Correo', $request->email)
+                    ->where('Id', '!=', $userId)
+                    ->exists();
+                    
+                if ($correoExiste) {
+                    return response()->json([
+                        'message' => 'El correo electrónico ya está en uso',
+                        'errors' => ['email' => ['Este correo ya está registrado']]
+                    ], 422);
+                }
             }
 
             // Preparar datos para actualizar
@@ -247,25 +253,22 @@ class ProfileController extends Controller
             // El ID puede estar en diferentes campos dependiendo de cómo se guardó
             $userId = $userData['id'] ?? $userData['Id'] ?? null;
 
+            if (!$userId && isset($userData['correo'])) {
+                // Si no hay ID en la sesión, buscar por correo y actualizar sesión
+                $usuario = $this->usuarioRepository->obtenerPorCorreo($userData['correo']);
+                if ($usuario && isset($usuario->Id)) {
+                    $userId = $usuario->Id;
+                    // Actualizar la sesión con el ID encontrado
+                    $userData['id'] = $userId;
+                    $request->session()->put('user', $userData);
+                    $request->session()->save();
+                }
+            }
+            
             if (!$userId) {
-                // Si no hay ID en la sesión, intentar buscar por correo
-                if (isset($userData['correo'])) {
-                    $usuario = $this->usuarioRepository->obtenerPorCorreo($userData['correo']);
-                    if ($usuario) {
-                        $userId = $usuario->Id ?? $usuario->id ?? null;
-                        if ($userId) {
-                            $userData['id'] = $userId;
-                            $request->session()->put('user', $userData);
-                            $request->session()->save();
-                        }
-                    }
-                }
-                
-                if (!$userId) {
-                    return response()->json([
-                        'message' => 'Error: No se pudo identificar al usuario'
-                    ], 400);
-                }
+                return response()->json([
+                    'message' => 'Error: No se pudo identificar al usuario'
+                ], 400);
             }
 
             // Guardar la imagen en storage

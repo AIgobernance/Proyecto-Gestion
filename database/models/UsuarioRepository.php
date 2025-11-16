@@ -13,6 +13,11 @@ class UsuarioRepository
      * Nombre de la tabla en la base de datos
      */
     protected string $table = 'usuario';
+    
+    /**
+     * Cache para verificación de columna Fecha_Creacion
+     */
+    protected static ?bool $tieneFechaCreacionCache = null;
 
     /**
      * Verifica si un correo ya existe en la base de datos
@@ -22,11 +27,10 @@ class UsuarioRepository
      */
     public function existeCorreo(string $correo): bool
     {
-        $result = DB::table($this->table)
+        // Optimización: usar exists() en lugar de first() para mejor rendimiento
+        return DB::table($this->table)
             ->where('Correo', $correo)
-            ->first();
-
-        return $result !== null;
+            ->exists();
     }
 
     /**
@@ -38,12 +42,11 @@ class UsuarioRepository
      */
     public function existeDocumento(string $tipoDocumento, string $numeroDocumento): bool
     {
-        $result = DB::table($this->table)
+        // Optimización: usar exists() en lugar de first() para mejor rendimiento
+        return DB::table($this->table)
             ->where('Tipo_Documento', $tipoDocumento)
             ->where('Numero_Documento', $numeroDocumento)
-            ->first();
-
-        return $result !== null;
+            ->exists();
     }
 
     /**
@@ -83,13 +86,40 @@ class UsuarioRepository
             
             $lastError = null;
             
+            // Verificar si la columna Fecha_Creacion existe (usar cache estático)
+            if (self::$tieneFechaCreacionCache === null) {
+                try {
+                    $columnaExiste = DB::selectOne("
+                        SELECT COUNT(*) as existe 
+                        FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_NAME = ? AND COLUMN_NAME = 'Fecha_Creacion'
+                    ", [$this->table]);
+                    self::$tieneFechaCreacionCache = ($columnaExiste && $columnaExiste->existe > 0);
+                } catch (\Exception $e) {
+                    // Si no se puede verificar, asumir que no existe
+                    self::$tieneFechaCreacionCache = false;
+                    Log::warning('No se pudo verificar si existe la columna Fecha_Creacion', [
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            $tieneFechaCreacion = self::$tieneFechaCreacionCache;
+            
             foreach ($activateAttempts as $activateAttempt) {
                 try {
                     // Construir la consulta SQL directa
-                    $sql = "INSERT INTO [{$this->table}] 
-                            ([Nombre_Usuario], [Empresa], [NIT], [Tipo_Documento], [Numero_Documento], 
-                             [Sector], [Pais], [Correo], [Telefono], [Contrasena], [Rol], [Activate]) 
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    // Incluir Fecha_Creacion solo si la columna existe
+                    if ($tieneFechaCreacion) {
+                        $sql = "INSERT INTO [{$this->table}] 
+                                ([Nombre_Usuario], [Empresa], [NIT], [Tipo_Documento], [Numero_Documento], 
+                                 [Sector], [Pais], [Correo], [Telefono], [Contrasena], [Rol], [Activate], [Fecha_Creacion]) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
+                    } else {
+                        $sql = "INSERT INTO [{$this->table}] 
+                                ([Nombre_Usuario], [Empresa], [NIT], [Tipo_Documento], [Numero_Documento], 
+                                 [Sector], [Pais], [Correo], [Telefono], [Contrasena], [Rol], [Activate]) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    }
                     
                     $params = [
                         $datosInsert['Nombre_Usuario'],
@@ -169,7 +199,13 @@ class UsuarioRepository
      */
     public function obtenerPorId(int $id): ?object
     {
+        // Optimización: seleccionar solo los campos necesarios
         return DB::table($this->table)
+            ->select([
+                'Id', 'Nombre_Usuario', 'Correo', 'Contrasena', 'Rol', 'Activate',
+                'Empresa', 'NIT', 'Tipo_Documento', 'Numero_Documento',
+                'Sector', 'Pais', 'Telefono', 'Foto_Perfil'
+            ])
             ->where('Id', $id)
             ->first();
     }
@@ -182,7 +218,13 @@ class UsuarioRepository
      */
     public function obtenerPorCorreo(string $correo): ?object
     {
+        // Optimización: seleccionar solo los campos necesarios
         return DB::table($this->table)
+            ->select([
+                'Id', 'Nombre_Usuario', 'Correo', 'Contrasena', 'Rol', 'Activate',
+                'Empresa', 'NIT', 'Tipo_Documento', 'Numero_Documento',
+                'Sector', 'Pais', 'Telefono', 'Foto_Perfil'
+            ])
             ->where('Correo', $correo)
             ->first();
     }
@@ -195,7 +237,13 @@ class UsuarioRepository
      */
     public function obtenerPorNombreUsuario(string $nombreUsuario): ?object
     {
+        // Optimización: seleccionar solo los campos necesarios
         return DB::table($this->table)
+            ->select([
+                'Id', 'Nombre_Usuario', 'Correo', 'Contrasena', 'Rol', 'Activate',
+                'Empresa', 'NIT', 'Tipo_Documento', 'Numero_Documento',
+                'Sector', 'Pais', 'Telefono', 'Foto_Perfil'
+            ])
             ->where('Nombre_Usuario', $nombreUsuario)
             ->first();
     }
@@ -205,16 +253,25 @@ class UsuarioRepository
      *
      * @param string $identificador Correo o nombre de usuario
      * @param string $contrasena Contraseña sin hashear
+     * @param object|null $usuarioBD Usuario ya obtenido (para evitar consultas duplicadas)
      * @return UsuarioInterface|null Usuario si las credenciales son correctas, null si no
      */
-    public function autenticar(string $identificador, string $contrasena): ?UsuarioInterface
+    public function autenticar(string $identificador, string $contrasena, ?object $usuarioBD = null): ?UsuarioInterface
     {
-        // Intentar buscar por correo primero
-        $usuarioBD = $this->obtenerPorCorreo($identificador);
-        
-        // Si no se encuentra por correo, intentar por nombre de usuario
+        // Si no se proporciona el usuario, buscarlo
         if (!$usuarioBD) {
-            $usuarioBD = $this->obtenerPorNombreUsuario($identificador);
+            // Optimización: buscar por correo o nombre en una sola consulta usando OR
+            $usuarioBD = DB::table($this->table)
+                ->select([
+                    'Id', 'Nombre_Usuario', 'Correo', 'Contrasena', 'Rol', 'Activate',
+                    'Empresa', 'NIT', 'Tipo_Documento', 'Numero_Documento',
+                    'Sector', 'Pais', 'Telefono', 'Foto_Perfil'
+                ])
+                ->where(function($query) use ($identificador) {
+                    $query->where('Correo', $identificador)
+                          ->orWhere('Nombre_Usuario', $identificador);
+                })
+                ->first();
         }
         
         // Si no se encuentra el usuario, retornar null
@@ -326,7 +383,9 @@ class UsuarioRepository
             'Telefono',
             'Rol',
             'Activate',
-            'Foto_Perfil' // Agregar soporte para foto de perfil
+            'Foto_Perfil', // Agregar soporte para foto de perfil
+            'Fecha_Actualizacion', // Fecha de actualización de datos
+            'Fecha_Ultima_Conexion' // Fecha de última conexión
         ];
 
         $datosActualizar = [];
@@ -340,6 +399,16 @@ class UsuarioRepository
         if (isset($datos['contrasena'])) {
             $datosActualizar['Contrasena'] = Hash::make($datos['contrasena']);
             Log::info('Contraseña hasheada para actualización', ['usuario_id' => $id]);
+        }
+
+        // Si no se está actualizando explícitamente Fecha_Actualizacion, agregarla automáticamente
+        // Solo si hay otros campos que actualizar (no solo fechas)
+        if (!isset($datosActualizar['Fecha_Actualizacion']) && !empty($datosActualizar)) {
+            // Verificar que no sea solo una actualización de fecha de conexión
+            $camposSinFechas = array_diff(array_keys($datosActualizar), ['Fecha_Ultima_Conexion', 'Fecha_Actualizacion']);
+            if (!empty($camposSinFechas)) {
+                $datosActualizar['Fecha_Actualizacion'] = now();
+            }
         }
 
         if (empty($datosActualizar)) {
@@ -419,9 +488,33 @@ class UsuarioRepository
             
             // Actualizar los demás campos si hay alguno
             if (!empty($datosActualizar)) {
-                $filasAfectadas = DB::table($this->table)
-                    ->where('Id', $id)
-                    ->update($datosActualizar);
+                // Si hay campos de fecha, usar SQL directo para usar GETDATE() de SQL Server
+                $tieneFechas = isset($datosActualizar['Fecha_Actualizacion']) || isset($datosActualizar['Fecha_Ultima_Conexion']);
+                
+                if ($tieneFechas) {
+                    // Construir la consulta SQL con GETDATE() para las fechas
+                    $setParts = [];
+                    $params = [];
+                    
+                    foreach ($datosActualizar as $campo => $valor) {
+                        if ($campo === 'Fecha_Actualizacion' || $campo === 'Fecha_Ultima_Conexion') {
+                            $setParts[] = "[{$campo}] = GETDATE()";
+                        } else {
+                            $setParts[] = "[{$campo}] = ?";
+                            $params[] = $valor;
+                        }
+                    }
+                    
+                    $params[] = $id; // Para el WHERE
+                    $sql = "UPDATE [{$this->table}] SET " . implode(', ', $setParts) . " WHERE [Id] = ?";
+                    
+                    $filasAfectadas = DB::update($sql, $params);
+                } else {
+                    // Usar el método normal de Laravel para campos sin fechas
+                    $filasAfectadas = DB::table($this->table)
+                        ->where('Id', $id)
+                        ->update($datosActualizar);
+                }
                 
                 Log::info('Campos adicionales actualizados', [
                     'usuario_id' => $id,
@@ -472,7 +565,13 @@ class UsuarioRepository
      */
     public function obtenerTodos(int $limit = 100, int $offset = 0): array
     {
+        // Optimización: seleccionar solo los campos necesarios para la lista
         return DB::table($this->table)
+            ->select([
+                'Id', 'Nombre_Usuario', 'Correo', 'Rol', 'Activate', 
+                'Empresa', 'Foto_Perfil'
+            ])
+            ->orderBy('Id', 'desc') // Ordenar por ID descendente para mostrar los más recientes primero
             ->skip($offset)
             ->take($limit)
             ->get()
