@@ -2,6 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RegisterController;
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 /*
 |---------------------------------------------------------------------------
 | Rutas para SPA (React)
@@ -11,6 +15,9 @@ use App\Http\Controllers\RegisterController;
 */
 
 Route::view('/', 'app');                      // Home
+
+// Rutas API (deben ir antes de las rutas de vista)
+Route::post('/register', [RegisterController::class, 'register']);
 
 // Públicas
 Route::view('/login', 'app');

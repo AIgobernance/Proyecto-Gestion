@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import imgRectangle13 from "../assets/logo-principal.jpg";
 import { ActivationLinkModal } from "./ActivationLinkModal";
 import { RegistrationSuccessModal } from "./RegistrationSuccessModal";
@@ -184,6 +185,7 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
   };
 
   const handleCreateAccount = async () => {
+<<<<<<< Updated upstream
   if (!validateForm()) {
     setNotice("Por favor corrija los errores en el formulario.");
     return;
@@ -212,6 +214,64 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
   }
 };
 
+=======
+    if (!validateForm()) { setNotice("Por favor corrija los errores en el formulario."); return; }
+    setIsSubmitting(true); setNotice("");
+    try {
+      // Usar window.axios (configurado en bootstrap.js) o axios como fallback
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/register', {
+        usuario: formData.usuario,
+        empresa: formData.empresa,
+        nit: formData.nit,
+        tipoDocumento: formData.tipoDocumento,
+        numeroDocumento: formData.numeroDocumento,
+        sector: formData.sector,
+        pais: formData.pais,
+        tamanoOrganizacional: formData.tamanoOrganizacional,
+        correo: formData.correo,
+        telefono: formData.telefono,
+        contrasena: formData.contrasena,
+      });
+
+      if (response.status === 201) {
+        setShowActivation(true);
+      }
+    } catch (error) {
+      console.error('Error al registrar:', error);
+      
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        
+        // Manejar errores de validación del backend
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const newErrors = {};
+          Object.keys(backendErrors).forEach(key => {
+            newErrors[key] = Array.isArray(backendErrors[key]) 
+              ? backendErrors[key][0] 
+              : backendErrors[key];
+          });
+          setErrors(newErrors);
+          setNotice(responseData.message || "Por favor corrija los errores en el formulario.");
+        } else {
+          // Mostrar el error específico si está disponible
+          const errorMessage = responseData.error || responseData.message || "Error al crear la cuenta. Intente nuevamente.";
+          setNotice(errorMessage);
+          
+          // Si hay detalles de debug, mostrarlos en consola
+          if (responseData.details) {
+            console.error('Detalles del error:', responseData.details);
+          }
+        }
+      } else {
+        setNotice("Error de conexión. Verifique su conexión a internet e intente nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+>>>>>>> Stashed changes
 
   const handleAcceptActivation = () => { setShowActivation(false); setShowSuccess(true); };
 
