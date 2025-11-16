@@ -288,15 +288,34 @@ class UsuarioRepository
         // Si se actualiza la contraseña, hashearla
         if (isset($datos['contrasena'])) {
             $datosActualizar['Contrasena'] = Hash::make($datos['contrasena']);
+            Log::info('Contraseña hasheada para actualización', ['usuario_id' => $id]);
         }
 
         if (empty($datosActualizar)) {
+            Log::warning('No hay datos para actualizar', ['usuario_id' => $id, 'datos_recibidos' => array_keys($datos)]);
             return false;
         }
 
-        return DB::table($this->table)
-            ->where('Id', $id)
-            ->update($datosActualizar) > 0;
+        try {
+            $filasAfectadas = DB::table($this->table)
+                ->where('Id', $id)
+                ->update($datosActualizar);
+            
+            Log::info('Actualización de usuario ejecutada', [
+                'usuario_id' => $id,
+                'filas_afectadas' => $filasAfectadas,
+                'campos_actualizados' => array_keys($datosActualizar)
+            ]);
+            
+            return $filasAfectadas > 0;
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar usuario en BD', [
+                'usuario_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     /**

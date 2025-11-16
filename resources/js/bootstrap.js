@@ -56,13 +56,35 @@ window.axios.interceptors.response.use(
         const newToken = response.headers['x-csrf-token'];
         if (newToken) {
             window.axios.defaults.headers.common['X-CSRF-TOKEN'] = newToken;
+            // Actualizar también el meta tag si existe
+            const metaToken = document.head?.querySelector('meta[name="csrf-token"]');
+            if (metaToken) {
+                metaToken.setAttribute('content', newToken);
+            }
         }
         return response;
     },
-    (error) => {
+    async (error) => {
         // Si hay un error 419 (CSRF token mismatch), intentar refrescar el token
         if (error.response && error.response.status === 419) {
-            setCsrfToken();
+            console.warn('CSRF token mismatch detectado, refrescando token...');
+            try {
+                // Intentar obtener un nuevo token del servidor
+                const response = await window.axios.get('/csrf-token');
+                if (response.data && response.data.token) {
+                    window.axios.defaults.headers.common['X-CSRF-TOKEN'] = response.data.token;
+                    // Actualizar el meta tag
+                    const metaToken = document.head?.querySelector('meta[name="csrf-token"]');
+                    if (metaToken) {
+                        metaToken.setAttribute('content', response.data.token);
+                    }
+                    console.log('Token CSRF refrescado exitosamente');
+                }
+            } catch (refreshError) {
+                console.error('Error al refrescar token CSRF:', refreshError);
+                // Fallback: intentar obtener del meta tag
+                setCsrfToken();
+            }
         }
         return Promise.reject(error);
     }

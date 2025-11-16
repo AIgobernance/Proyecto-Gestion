@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import { VerificationMethodModal } from "./VerificationMethodModal";
 import { CodeVerificationModal } from "./CodeVerificationModal";
 import { PasswordResetSuccessModal } from "./PasswordResetSuccessModal";
@@ -79,6 +80,8 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userData, setUserData] = useState(null); // Guardar datos del usuario después del login
 
   // Flujo de recuperación
   const [resetUsername, setResetUsername] = useState("");
@@ -86,13 +89,85 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetError, setResetError] = useState("");
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!username || !password) {
       setError("Por favor, complete todos los campos");
       return;
     }
+    
     setError("");
-    setVerificationStep("selectMethod");
+    setIsSubmitting(true);
+    
+    try {
+      // Asegurar que el token CSRF esté configurado antes de enviar
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+      
+      // Enviar petición de login al backend
+      const response = await axios.post('/login', {
+        username: username,
+        password: password,
+      });
+
+      if (response.status === 200 && response.data.user) {
+        // Verificar que el usuario sea administrador
+        const role = response.data.user.rol || 'usuario';
+        if (role !== 'admin') {
+          setError("Este usuario no tiene permisos de administrador");
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Login exitoso - Guardar datos del usuario y mostrar modal de selección de método de verificación
+        setUserData(response.data.user);
+        setVerificationStep("selectMethod");
+        return;
+      }
+    } catch (error) {
+      console.error('Error al iniciar sesión:', error);
+      
+      // Manejar error 401 (Unauthorized) - credenciales incorrectas
+      if (error.response && error.response.status === 401) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.username 
+            ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
+            : responseData.message || "Usuario o contraseña incorrectos";
+          setError(errorMessage);
+        } else {
+          setError(responseData.message || "Usuario o contraseña incorrectos");
+        }
+      } 
+      // Manejar error 419 (CSRF token mismatch)
+      else if (error.response && error.response.status === 419) {
+        setError("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
+        // Intentar refrescar el token CSRF
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+      }
+      // Otros errores
+      else if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.username 
+            ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
+            : responseData.message || "Error al iniciar sesión";
+          setError(errorMessage);
+        } else {
+          setError(responseData.message || "Error al iniciar sesión. Verifica tus credenciales.");
+        }
+      } else {
+        setError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Selección método 2FA
@@ -100,8 +175,15 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
   const handleSelectPhone = () => { setVerificationMethod("phone"); setVerificationStep("enterCode"); };
 
   // Verificación OK
-  const handleVerify = (code) => {
-    if (onLoginSuccess) onLoginSuccess(username);
+  const handleVerify = async (code) => {
+    // Verificar el código de verificación aquí
+    // TODO: Implementar verificación real del código con el backend
+    // Por ahora, si el código es válido, llamar al callback de éxito
+    if (code && code.length > 0) {
+      if (onLoginSuccess && userData) {
+        onLoginSuccess(userData.nombre || username, userData);
+      }
+    }
   };
   const handleBackToMethod = () => setVerificationStep("selectMethod");
   const handleCloseModal = () => setVerificationStep("login");
@@ -200,8 +282,12 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
 
               {/* Acciones */}
               <div className="actions">
-                <Button className="btn-primary" onClick={handleAccept}>
-                  Iniciar Sesión
+                <Button 
+                  className="btn-primary" 
+                  onClick={handleAccept}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Iniciando sesión..." : "Iniciar Sesión"}
                 </Button>
                 <Button className="btn-ghost" onClick={handleResetPassword}>
                   Restablecer Contraseña

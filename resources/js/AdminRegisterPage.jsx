@@ -302,6 +302,7 @@ export function AdminRegisterPage({ onBack, onLoginRedirect }) {
   const [notice, setNotice] = useState("");
 
   const [formData, setFormData] = useState({
+    nombre: "",
     usuario: "",
     empresa: "",
     nit: "",
@@ -326,9 +327,12 @@ export function AdminRegisterPage({ onBack, onLoginRedirect }) {
   const validate = () => {
     const e = {};
 
-    if (!formData.nombre.trim()) e.nombre = "El nombre es requerido";
-    if (!formData.tipoDocumento) e.tipoDocumento = "Seleccione un tipo";
-    if (!formData.numeroDocumento.trim()) e.numeroDocumento = "Número requerido";
+    // Validar solo campos básicos (sin información de empresa)
+    if (!formData.nombre.trim()) {
+      e.nombre = "El nombre es requerido";
+    }
+    if (!formData.tipoDocumento) e.tipoDocumento = "Seleccione un tipo de documento";
+    if (!formData.numeroDocumento.trim()) e.numeroDocumento = "Número de documento requerido";
 
     const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.correo.trim()) e.correo = "Ingrese un correo";
@@ -372,14 +376,9 @@ export function AdminRegisterPage({ onBack, onLoginRedirect }) {
       // Enviar petición al endpoint de registro de administradores
       const axiosClient = window.axios || axios;
       const response = await axiosClient.post('/admin/register', {
-        usuario: formData.usuario || formData.nombre,
-        empresa: formData.empresa,
-        nit: formData.nit,
+        nombre: formData.nombre,
         tipoDocumento: formData.tipoDocumento,
         numeroDocumento: formData.numeroDocumento,
-        sector: formData.sector,
-        pais: formData.pais,
-        tamanoOrganizacional: formData.tamanoOrganizacional,
         correo: formData.correo,
         telefono: formData.telefono,
         contrasena: formData.contrasena,

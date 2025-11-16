@@ -296,8 +296,8 @@ export default function App() {
                 <AdminLoginPage
                   onBack={() => navigate("/")}
                   onRegister={() => navigate("/admin/register")}
-                  onLoginSuccess={(username) => {
-                    auth.loginAsAdmin(username);
+                  onLoginSuccess={(username, userData) => {
+                    auth.loginAsAdmin(username, userData);
                     navigate("/admin/dashboard");
                   }}
                 />

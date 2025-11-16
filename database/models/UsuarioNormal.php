@@ -81,9 +81,32 @@ class UsuarioNormal implements UsuarioInterface
     public function recuperarContrasena(string $nuevaContrasena): bool
     {
         // Lógica específica para recuperar contraseña de usuario normal
-        Log::info('Usuario normal recuperando contraseña', ['usuario_id' => $this->id]);
-        // Aquí se implementaría la lógica de actualización de contraseña
-        return true;
+        if (!$this->id) {
+            Log::error('No se puede recuperar contraseña: ID de usuario no disponible');
+            return false;
+        }
+
+        try {
+            // Usar el repositorio para actualizar la contraseña en la BD
+            $repository = new \Database\Models\UsuarioRepository();
+            $resultado = $repository->actualizar($this->id, [
+                'contrasena' => $nuevaContrasena
+            ]);
+
+            if ($resultado) {
+                // Actualizar el hash en memoria
+                $this->contrasenaHash = Hash::make($nuevaContrasena);
+                Log::info('Usuario normal recuperó contraseña exitosamente', ['usuario_id' => $this->id]);
+            }
+
+            return $resultado;
+        } catch (\Exception $e) {
+            Log::error('Error al recuperar contraseña de usuario normal', [
+                'usuario_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
     }
 
     public function toArray(): array

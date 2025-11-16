@@ -97,7 +97,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
   const [error, setError] = useState("");
 
   // Estados para restablecer contraseña
-  const [resetUsername, setResetUsername] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetError, setResetError] = useState("");
@@ -200,20 +200,78 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
 
   // Reset contraseña
   const handleResetPassword = () => setVerificationStep("resetPassword");
-  const handleAcceptResetPassword = () => {
-    if (!resetUsername || !newPassword || !confirmPassword) return setResetError("Por favor, complete todos los campos");
-    if (newPassword !== confirmPassword) return setResetError("Las contraseñas no coinciden");
-    if (newPassword.length < 6) return setResetError("La contraseña debe tener al menos 6 caracteres");
-    setResetError(""); setVerificationStep("resetSelectMethod");
+  const handleAcceptResetPassword = async () => {
+    if (!resetEmail || !newPassword || !confirmPassword) {
+      setResetError("Por favor, complete todos los campos");
+      return;
+    }
+    
+    // Validar formato de correo
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resetEmail)) {
+      setResetError("Por favor, ingrese un correo electrónico válido");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setResetError("Las contraseñas no coinciden");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setResetError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    setResetError("");
+    setIsSubmitting(true);
+
+    try {
+      // Configurar token CSRF
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      // Enviar petición al backend para restablecer contraseña
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/password/reset', {
+        email: resetEmail,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+      });
+
+      if (response.status === 200) {
+        // Contraseña restablecida exitosamente, mostrar modal de éxito
+        setVerificationStep("resetSuccess");
+      }
+    } catch (error) {
+      console.error('Error al restablecer contraseña:', error);
+      
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.email 
+            ? (Array.isArray(backendErrors.email) ? backendErrors.email[0] : backendErrors.email)
+            : backendErrors.general
+            ? (Array.isArray(backendErrors.general) ? backendErrors.general[0] : backendErrors.general)
+            : responseData.message || "Error al restablecer la contraseña";
+          setResetError(errorMessage);
+        } else {
+          setResetError(responseData.message || "Error al restablecer la contraseña. Verifica los datos e intenta nuevamente.");
+        }
+      } else {
+        setResetError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   const handleCancelResetPassword = () => {
-    setResetUsername(""); setNewPassword(""); setConfirmPassword(""); setResetError(""); setVerificationStep("login");
+    setResetEmail(""); setNewPassword(""); setConfirmPassword(""); setResetError(""); setVerificationStep("login");
   };
-  const handleSelectEmailForReset = () => { setVerificationMethod("email"); setVerificationStep("resetEnterCode"); };
-  const handleSelectPhoneForReset = () => { setVerificationMethod("phone"); setVerificationStep("resetEnterCode"); };
-  const handleVerifyResetCode = () => setVerificationStep("resetSuccess");
   const handleResetSuccessContinue = () => { handleCancelResetPassword(); };
-  const handleBackToResetMethod = () => setVerificationStep("resetSelectMethod");
 
   return (
     <div className="page">
@@ -319,7 +377,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Restablecer Contraseña</DialogTitle>
-              <DialogDescription>Ingresa tu usuario y nueva contraseña</DialogDescription>
+              <DialogDescription>Ingresa tu correo electrónico y nueva contraseña</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
@@ -331,13 +389,13 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
               )}
 
               <div className="field">
-                <Label htmlFor="reset-username">Usuario</Label>
+                <Label htmlFor="reset-email">Correo Electrónico</Label>
                 <Input
-                  id="reset-username"
-                  type="text"
-                  placeholder="Ingresa tu usuario"
-                  value={resetUsername}
-                  onChange={(e) => setResetUsername(e.target.value)}
+                  id="reset-email"
+                  type="email"
+                  placeholder="Ingresa tu correo electrónico"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
                 />
               </div>
 
@@ -364,10 +422,20 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
               </div>
 
               <div style={{ display:"flex", gap:10, marginTop:6 }}>
-                <Button className="btn-primary btn-pill" style={{ flex:1 }} onClick={handleAcceptResetPassword}>
-                  Aceptar
+                <Button 
+                  className="btn-primary btn-pill" 
+                  style={{ flex:1 }} 
+                  onClick={handleAcceptResetPassword}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Procesando..." : "Aceptar"}
                 </Button>
-                <Button className="btn-pill" style={{ flex:1 }} onClick={handleCancelResetPassword}>
+                <Button 
+                  className="btn-pill" 
+                  style={{ flex:1 }} 
+                  onClick={handleCancelResetPassword}
+                  disabled={isSubmitting}
+                >
                   Cancelar
                 </Button>
               </div>
@@ -388,22 +456,6 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
             method={verificationMethod}
             onVerify={handleVerify}
             onBack={handleBackToMethod}
-          />
-        )}
-
-        {/* Verificación para reset */}
-        {verificationStep === "resetSelectMethod" && (
-          <VerificationMethodModal
-            onSelectEmail={handleSelectEmailForReset}
-            onSelectPhone={handleSelectPhoneForReset}
-            onClose={handleCancelResetPassword}
-          />
-        )}
-        {verificationStep === "resetEnterCode" && (
-          <CodeVerificationModal
-            method={verificationMethod}
-            onVerify={handleVerifyResetCode}
-            onBack={handleBackToResetMethod}
           />
         )}
 

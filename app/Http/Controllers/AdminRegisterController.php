@@ -19,16 +19,11 @@ class AdminRegisterController extends Controller
 
     public function register(Request $request)
     {
-        // Validar los datos del formulario
+        // Validar los datos del formulario (solo campos básicos para administrador)
         $validator = Validator::make($request->all(), [
-            'usuario' => 'required|string|max:255',
-            'empresa' => 'required|string|max:255',
-            'nit' => 'required|string|max:50',
+            'nombre' => 'required|string|max:255',
             'tipoDocumento' => 'required|string|in:CC,CE,Pasaporte',
             'numeroDocumento' => 'required|string|max:50',
-            'sector' => 'required|string|max:255',
-            'pais' => 'required|string|max:255',
-            'tamanoOrganizacional' => 'required|string|max:255',
             'correo' => 'required|email|max:255',
             'telefono' => 'required|string|max:20',
             'contrasena' => 'required|string|min:8',
@@ -59,14 +54,16 @@ class AdminRegisterController extends Controller
 
         try {
             // Preparar los datos para el repositorio - Usando Factory Method para crear Administrador
+            // Los administradores no requieren información de empresa
             $datosUsuario = [
-                'usuario' => $request->usuario,
-                'empresa' => $request->empresa,
-                'nit' => $request->nit,
+                'usuario' => $request->nombre, // Usar el nombre como usuario
+                'empresa' => $request->empresa ?? 'N/A', // Opcional, valor por defecto
+                'nit' => $request->nit ?? 'N/A', // Opcional, valor por defecto
                 'tipoDocumento' => $request->tipoDocumento,
                 'numeroDocumento' => $request->numeroDocumento,
-                'sector' => $request->sector,
-                'pais' => $request->pais,
+                'sector' => $request->sector ?? 'N/A', // Opcional, valor por defecto
+                'pais' => $request->pais ?? 'Colombia', // Opcional, valor por defecto
+                'tamanoOrganizacional' => $request->tamanoOrganizacional ?? 'N/A', // Opcional, valor por defecto
                 'correo' => $request->correo,
                 'telefono' => $request->telefono,
                 'contrasena' => $request->contrasena,
