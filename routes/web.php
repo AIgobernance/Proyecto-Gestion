@@ -29,6 +29,9 @@ Route::middleware(['web'])->group(function () {
     Route::post('/register', [RegisterController::class, 'register']);
     Route::post('/admin/register', [AdminRegisterController::class, 'register']);
     Route::post('/login', [LoginController::class, 'login']);
+    Route::post('/login/send-2fa', [LoginController::class, 'send2FACode']);
+    Route::post('/login/verify-2fa', [LoginController::class, 'verify2FA']);
+    Route::post('/login/resend-2fa', [LoginController::class, 'resend2FA']);
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/auth/check', [LoginController::class, 'check']);
     Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);

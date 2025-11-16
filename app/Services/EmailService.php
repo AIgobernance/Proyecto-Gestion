@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use App\Mail\AccountActivationMail;
+use App\Mail\TwoFactorCodeMail;
 use App\Services\JwtService;
 
 class EmailService
@@ -53,6 +54,36 @@ class EmailService
             return true;
         } catch (\Exception $e) {
             Log::error('Error al enviar email de activación', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Envía el código 2FA por email
+     *
+     * @param string $email Email del destinatario
+     * @param string $code Código de 6 dígitos
+     * @param string $username Nombre de usuario (opcional)
+     * @return bool True si se envió correctamente, false en caso contrario
+     */
+    public static function sendTwoFactorCode(string $email, string $code, string $username = 'Usuario'): bool
+    {
+        try {
+            Mail::to($email)->send(new TwoFactorCodeMail($code, $username));
+
+            Log::info('Código 2FA enviado por email', [
+                'email' => $email,
+                'username' => $username
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Error al enviar código 2FA por email', [
                 'email' => $email,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()

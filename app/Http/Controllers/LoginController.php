@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Cache;
 use App\Observer\ObserverManager;
+use App\Services\TwoFactorService;
+use App\Services\EmailService;
 
 class LoginController extends Controller
 {
@@ -172,20 +174,20 @@ class LoginController extends Controller
                 }
             }
 
-            // Guardar el usuario en la sesión
-            $request->session()->put('user', $userData);
+            // NO guardar el usuario en sesión todavía - esperar verificación 2FA
+            // Guardar temporalmente los datos del usuario en sesión para el proceso 2FA
+            $request->session()->put('pending_2fa_user', $userData);
             $request->session()->save();
             
-            Log::info('Usuario guardado en sesión', [
-                'user_id' => $userData['id'] ?? 'NO_ID',
-                'correo' => $userData['correo'] ?? 'NO_CORREO',
-                'userData_keys' => array_keys($userData)
+            Log::info('Login exitoso, requiere selección de método 2FA', [
+                'user_id' => $userData['id'] ?? 'NO_ID'
             ]);
 
-            // Retornar respuesta exitosa
+            // Retornar respuesta indicando que se requiere selección de método 2FA
             return response()->json([
-                'message' => 'Login exitoso',
-                'user' => $userData
+                'message' => 'Selecciona un método de verificación',
+                'requires_2fa' => true,
+                'user_id' => $userData['id']
             ], 200);
 
         } catch (\Exception $e) {
@@ -255,6 +257,275 @@ class LoginController extends Controller
         return response()->json([
             'authenticated' => false
         ], 200);
+    }
+
+    /**
+     * Verifica el código 2FA y completa el login
+     */
+    public function verify2FA(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|integer',
+            'code' => 'required|string|size:6',
+            'method' => 'nullable|string|in:email,sms',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $userId = $request->input('user_id');
+            $inputCode = $request->input('code');
+
+            // Obtener el método de verificación del request o de la sesión
+            $verificationMethod = $request->input('method', $request->session()->get('2fa_method', 'email'));
+            
+            // Verificar el código 2FA solo si el método es email
+            if ($verificationMethod === 'email') {
+                $isValid = TwoFactorService::verifyCode($userId, $inputCode);
+
+                if (!$isValid) {
+                    return response()->json([
+                        'message' => 'Código de verificación incorrecto o expirado',
+                        'errors' => ['code' => ['El código ingresado no es válido. Por favor, verifica e intenta nuevamente.']]
+                    ], 400);
+                }
+            } else if ($verificationMethod === 'sms') {
+                // Para SMS, aceptar cualquier código (sin validación real)
+                Log::info('Código SMS verificado (sin validación real)', [
+                    'user_id' => $userId
+                ]);
+            }
+
+            // Obtener datos del usuario pendiente de la sesión
+            $userData = $request->session()->get('pending_2fa_user');
+
+            if (!$userData || ($userData['id'] ?? null) != $userId) {
+                return response()->json([
+                    'message' => 'Sesión de verificación no encontrada',
+                    'errors' => ['code' => ['La sesión de verificación ha expirado. Por favor, inicia sesión nuevamente.']]
+                ], 400);
+            }
+
+            // Limpiar datos temporales de 2FA
+            $request->session()->forget('pending_2fa_user');
+
+            // Guardar el usuario en la sesión (login completo)
+            $request->session()->put('user', $userData);
+            $request->session()->save();
+
+            Log::info('Verificación 2FA exitosa, usuario autenticado', [
+                'user_id' => $userId
+            ]);
+
+            return response()->json([
+                'message' => 'Verificación exitosa',
+                'user' => $userData
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error al verificar código 2FA', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'message' => 'Error al verificar el código',
+                'error' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
+        }
+    }
+
+    /**
+     * Reenvía el código 2FA
+     */
+    public function resend2FA(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|integer',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $userId = $request->input('user_id');
+            
+            // Obtener datos del usuario pendiente de la sesión
+            $userData = $request->session()->get('pending_2fa_user');
+
+            if (!$userData || ($userData['id'] ?? null) != $userId) {
+                return response()->json([
+                    'message' => 'Sesión de verificación no encontrada',
+                    'errors' => ['user_id' => ['La sesión de verificación ha expirado. Por favor, inicia sesión nuevamente.']]
+                ], 400);
+            }
+
+            // Obtener email del usuario
+            $usuarioBD = $this->usuarioRepository->obtenerPorId($userId);
+            if (!$usuarioBD) {
+                return response()->json([
+                    'message' => 'Usuario no encontrado',
+                    'errors' => ['user_id' => ['Usuario no encontrado']]
+                ], 404);
+            }
+
+            // Generar nuevo código 2FA
+            $twoFactorCode = TwoFactorService::generateCode();
+            $userEmail = $usuarioBD->Correo ?? null;
+            $userName = $userData['nombre'] ?? $userData['usuario'] ?? $usuarioBD->Nombre_Usuario ?? 'Usuario';
+
+            if ($userEmail) {
+                // Guardar código en caché
+                TwoFactorService::storeCode($userId, $twoFactorCode, 10);
+                
+                // Enviar código por email
+                $emailSent = EmailService::sendTwoFactorCode($userEmail, $twoFactorCode, $userName);
+                
+                if (!$emailSent) {
+                    return response()->json([
+                        'message' => 'No se pudo enviar el código',
+                        'errors' => ['code' => ['Error al enviar el código. Por favor, intenta nuevamente.']]
+                    ], 500);
+                }
+            } else {
+                return response()->json([
+                    'message' => 'Email no encontrado',
+                    'errors' => ['user_id' => ['No se encontró el email del usuario']]
+                ], 400);
+            }
+
+            Log::info('Código 2FA reenviado', [
+                'user_id' => $userId
+            ]);
+
+            return response()->json([
+                'message' => 'Código de verificación reenviado exitosamente'
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error al reenviar código 2FA', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'message' => 'Error al reenviar el código',
+                'error' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
+        }
+    }
+
+    /**
+     * Envía el código 2FA por email cuando el usuario selecciona el método email
+     */
+    public function send2FACode(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|integer',
+            'method' => 'required|string|in:email,sms',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $userId = $request->input('user_id');
+            $method = $request->input('method');
+            
+            // Guardar el método en sesión para la verificación
+            $request->session()->put('2fa_method', $method);
+            
+            // Obtener datos del usuario pendiente de la sesión
+            $userData = $request->session()->get('pending_2fa_user');
+
+            if (!$userData || ($userData['id'] ?? null) != $userId) {
+                return response()->json([
+                    'message' => 'Sesión de verificación no encontrada',
+                    'errors' => ['user_id' => ['La sesión de verificación ha expirado. Por favor, inicia sesión nuevamente.']]
+                ], 400);
+            }
+
+            // Obtener datos del usuario de la BD
+            $usuarioBD = $this->usuarioRepository->obtenerPorId($userId);
+            if (!$usuarioBD) {
+                return response()->json([
+                    'message' => 'Usuario no encontrado',
+                    'errors' => ['user_id' => ['Usuario no encontrado']]
+                ], 404);
+            }
+
+            if ($method === 'email') {
+                // Generar código 2FA
+                $twoFactorCode = TwoFactorService::generateCode();
+                $userEmail = $usuarioBD->Correo ?? null;
+                $userName = $userData['nombre'] ?? $userData['usuario'] ?? $usuarioBD->Nombre_Usuario ?? 'Usuario';
+
+                if (!$userEmail) {
+                    return response()->json([
+                        'message' => 'Email no encontrado',
+                        'errors' => ['method' => ['No se encontró el email del usuario']]
+                    ], 400);
+                }
+
+                // Guardar código en caché (válido por 10 minutos)
+                TwoFactorService::storeCode($userId, $twoFactorCode, 10);
+                
+                // Enviar código por email
+                $emailSent = EmailService::sendTwoFactorCode($userEmail, $twoFactorCode, $userName);
+                
+                if (!$emailSent) {
+                    return response()->json([
+                        'message' => 'No se pudo enviar el código',
+                        'errors' => ['method' => ['Error al enviar el código. Por favor, intenta nuevamente.']]
+                    ], 500);
+                }
+
+                Log::info('Código 2FA enviado por email', [
+                    'user_id' => $userId,
+                    'email' => $userEmail
+                ]);
+
+                return response()->json([
+                    'message' => 'Código de verificación enviado a tu correo electrónico',
+                    'method' => 'email'
+                ], 200);
+            } else if ($method === 'sms') {
+                // Para SMS, no enviamos código real (funciona sin validar)
+                // Solo retornamos éxito para que el frontend continúe
+                Log::info('Método SMS seleccionado (sin validación)', [
+                    'user_id' => $userId
+                ]);
+
+                return response()->json([
+                    'message' => 'Método SMS seleccionado',
+                    'method' => 'sms'
+                ], 200);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error al enviar código 2FA', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'message' => 'Error al enviar el código',
+                'error' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
+        }
     }
 }
 

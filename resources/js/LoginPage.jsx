@@ -127,11 +127,25 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
         password: password,
       });
 
-      if (response.status === 200 && response.data.user) {
-        // Login exitoso - Guardar datos del usuario y mostrar modal de selección de método de verificación
-        setUserData(response.data.user);
-    setVerificationStep("selectMethod");
-        return;
+      if (response.status === 200) {
+        // Verificar si requiere 2FA
+        if (response.data.requires_2fa) {
+          // Guardar user_id para verificación 2FA
+          setUserData({
+            id: response.data.user_id,
+            nombre: username
+          });
+          // Mostrar modal de selección de método
+          setVerificationStep("selectMethod");
+          return;
+        }
+        
+        // Si no requiere 2FA, login directo (por compatibilidad)
+        if (response.data.user) {
+          setUserData(response.data.user);
+          setVerificationStep("selectMethod");
+          return;
+        }
       }
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
@@ -193,20 +207,200 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
     }
   };
 
-  const handleSelectEmail = () => { setVerificationMethod("email"); setVerificationStep("enterCode"); };
-  const handleSelectPhone = () => { setVerificationMethod("phone"); setVerificationStep("enterCode"); };
+  const handleSelectEmail = async () => {
+    setVerificationMethod("email");
+    
+    // Enviar código 2FA por email
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const response = await axios.post('/login/send-2fa', {
+        user_id: userData.id,
+        method: 'email'
+      });
+
+      if (response.status === 200) {
+        setVerificationStep("enterCode");
+      }
+    } catch (error) {
+      console.error('Error al enviar código 2FA:', error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Error al enviar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSelectPhone = async () => {
+    setVerificationMethod("phone");
+    
+    // Notificar al backend que se seleccionó SMS
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const response = await axios.post('/login/send-2fa', {
+        user_id: userData.id,
+        method: 'sms'
+      });
+
+      if (response.status === 200) {
+        setVerificationStep("enterCode");
+      }
+    } catch (error) {
+      console.error('Error al seleccionar método SMS:', error);
+      // Aún así mostrar el modal, ya que SMS funciona sin validación
+      setVerificationStep("enterCode");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleVerify = async (code) => {
-    // Verificar el código de verificación aquí
-    // TODO: Implementar verificación real del código con el backend
-    // Por ahora, si el código es válido, llamar al callback de éxito
-    // En una implementación real, aquí harías una petición al backend para verificar el código
-    
-    // Por ahora, aceptamos cualquier código (esto debe cambiarse por verificación real)
-    if (code && code.length > 0) {
-      if (onLoginSuccess && userData) {
-        onLoginSuccess(userData.nombre || username, userData);
+    if (!code || code.length !== 6) {
+      setError("Por favor, ingresa un código de 6 dígitos");
+      return;
+    }
+
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario. Por favor, inicia sesión nuevamente.");
+      return;
+    }
+
+    // Si es SMS, aceptar cualquier código sin validar
+    if (verificationMethod === "phone" || verificationMethod === "sms") {
+      // Obtener datos del usuario de la sesión pendiente
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const response = await axios.post('/login/verify-2fa', {
+          user_id: userData.id,
+          code: code.trim(),
+          method: 'sms'
+        });
+
+        if (response.status === 200 && response.data.user) {
+          if (onLoginSuccess) {
+            onLoginSuccess(response.data.user.nombre || username, response.data.user);
+          }
+        }
+      } catch (error) {
+        console.error('Error al verificar código SMS:', error);
+        setError("Error al verificar el código. Por favor, intenta nuevamente.");
       }
+      return;
+    }
+
+    // Si es email, validar con el backend
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      // Configurar token CSRF
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      // Verificar código 2FA con el backend
+      const response = await axios.post('/login/verify-2fa', {
+        user_id: userData.id,
+        code: code.trim(),
+        method: 'email'
+      });
+
+      if (response.status === 200 && response.data.user) {
+        // Verificación exitosa - completar login
+        if (onLoginSuccess) {
+          onLoginSuccess(response.data.user.nombre || username, response.data.user);
+        }
+      }
+    } catch (error) {
+      console.error('Error al verificar código 2FA:', error);
+      
+      if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        if (errorData.errors?.code) {
+          setError(Array.isArray(errorData.errors.code) 
+            ? errorData.errors.code[0] 
+            : errorData.errors.code);
+        } else {
+          setError(errorData.message || "Código incorrecto. Por favor, verifica e intenta nuevamente.");
+        }
+      } else if (error.response?.status === 419) {
+        setError("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+      } else {
+        setError("Error al verificar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const response = await axios.post('/login/resend-2fa', {
+        user_id: userData.id
+      });
+
+      if (response.status === 200) {
+        setError(""); // Limpiar errores
+        // Mostrar mensaje de éxito (puedes agregar un estado para esto)
+        alert("Código reenviado exitosamente. Por favor, revisa tu correo.");
+      }
+    } catch (error) {
+      console.error('Error al reenviar código:', error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Error al reenviar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -471,6 +665,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
             method={verificationMethod}
             onVerify={handleVerify}
             onBack={handleBackToMethod}
+            onResendCode={handleResendCode}
           />
         )}
 

@@ -6,7 +6,7 @@ import { Label } from "../ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
 import { Mail, Phone, Shield, ArrowLeft, CheckCircle2, RotateCw } from "lucide-react";
 
-export function CodeVerificationModal({ method, onVerify, onBack }) {
+export function CodeVerificationModal({ method, onVerify, onBack, onResendCode }) {
   const [code, setCode] = useState("");
   const [isResending, setIsResending] = useState(false);
   const otpWrapperRef = useRef(null);
@@ -17,12 +17,23 @@ export function CodeVerificationModal({ method, onVerify, onBack }) {
     if (code.length === 6) onVerify(code);
   };
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     setIsResending(true);
-    setTimeout(() => {
+    try {
+      if (onResendCode) {
+        await onResendCode();
+      } else {
+        // Fallback si no se proporciona la función
+        setTimeout(() => {
+          setIsResending(false);
+          alert(`Código reenviado a tu ${method === "email" ? "correo electrónico" : "teléfono"}`);
+        }, 1200);
+      }
+    } catch (error) {
+      console.error('Error al reenviar código:', error);
+    } finally {
       setIsResending(false);
-      alert(`Código reenviado a tu ${method === "email" ? "correo electrónico" : "teléfono"}`);
-    }, 1200);
+    }
   };
 
   // Si el usuario hace click en el contenedor, enfocamos el primer slot
