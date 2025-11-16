@@ -22,13 +22,16 @@ use App\Http\Controllers\EvaluationController;
 Route::view('/', 'app');                      // Home
 
 // Rutas API (deben ir antes de las rutas de vista)
-Route::get('/csrf-token', [CsrfController::class, 'getToken']);
-Route::post('/register', [RegisterController::class, 'register']);
-Route::post('/admin/register', [AdminRegisterController::class, 'register']);
-Route::post('/login', [LoginController::class, 'login']);
-Route::post('/logout', [LoginController::class, 'logout']);
-Route::get('/auth/check', [LoginController::class, 'check']);
-Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
+// Estas rutas necesitan el middleware 'web' para tener acceso a sesión y CSRF
+Route::middleware(['web'])->group(function () {
+    Route::get('/csrf-token', [CsrfController::class, 'getToken']);
+    Route::post('/register', [RegisterController::class, 'register']);
+    Route::post('/admin/register', [AdminRegisterController::class, 'register']);
+    Route::post('/login', [LoginController::class, 'login']);
+    Route::post('/logout', [LoginController::class, 'logout']);
+    Route::get('/auth/check', [LoginController::class, 'check']);
+    Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
+});
 
 // Rutas de perfil de usuario
 Route::middleware(['web'])->group(function () {
@@ -45,7 +48,11 @@ Route::middleware(['web'])->group(function () {
 
 // Rutas de evaluación
 Route::middleware(['web'])->group(function () {
+    Route::get('/api/evaluation/check-incomplete', [EvaluationController::class, 'checkIncompleteEvaluation']);
+    Route::get('/api/evaluation/{id}/load', [EvaluationController::class, 'loadEvaluation']);
+    Route::post('/api/evaluation/save-progress', [EvaluationController::class, 'saveProgress']);
     Route::post('/api/evaluation/submit', [EvaluationController::class, 'submitEvaluation']);
+    Route::post('/api/evaluation/upload-document', [EvaluationController::class, 'uploadDocument']);
 });
 
 // Rutas de administración de usuarios (requieren autenticación admin)

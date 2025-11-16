@@ -127,10 +127,47 @@ export function DashboardPage({
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [incompleteEvaluation, setIncompleteEvaluation] = useState(null);
+  const [loadingIncomplete, setLoadingIncomplete] = useState(true);
 
   useEffect(() => {
     loadDashboardStats();
+    checkIncompleteEvaluation();
   }, []);
+
+  // Verificar evaluación incompleta cuando el componente se vuelve a montar (al volver del dashboard)
+  useEffect(() => {
+    const handleFocus = () => {
+      checkIncompleteEvaluation();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  const checkIncompleteEvaluation = async () => {
+    setLoadingIncomplete(true);
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.get('/api/evaluation/check-incomplete');
+
+      if (response.data && response.data.success && response.data.has_incomplete) {
+        setIncompleteEvaluation(response.data.data);
+      } else {
+        setIncompleteEvaluation(null);
+      }
+    } catch (err) {
+      console.error('Error al verificar evaluación incompleta:', err);
+      setIncompleteEvaluation(null);
+    } finally {
+      setLoadingIncomplete(false);
+    }
+  };
 
   const loadDashboardStats = async () => {
     setLoading(true);
@@ -327,11 +364,48 @@ export function DashboardPage({
                   </ul>
                 </div>
 
-                <div style={{marginTop:16}}>
-                  <button className="btn-primary" onClick={onStartEvaluation} aria-label="Iniciar nueva evaluación">
+                <div style={{marginTop:16, display:"flex", flexDirection:"column", gap:12}}>
+                  {incompleteEvaluation && (
+                    <button 
+                      className="btn-primary" 
+                      onClick={onStartEvaluation} 
+                      aria-label="Continuar evaluación"
+                      style={{
+                        background: "linear-gradient(90deg, #f59e0b, #f97316)",
+                        color: "#fff",
+                      }}
+                    >
+                      <PlayCircle className="w-5 h-5" />
+                      Continuar Evaluación ({incompleteEvaluation.total_respuestas || 0}/50)
+                    </button>
+                  )}
+                  <button 
+                    className="btn-primary" 
+                    onClick={onStartEvaluation} 
+                    aria-label="Iniciar nueva evaluación"
+                    disabled={incompleteEvaluation !== null}
+                    style={{
+                      opacity: incompleteEvaluation !== null ? 0.5 : 1,
+                      cursor: incompleteEvaluation !== null ? "not-allowed" : "pointer",
+                      background: incompleteEvaluation !== null 
+                        ? "linear-gradient(90deg, #9ca3af, #6b7280)" 
+                        : undefined,
+                    }}
+                  >
                     <PlayCircle className="w-5 h-5" />
-                    Iniciar Nueva Evaluación
+                    {incompleteEvaluation ? "Iniciar Nueva Evaluación (Bloqueado)" : "Iniciar Nueva Evaluación"}
                   </button>
+                  {incompleteEvaluation && (
+                    <p style={{
+                      fontSize: 12,
+                      color: "#f59e0b",
+                      margin: 0,
+                      textAlign: "center",
+                      fontWeight: 500,
+                    }}>
+                      ⚠️ Debes completar la evaluación anterior antes de iniciar una nueva
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>

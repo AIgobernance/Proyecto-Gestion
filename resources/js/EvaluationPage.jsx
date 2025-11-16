@@ -12,6 +12,7 @@ import {
   Award,
   Loader2,
 } from "lucide-react";
+import { DocumentUpload } from "./DocumentUpload";
 import imgLogo from "../assets/logo-principal.jpg";
 
 /* ===== Preguntas (puedes ampliar la lista) ===== */
@@ -679,11 +680,154 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
   const [elapsed, setElapsed] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [showRetry, setShowRetry] = useState(false);
+  const [lastAnswers, setLastAnswers] = useState(null); // Guardar respuestas para reintentar
+  const [evaluationId, setEvaluationId] = useState(null); // ID de la evaluación actual
+  const [loadingEvaluation, setLoadingEvaluation] = useState(true); // Cargando evaluación incompleta
+  const [savingProgress, setSavingProgress] = useState(false); // Guardando progreso
+  
+  // Estado para documentos (máximo 3)
+  const [documents, setDocuments] = useState({
+    0: null, // Documento después de pregunta 10 (índice 9)
+    1: null, // Documento después de pregunta 20 (índice 19)
+    2: null, // Documento después de pregunta 30 (índice 29)
+  });
 
   const currentQuestion = QUESTIONS[currentIndex];
 
   const answeredCount = Object.keys(answers).length;
   const progress = (answeredCount / TOTAL_QUESTIONS) * 100;
+
+  // Verificar si hay una evaluación incompleta al cargar
+  useEffect(() => {
+    const checkIncompleteEvaluation = async () => {
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const axiosClient = window.axios || axios;
+        const response = await axiosClient.get('/api/evaluation/check-incomplete');
+
+        if (response.data && response.data.success && response.data.has_incomplete) {
+          const data = response.data.data;
+          setEvaluationId(data.id_evaluacion);
+          
+          // Cargar respuestas guardadas
+          if (data.respuestas && Object.keys(data.respuestas).length > 0) {
+            // Convertir respuestas guardadas (texto) a índices de opciones
+            const respuestasCargadas = {};
+            Object.keys(data.respuestas).forEach((preguntaIndex) => {
+              const index = parseInt(preguntaIndex);
+              const respuestaTexto = data.respuestas[preguntaIndex];
+              
+              // Buscar qué opción coincide con el texto guardado
+              const pregunta = QUESTIONS[index];
+              if (pregunta) {
+                const opcionIndex = pregunta.options.findIndex(opt => opt === respuestaTexto);
+                if (opcionIndex !== -1) {
+                  respuestasCargadas[index] = opcionIndex;
+                }
+              }
+            });
+            
+            setAnswers(respuestasCargadas);
+            
+            // Ir a la primera pregunta sin respuesta
+            const primeraSinRespuesta = QUESTIONS.findIndex((_, idx) => !respuestasCargadas[idx]);
+            if (primeraSinRespuesta !== -1) {
+              setCurrentIndex(primeraSinRespuesta);
+            }
+          }
+        } else {
+          // No hay evaluación incompleta, crear una nueva
+          await createNewEvaluation();
+        }
+      } catch (error) {
+        console.error('Error al verificar evaluación incompleta:', error);
+        // En caso de error, intentar crear una nueva evaluación
+        await createNewEvaluation();
+      } finally {
+        setLoadingEvaluation(false);
+      }
+    };
+
+    checkIncompleteEvaluation();
+  }, []);
+
+  // Crear una nueva evaluación
+  const createNewEvaluation = async () => {
+    try {
+      // Crear evaluación vacía al iniciar (se actualizará cuando se envíe)
+      // Por ahora, solo marcamos que no hay evaluación existente
+      setEvaluationId(null);
+    } catch (error) {
+      console.error('Error al crear nueva evaluación:', error);
+    }
+  };
+
+  // Guardar progreso automáticamente cuando se selecciona una respuesta
+  const saveProgress = async (preguntaIndex, respuestaTexto) => {
+    if (!evaluationId) {
+      // Si no hay evaluación, crear una primero con la primera respuesta
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        // Crear evaluación con la primera respuesta
+        const respuestasArray = new Array(TOTAL_QUESTIONS).fill('');
+        respuestasArray[preguntaIndex] = respuestaTexto;
+
+        const axiosClient = window.axios || axios;
+        const createResponse = await axiosClient.post('/api/evaluation/submit', {
+          respuestas: respuestasArray,
+          tiempo: elapsed / 60,
+          prompt: '',
+          documentos: [],
+        });
+
+        if (createResponse.data && createResponse.data.success) {
+          const newId = createResponse.data.data?.id_evaluacion;
+          if (newId) {
+            setEvaluationId(newId);
+          }
+        }
+      } catch (error) {
+        console.error('Error al crear evaluación:', error);
+      }
+      return;
+    }
+
+    await saveSingleAnswer(evaluationId, preguntaIndex, respuestaTexto);
+  };
+
+  // Guardar una respuesta individual
+  const saveSingleAnswer = async (idEval, preguntaIndex, respuestaTexto) => {
+    if (savingProgress) return; // Evitar múltiples guardados simultáneos
+    
+    setSavingProgress(true);
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      await axiosClient.post('/api/evaluation/save-progress', {
+        id_evaluacion: idEval,
+        pregunta_index: preguntaIndex,
+        respuesta: respuestaTexto,
+      });
+    } catch (error) {
+      console.error('Error al guardar progreso:', error);
+      // No mostrar error al usuario, solo loguear
+    } finally {
+      setSavingProgress(false);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setElapsed((t) => t + 1), 1000);
@@ -711,8 +855,14 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
 
   const handleNext = async () => {
     if (selected === null) return;
+    
     const newAnswers = { ...answers, [currentIndex]: selected };
     setAnswers(newAnswers);
+
+    // Guardar progreso automáticamente
+    const pregunta = QUESTIONS[currentIndex];
+    const respuestaTexto = pregunta.options[selected];
+    await saveProgress(currentIndex, respuestaTexto);
 
     if (currentIndex === TOTAL_QUESTIONS - 1) {
       // Última pregunta - enviar evaluación
@@ -722,9 +872,15 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
     setCurrentIndex((i) => i + 1);
   };
 
-  const handleSubmitEvaluation = async (allAnswers) => {
+  const handleSubmitEvaluation = async (allAnswers, isRetry = false) => {
     setIsSubmitting(true);
     setSubmitError(null);
+    setShowRetry(false);
+    
+    // Guardar respuestas para poder reintentar
+    if (!isRetry) {
+      setLastAnswers(allAnswers);
+    }
 
     try {
       // Obtener token CSRF
@@ -751,31 +907,75 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
       const tiempoMinutos = elapsed / 60;
 
       // Preparar datos para enviar
+      // Si hay una evaluación existente, incluir su ID
       const datosEnvio = {
         respuestas: respuestasArray,
         tiempo: parseFloat(tiempoMinutos.toFixed(2)),
         prompt: '', // El usuario puede agregar un prompt personalizado si lo desea
+        documentos: Object.values(documents).filter(doc => doc !== null), // Solo documentos subidos
+        id_evaluacion: evaluationId, // Incluir ID si existe
       };
 
       const axiosClient = window.axios || axios;
-      const response = await axiosClient.post('/api/evaluation/submit', datosEnvio);
+      
+      // Crear un timeout de 20 segundos
+      const timeoutId = setTimeout(() => {
+        setIsSubmitting(false);
+        setShowRetry(true);
+        setSubmitError('El servidor está tardando demasiado en responder. Puedes intentar nuevamente.');
+      }, 20000); // 20 segundos
 
-      if (response.data && response.data.success) {
-        // Éxito - llamar al callback con el ID de evaluación
-        onComplete?.(allAnswers, response.data.data?.id_evaluacion);
-      } else {
-        throw new Error(response.data?.error || 'Error al enviar la evaluación');
+      try {
+        const response = await axiosClient.post('/api/evaluation/submit', datosEnvio, {
+          timeout: 20000, // Timeout de 20 segundos
+        });
+
+        // Limpiar el timeout si la respuesta llega a tiempo
+        clearTimeout(timeoutId);
+
+        if (response.data && response.data.success) {
+          // Éxito - llamar al callback con el ID de evaluación
+          onComplete?.(allAnswers, response.data.data?.id_evaluacion);
+        } else {
+          throw new Error(response.data?.error || 'Error al enviar la evaluación');
+        }
+      } catch (requestError) {
+        // Limpiar el timeout si hay un error
+        clearTimeout(timeoutId);
+        
+        // Si es un error de timeout, mostrar mensaje de reintentar
+        if (requestError.code === 'ECONNABORTED' || requestError.message?.includes('timeout')) {
+          setShowRetry(true);
+          setSubmitError('La solicitud tardó demasiado. Por favor, intenta nuevamente.');
+          setIsSubmitting(false);
+          return;
+        }
+        
+        // Para otros errores, lanzar la excepción para que se maneje abajo
+        throw requestError;
       }
 
     } catch (error) {
       console.error('Error al enviar evaluación:', error);
-      setSubmitError(
-        error.response?.data?.error || 
-        error.response?.data?.message || 
-        'Error al enviar la evaluación. Por favor, intenta nuevamente.'
-      );
+      
+      // Si no es un error de timeout, mostrar el error normal
+      if (!showRetry) {
+        setSubmitError(
+          error.response?.data?.error || 
+          error.response?.data?.message || 
+          'Error al enviar la evaluación. Por favor, intenta nuevamente.'
+        );
+        setShowRetry(true); // Permitir reintentar en caso de error
+      }
+      
       setIsSubmitting(false);
       // No llamar a onComplete si hay error
+    }
+  };
+
+  const handleRetry = () => {
+    if (lastAnswers) {
+      handleSubmitEvaluation(lastAnswers, true);
     }
   };
 
@@ -783,6 +983,19 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
     if (currentIndex === 0) return;
     setCurrentIndex((i) => i - 1);
   };
+
+  // Mostrar loading mientras se verifica la evaluación incompleta
+  if (loadingEvaluation) {
+    return (
+      <div className="eval-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+        <style>{styles}</style>
+        <div style={{ textAlign: 'center' }}>
+          <Loader2 size={48} className="animate-spin" style={{ color: '#173b8f', margin: '0 auto 16px' }} />
+          <p style={{ color: '#173b8f', fontSize: 18, fontWeight: 600 }}>Cargando evaluación...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="eval-page">
@@ -958,18 +1171,76 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                 })}
               </div>
 
-              {/* Mensaje de error */}
+              {/* Subida de documentos cada 10 preguntas */}
+              {(currentIndex === 9 || currentIndex === 19 || currentIndex === 29) && (
+                <DocumentUpload
+                  currentFileIndex={Math.floor(currentIndex / 10)}
+                  maxFiles={3}
+                  maxSizeMB={2}
+                  uploadedFile={documents[Math.floor(currentIndex / 10)]}
+                  onUpload={(documentData) => {
+                    setDocuments(prev => ({
+                      ...prev,
+                      [Math.floor(currentIndex / 10)]: documentData
+                    }));
+                  }}
+                  disabled={isSubmitting}
+                />
+              )}
+
+              {/* Mensaje de error y opción de reintentar */}
               {submitError && (
                 <div style={{
                   marginTop: 12,
-                  padding: 12,
-                  background: "#fee2e2",
-                  border: "1px solid #fecaca",
+                  padding: 16,
+                  background: showRetry ? "#fef3c7" : "#fee2e2",
+                  border: `1px solid ${showRetry ? "#fcd34d" : "#fecaca"}`,
                   borderRadius: 12,
-                  color: "#991b1b",
+                  color: showRetry ? "#92400e" : "#991b1b",
                   fontSize: 14
                 }}>
-                  {submitError}
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ display: "block", marginBottom: 4 }}>
+                        {showRetry ? "⏱️ Tiempo de espera agotado" : "❌ Error al enviar"}
+                      </strong>
+                      <p style={{ margin: 0, fontSize: 13 }}>
+                        {submitError}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {showRetry && (
+                    <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        className="btn-nav btn-nav--next"
+                        onClick={handleRetry}
+                        disabled={isSubmitting}
+                        style={{
+                          background: "linear-gradient(90deg, #f59e0b, #f97316)",
+                          color: "#fff",
+                          border: "none",
+                          padding: "10px 20px",
+                          borderRadius: "999px",
+                          fontWeight: 700,
+                          cursor: isSubmitting ? "not-allowed" : "pointer",
+                          opacity: isSubmitting ? 0.6 : 1,
+                        }}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            Reintentando...
+                          </>
+                        ) : (
+                          <>
+                            🔄 Reintentar Envío
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 

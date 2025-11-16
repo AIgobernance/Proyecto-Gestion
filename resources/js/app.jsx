@@ -382,7 +382,7 @@ export default function App() {
               path="/evaluation/:id/completed"
               element={
                 <EvaluationCompletedPage
-                  onBack={() => navigate("/evaluations")}
+                  onBack={() => navigate("/dashboard")}
                   onViewResults={() => navigate("/evaluations")}
                 />
               }

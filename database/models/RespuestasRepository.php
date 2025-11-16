@@ -118,5 +118,118 @@ class RespuestasRepository
             return [];
         }
     }
+
+    /**
+     * Guarda o actualiza una respuesta individual (para guardado progresivo)
+     *
+     * @param int $idEvaluacion
+     * @param int $idPregunta (1-based)
+     * @param string $respuesta
+     * @return bool
+     */
+    public function guardarRespuesta(int $idEvaluacion, int $idPregunta, string $respuesta): bool
+    {
+        try {
+            // Verificar si la tabla existe
+            $tablaExiste = DB::selectOne("
+                SELECT COUNT(*) as existe 
+                FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_NAME = ?
+            ", [$this->table]);
+
+            if (!$tablaExiste || $tablaExiste->existe == 0) {
+                Log::warning('La tabla Respuestas no existe en la base de datos');
+                return false;
+            }
+
+            // Verificar si la respuesta ya existe
+            $existe = DB::table($this->table)
+                ->where('Id_Evaluacion', $idEvaluacion)
+                ->where('Id_Pregunta', $idPregunta)
+                ->exists();
+
+            // Verificar columnas disponibles
+            $columnas = DB::select("
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_NAME = ?
+            ", [$this->table]);
+
+            $columnasDisponibles = array_map(function ($col) {
+                return $col->COLUMN_NAME;
+            }, $columnas);
+
+            $hasFechaCreacion = in_array('Fecha_Creacion', $columnasDisponibles);
+            $hasFechaActualizacion = in_array('Fecha_Actualizacion', $columnasDisponibles);
+
+            if ($existe) {
+                // Actualizar respuesta existente
+                $datosUpdate = [
+                    'Respuesta_Usuario' => $respuesta,
+                ];
+
+                if ($hasFechaActualizacion) {
+                    $datosUpdate['Fecha_Actualizacion'] = DB::raw('GETDATE()');
+                }
+
+                DB::table($this->table)
+                    ->where('Id_Evaluacion', $idEvaluacion)
+                    ->where('Id_Pregunta', $idPregunta)
+                    ->update($datosUpdate);
+            } else {
+                // Insertar nueva respuesta
+                $datosInsert = [
+                    'Id_Evaluacion' => $idEvaluacion,
+                    'Id_Pregunta' => $idPregunta,
+                    'Respuesta_Usuario' => $respuesta,
+                ];
+
+                if ($hasFechaCreacion) {
+                    DB::statement("
+                        INSERT INTO [{$this->table}] 
+                        ([Id_Evaluacion], [Id_Pregunta], [Respuesta_Usuario], [Fecha_Creacion]) 
+                        VALUES (?, ?, ?, GETDATE())
+                    ", [
+                        $datosInsert['Id_Evaluacion'],
+                        $datosInsert['Id_Pregunta'],
+                        $datosInsert['Respuesta_Usuario']
+                    ]);
+                } else {
+                    DB::table($this->table)->insert($datosInsert);
+                }
+            }
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Error al guardar respuesta individual', [
+                'id_evaluacion' => $idEvaluacion,
+                'id_pregunta' => $idPregunta,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Obtiene el conteo de respuestas de una evaluación
+     *
+     * @param int $idEvaluacion
+     * @return int
+     */
+    public function contarPorEvaluacion(int $idEvaluacion): int
+    {
+        try {
+            return DB::table($this->table)
+                ->where('Id_Evaluacion', $idEvaluacion)
+                ->count();
+        } catch (\Exception $e) {
+            Log::error('Error al contar respuestas', [
+                'id_evaluacion' => $idEvaluacion,
+                'error' => $e->getMessage()
+            ]);
+            return 0;
+        }
+    }
 }
 

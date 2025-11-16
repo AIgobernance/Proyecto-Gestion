@@ -531,5 +531,82 @@ class EvaluacionRepository
             return false;
         }
     }
+
+    /**
+     * Obtiene la evaluación incompleta más reciente de un usuario
+     * Una evaluación se considera incompleta si tiene menos de 50 respuestas
+     *
+     * @param int $idUsuario
+     * @param int $totalPreguntas Total de preguntas esperadas (por defecto 50)
+     * @return array|null
+     */
+    public function obtenerIncompletaPorUsuario(int $idUsuario, int $totalPreguntas = 50): ?array
+    {
+        try {
+            // Obtener todas las evaluaciones del usuario ordenadas por fecha descendente
+            $evaluaciones = DB::table($this->table)
+                ->where('Id_Usuario', $idUsuario)
+                ->orderBy('Fecha', 'desc')
+                ->get();
+
+            if ($evaluaciones->isEmpty()) {
+                return null;
+            }
+
+            // Verificar cada evaluación para ver si está incompleta
+            $respuestasRepository = new \Database\Models\RespuestasRepository();
+            
+            foreach ($evaluaciones as $evaluacion) {
+                $idEvaluacion = $evaluacion->Id_Evaluacion;
+                
+                // Verificar si el estado es "Completada" - si es así, no es incompleta
+                $estado = $evaluacion->Estado ?? null;
+                if ($estado === 'Completada' || $estado === 'Completado') {
+                    continue; // Saltar evaluaciones completadas
+                }
+                
+                $totalRespuestas = $respuestasRepository->contarPorEvaluacion($idEvaluacion);
+                
+                // Si tiene menos respuestas que el total esperado, está incompleta
+                if ($totalRespuestas < $totalPreguntas) {
+                    $evalArray = (array) $evaluacion;
+                    $evalArray['total_respuestas'] = $totalRespuestas;
+                    return $evalArray;
+                }
+            }
+
+            return null;
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener evaluación incompleta', [
+                'id_usuario' => $idUsuario,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Obtiene una evaluación por su ID
+     *
+     * @param int $idEvaluacion
+     * @return array|null
+     */
+    public function obtenerPorId(int $idEvaluacion): ?array
+    {
+        try {
+            $evaluacion = DB::table($this->table)
+                ->where('Id_Evaluacion', $idEvaluacion)
+                ->first();
+
+            return $evaluacion ? (array) $evaluacion : null;
+        } catch (\Exception $e) {
+            Log::error('Error al obtener evaluación por ID', [
+                'id_evaluacion' => $idEvaluacion,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
 }
 

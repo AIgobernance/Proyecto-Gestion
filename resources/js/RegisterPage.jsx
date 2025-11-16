@@ -188,6 +188,15 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
     if (!validateForm()) { setNotice("Por favor corrija los errores en el formulario."); return; }
     setIsSubmitting(true); setNotice("");
     try {
+      // Obtener token CSRF
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        if (window.axios) {
+          window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+      }
+
       // Usar window.axios (configurado en bootstrap.js) o axios como fallback
       const axiosClient = window.axios || axios;
       const response = await axiosClient.post('/register', {
@@ -209,6 +218,52 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
       }
     } catch (error) {
       console.error('Error al registrar:', error);
+      
+      // Si es un error 419 (CSRF token mismatch), intentar refrescar el token y reintentar
+      if (error.response && error.response.status === 419) {
+        try {
+          // Obtener nuevo token CSRF
+          const tokenResponse = await axios.get('/csrf-token');
+          if (tokenResponse.data && tokenResponse.data.token) {
+            // Actualizar token
+            axios.defaults.headers.common['X-CSRF-TOKEN'] = tokenResponse.data.token;
+            if (window.axios) {
+              window.axios.defaults.headers.common['X-CSRF-TOKEN'] = tokenResponse.data.token;
+            }
+            // Actualizar meta tag
+            const metaToken = document.head?.querySelector('meta[name="csrf-token"]');
+            if (metaToken) {
+              metaToken.setAttribute('content', tokenResponse.data.token);
+            }
+            
+            // Reintentar la petición
+            const axiosClient = window.axios || axios;
+            const retryResponse = await axiosClient.post('/register', {
+              usuario: formData.usuario,
+              empresa: formData.empresa,
+              nit: formData.nit,
+              tipoDocumento: formData.tipoDocumento,
+              numeroDocumento: formData.numeroDocumento,
+              sector: formData.sector,
+              pais: formData.pais,
+              tamanoOrganizacional: formData.tamanoOrganizacional,
+              correo: formData.correo,
+              telefono: formData.telefono,
+              contrasena: formData.contrasena,
+            });
+            
+            if (retryResponse.status === 201) {
+              setShowActivation(true);
+            }
+            return;
+          }
+        } catch (retryError) {
+          console.error('Error al reintentar registro:', retryError);
+          setNotice("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
       
       if (error.response && error.response.data) {
         const responseData = error.response.data;

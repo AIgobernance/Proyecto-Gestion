@@ -27,10 +27,33 @@ El servicio envía los siguientes datos en formato JSON al webhook de N8N:
     "pregunta3": "c) En algunos modelos críticos",
     ...
   },
+  "documentos": [
+    {
+      "nombre": "documento1.pdf",
+      "indice": 0,
+      "mime_type": "application/pdf",
+      "contenido_base64": "JVBERi0xLjQKJeLjz9MKMy...", // Contenido completo del PDF en base64
+      "ruta": "evaluations/documents/doc_123_0_abc.pdf",
+      "url": "http://localhost:8000/storage/evaluations/documents/doc_123_0_abc.pdf"
+    },
+    {
+      "nombre": "documento2.pdf",
+      "indice": 1,
+      "mime_type": "application/pdf",
+      "contenido_base64": "JVBERi0xLjQKJeLjz9MKMy...",
+      "ruta": "evaluations/documents/doc_123_1_def.pdf",
+      "url": "http://localhost:8000/storage/evaluations/documents/doc_123_1_def.pdf"
+    }
+  ],
   "timestamp": "2024-11-16T10:30:00Z",
   "version": "1.0"
 }
 ```
+
+**Nota sobre documentos:**
+- Los documentos se envían con su contenido completo en formato base64 para que N8N pueda procesarlos directamente
+- Cada documento incluye: nombre, índice (0, 1, 2), contenido en base64, ruta y URL de referencia
+- N8N puede decodificar el base64 para obtener el PDF original y procesarlo con IA
 
 ## Respuesta Esperada de N8N
 

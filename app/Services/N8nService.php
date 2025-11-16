@@ -92,9 +92,10 @@ class N8nService
      *
      * @param array $respuestas Respuestas del usuario (pregunta1: "respuesta", pregunta2: "respuesta", ...)
      * @param array $metadatos Metadatos del usuario (nombre, empresa, correo, prompt)
+     * @param array $documentos Array de documentos subidos (opcional)
      * @return array Datos formateados para N8N
      */
-    public function formatearDatosEvaluacion(array $respuestas, array $metadatos): array
+    public function formatearDatosEvaluacion(array $respuestas, array $metadatos, array $documentos = []): array
     {
         return [
             // Metadatos
@@ -107,6 +108,18 @@ class N8nService
             
             // Respuestas en formato {pregunta1: "respuesta", pregunta2: "respuesta", ...}
             'respuestas' => $respuestas,
+            
+            // Documentos subidos (si existen) - incluyen contenido en base64 para procesamiento
+            'documentos' => array_map(function($doc) {
+                return [
+                    'nombre' => $doc['nombre'] ?? 'documento.pdf',
+                    'indice' => $doc['indice'] ?? null,
+                    'mime_type' => $doc['mime_type'] ?? 'application/pdf',
+                    'contenido_base64' => $doc['contenido_base64'] ?? null, // Contenido del PDF en base64
+                    'ruta' => $doc['ruta'] ?? null, // Ruta en el servidor (referencia)
+                    'url' => $doc['url'] ?? null, // URL pública (referencia)
+                ];
+            }, $documentos),
             
             // Información adicional
             'timestamp' => now()->toIso8601String(),
