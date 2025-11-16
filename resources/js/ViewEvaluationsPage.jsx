@@ -199,12 +199,12 @@ export function ViewEvaluationsPage({
     // Aplicar filtro de fecha si existe
     if (range.from || range.to) {
       filteredEvals = evaluations.filter((ev) => {
-        const d = parseDMY(ev.date);
+      const d = parseDMY(ev.date);
         if (!d) return false;
-        if (range.from && d < new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate())) return false;
-        if (range.to && d > new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate())) return false;
-        return true;
-      });
+      if (range.from && d < new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate())) return false;
+      if (range.to && d > new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate())) return false;
+      return true;
+    });
     }
     
     return filteredEvals;

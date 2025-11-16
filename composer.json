@@ -25,7 +25,10 @@
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/",
             "Database\\Models\\": "database/models/"
-        }
+        },
+        "files": [
+            "app/Helpers/SessionHelper.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

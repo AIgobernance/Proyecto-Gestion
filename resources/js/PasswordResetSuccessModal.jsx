@@ -58,19 +58,19 @@ export function PasswordResetSuccessModal({ onContinue }) {
           <div className="ok-head">
             <div className="ok-icon">
               <CheckCircle2 className="w-9 h-9" />
-            </div>
+              </div>
             <h3 className="ok-title">¡Contraseña restablecida!</h3>
             <p className="ok-desc">La contraseña se cambió correctamente. El usuario ya puede iniciar sesión con su nueva contraseña.</p>
-          </div>
+              </div>
 
           <div className="ok-body">
             <button className="ok-cta" onClick={onContinue}>
               <CheckCircle2 className="w-5 h-5" />
               Continuar
             </button>
-          </div>
-        </div>
-      </div>
+              </div>
+              </div>
+            </div>
     </>
   );
 }

@@ -6,10 +6,12 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
+    'App\\Helpers\\SessionHelper' => $baseDir . '/app/Helpers/SessionHelper.php',
     'App\\Http\\Controllers\\AdminRegisterController' => $baseDir . '/app/Http/Controllers/AdminRegisterController.php',
     'App\\Http\\Controllers\\Controller' => $baseDir . '/app/Http/Controllers/Controller.php',
     'App\\Http\\Controllers\\CsrfController' => $baseDir . '/app/Http/Controllers/CsrfController.php',
     'App\\Http\\Controllers\\DashboardController' => $baseDir . '/app/Http/Controllers/DashboardController.php',
+    'App\\Http\\Controllers\\EvaluationController' => $baseDir . '/app/Http/Controllers/EvaluationController.php',
     'App\\Http\\Controllers\\LoginController' => $baseDir . '/app/Http/Controllers/LoginController.php',
     'App\\Http\\Controllers\\PasswordResetController' => $baseDir . '/app/Http/Controllers/PasswordResetController.php',
     'App\\Http\\Controllers\\ProfileController' => $baseDir . '/app/Http/Controllers/ProfileController.php',
@@ -17,6 +19,7 @@ return array(
     'App\\Http\\Controllers\\UserManagementController' => $baseDir . '/app/Http/Controllers/UserManagementController.php',
     'App\\Models\\User' => $baseDir . '/app/Models/User.php',
     'App\\Providers\\AppServiceProvider' => $baseDir . '/app/Providers/AppServiceProvider.php',
+    'App\\Services\\N8nService' => $baseDir . '/app/Services/N8nService.php',
     'Attribute' => $vendorDir . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
     'Brick\\Math\\BigDecimal' => $vendorDir . '/brick/math/src/BigDecimal.php',
     'Brick\\Math\\BigInteger' => $vendorDir . '/brick/math/src/BigInteger.php',
@@ -141,7 +144,10 @@ return array(
     'Database\\Factories\\UsuarioFactoryManager' => $baseDir . '/database/factories/UsuarioFactoryManager.php',
     'Database\\Factories\\UsuarioNormalFactory' => $baseDir . '/database/factories/UsuarioNormalFactory.php',
     'Database\\Models\\Administrador' => $baseDir . '/database/models/Administrador.php',
+    'Database\\Models\\DocumentosAdjuntosRepository' => $baseDir . '/database/models/DocumentosAdjuntosRepository.php',
     'Database\\Models\\EvaluacionRepository' => $baseDir . '/database/models/EvaluacionRepository.php',
+    'Database\\Models\\RespuestasRepository' => $baseDir . '/database/models/RespuestasRepository.php',
+    'Database\\Models\\ResultadosRepository' => $baseDir . '/database/models/ResultadosRepository.php',
     'Database\\Models\\UsuarioInterface' => $baseDir . '/database/models/UsuarioInterface.php',
     'Database\\Models\\UsuarioNormal' => $baseDir . '/database/models/UsuarioNormal.php',
     'Database\\Models\\UsuarioRepository' => $baseDir . '/database/models/UsuarioRepository.php',

@@ -683,7 +683,6 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
   const [showRetry, setShowRetry] = useState(false);
   const [lastAnswers, setLastAnswers] = useState(null); // Guardar respuestas para reintentar
   const [evaluationId, setEvaluationId] = useState(null); // ID de la evaluación actual
-  const [loadingEvaluation, setLoadingEvaluation] = useState(true); // Cargando evaluación incompleta
   const [savingProgress, setSavingProgress] = useState(false); // Guardando progreso
   
   // Estado para documentos (máximo 3)
@@ -698,9 +697,9 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
   const answeredCount = Object.keys(answers).length;
   const progress = (answeredCount / TOTAL_QUESTIONS) * 100;
 
-  // Verificar si hay una evaluación incompleta al cargar
+  // Inicializar: crear evaluación vacía al montar el componente
   useEffect(() => {
-    const checkIncompleteEvaluation = async () => {
+    const createEvaluation = async () => {
       try {
         const token = document.head?.querySelector('meta[name="csrf-token"]');
         if (token) {
@@ -708,125 +707,78 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
         }
 
         const axiosClient = window.axios || axios;
-        const response = await axiosClient.get('/api/evaluation/check-incomplete');
-
-        if (response.data && response.data.success && response.data.has_incomplete) {
-          const data = response.data.data;
-          setEvaluationId(data.id_evaluacion);
-          
-          // Cargar respuestas guardadas
-          if (data.respuestas && Object.keys(data.respuestas).length > 0) {
-            // Convertir respuestas guardadas (texto) a índices de opciones
-            const respuestasCargadas = {};
-            Object.keys(data.respuestas).forEach((preguntaIndex) => {
-              const index = parseInt(preguntaIndex);
-              const respuestaTexto = data.respuestas[preguntaIndex];
-              
-              // Buscar qué opción coincide con el texto guardado
-              const pregunta = QUESTIONS[index];
-              if (pregunta) {
-                const opcionIndex = pregunta.options.findIndex(opt => opt === respuestaTexto);
-                if (opcionIndex !== -1) {
-                  respuestasCargadas[index] = opcionIndex;
-                }
-              }
-            });
-            
-            setAnswers(respuestasCargadas);
-            
-            // Ir a la primera pregunta sin respuesta
-            const primeraSinRespuesta = QUESTIONS.findIndex((_, idx) => !respuestasCargadas[idx]);
-            if (primeraSinRespuesta !== -1) {
-              setCurrentIndex(primeraSinRespuesta);
-            }
-          }
-        } else {
-          // No hay evaluación incompleta, crear una nueva
-          await createNewEvaluation();
-        }
-      } catch (error) {
-        console.error('Error al verificar evaluación incompleta:', error);
-        // En caso de error, intentar crear una nueva evaluación
-        await createNewEvaluation();
-      } finally {
-        setLoadingEvaluation(false);
-      }
-    };
-
-    checkIncompleteEvaluation();
-  }, []);
-
-  // Crear una nueva evaluación
-  const createNewEvaluation = async () => {
-    try {
-      // Crear evaluación vacía al iniciar (se actualizará cuando se envíe)
-      // Por ahora, solo marcamos que no hay evaluación existente
-      setEvaluationId(null);
-    } catch (error) {
-      console.error('Error al crear nueva evaluación:', error);
-    }
-  };
-
-  // Guardar progreso automáticamente cuando se selecciona una respuesta
-  const saveProgress = async (preguntaIndex, respuestaTexto) => {
-    if (!evaluationId) {
-      // Si no hay evaluación, crear una primero con la primera respuesta
-      try {
-        const token = document.head?.querySelector('meta[name="csrf-token"]');
-        if (token) {
-          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
-        }
-
-        // Crear evaluación con la primera respuesta
-        const respuestasArray = new Array(TOTAL_QUESTIONS).fill('');
-        respuestasArray[preguntaIndex] = respuestaTexto;
-
-        const axiosClient = window.axios || axios;
-        const createResponse = await axiosClient.post('/api/evaluation/submit', {
-          respuestas: respuestasArray,
-          tiempo: elapsed / 60,
-          prompt: '',
-          documentos: [],
+        const response = await axiosClient.post('/api/evaluation/create', {
+          tiempo: 0,
         });
 
-        if (createResponse.data && createResponse.data.success) {
-          const newId = createResponse.data.data?.id_evaluacion;
-          if (newId) {
-            setEvaluationId(newId);
-          }
+        if (response.data && response.data.success && response.data.data?.id_evaluacion) {
+          setEvaluationId(response.data.data.id_evaluacion);
         }
       } catch (error) {
         console.error('Error al crear evaluación:', error);
       }
+    };
+
+    createEvaluation();
+  }, []);
+
+  // Guardar progreso automáticamente cuando se selecciona una respuesta (asíncrono, no bloquea UI)
+  const saveProgress = (preguntaIndex, respuestaTexto) => {
+    // Si aún no hay evaluationId, esperar un momento y reintentar
+    if (!evaluationId) {
+      // Esperar hasta 2 segundos a que se cree la evaluación
+      let attempts = 0;
+      const checkEvaluation = setInterval(() => {
+        attempts++;
+        if (evaluationId) {
+          clearInterval(checkEvaluation);
+          saveSingleAnswer(evaluationId, preguntaIndex, respuestaTexto);
+        } else if (attempts >= 20) { // 2 segundos máximo
+          clearInterval(checkEvaluation);
+          console.warn('No se pudo crear la evaluación a tiempo');
+        }
+      }, 100);
       return;
     }
 
-    await saveSingleAnswer(evaluationId, preguntaIndex, respuestaTexto);
+    // Guardar de forma asíncrona sin bloquear la UI (no usar await)
+    saveSingleAnswer(evaluationId, preguntaIndex, respuestaTexto);
   };
 
-  // Guardar una respuesta individual
+  // Guardar una respuesta individual (asíncrono, no bloquea la UI)
   const saveSingleAnswer = async (idEval, preguntaIndex, respuestaTexto) => {
-    if (savingProgress) return; // Evitar múltiples guardados simultáneos
-    
-    setSavingProgress(true);
-    try {
-      const token = document.head?.querySelector('meta[name="csrf-token"]');
-      if (token) {
-        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
-      }
-
-      const axiosClient = window.axios || axios;
-      await axiosClient.post('/api/evaluation/save-progress', {
-        id_evaluacion: idEval,
-        pregunta_index: preguntaIndex,
-        respuesta: respuestaTexto,
-      });
-    } catch (error) {
-      console.error('Error al guardar progreso:', error);
-      // No mostrar error al usuario, solo loguear
-    } finally {
-      setSavingProgress(false);
+    // No bloquear si ya hay un guardado en progreso, simplemente hacerlo en background
+    // Usar un debounce simple para evitar múltiples llamadas simultáneas para la misma pregunta
+    const saveKey = `${idEval}_${preguntaIndex}`;
+    if (window[`saving_${saveKey}`]) {
+      return; // Ya hay un guardado en progreso para esta pregunta
     }
+    
+    window[`saving_${saveKey}`] = true;
+    
+    // Guardar en background sin bloquear la UI
+    (async () => {
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const axiosClient = window.axios || axios;
+        await axiosClient.post('/api/evaluation/save-progress', {
+          id_evaluacion: idEval,
+          pregunta_index: preguntaIndex,
+          respuesta: respuestaTexto,
+        }, {
+          timeout: 5000, // Timeout de 5 segundos
+        });
+      } catch (error) {
+        console.error('Error al guardar progreso:', error);
+        // No mostrar error al usuario, solo loguear
+      } finally {
+        delete window[`saving_${saveKey}`];
+      }
+    })();
   };
 
   useEffect(() => {
@@ -853,20 +805,20 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
     setSelected(idx);
   };
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (selected === null) return;
     
     const newAnswers = { ...answers, [currentIndex]: selected };
     setAnswers(newAnswers);
 
-    // Guardar progreso automáticamente
+    // Guardar progreso automáticamente (asíncrono, no bloquea)
     const pregunta = QUESTIONS[currentIndex];
     const respuestaTexto = pregunta.options[selected];
-    await saveProgress(currentIndex, respuestaTexto);
+    saveProgress(currentIndex, respuestaTexto); // Sin await
 
     if (currentIndex === TOTAL_QUESTIONS - 1) {
       // Última pregunta - enviar evaluación
-      await handleSubmitEvaluation(newAnswers);
+      handleSubmitEvaluation(newAnswers);
       return;
     }
     setCurrentIndex((i) => i + 1);
@@ -992,18 +944,6 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
     setCurrentIndex((i) => i - 1);
   };
 
-  // Mostrar loading mientras se verifica la evaluación incompleta
-  if (loadingEvaluation) {
-    return (
-      <div className="eval-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <style>{styles}</style>
-        <div style={{ textAlign: 'center' }}>
-          <Loader2 size={48} className="animate-spin" style={{ color: '#173b8f', margin: '0 auto 16px' }} />
-          <p style={{ color: '#173b8f', fontSize: 18, fontWeight: 600 }}>Cargando evaluación...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="eval-page">

@@ -13,6 +13,14 @@ class RespuestasRepository
     protected string $table = 'Respuestas';
 
     /**
+     * Cache estático para verificaciones de tabla y columnas
+     */
+    protected static ?bool $tablaExisteCache = null;
+    protected static ?array $columnasCache = null;
+    protected static ?bool $hasFechaCreacionCache = null;
+    protected static ?bool $hasFechaActualizacionCache = null;
+
+    /**
      * Guarda las respuestas de una evaluación
      *
      * @param int $idEvaluacion
@@ -130,73 +138,83 @@ class RespuestasRepository
     public function guardarRespuesta(int $idEvaluacion, int $idPregunta, string $respuesta): bool
     {
         try {
-            // Verificar si la tabla existe
-            $tablaExiste = DB::selectOne("
-                SELECT COUNT(*) as existe 
-                FROM INFORMATION_SCHEMA.TABLES 
-                WHERE TABLE_NAME = ?
-            ", [$this->table]);
-
-            if (!$tablaExiste || $tablaExiste->existe == 0) {
-                Log::warning('La tabla Respuestas no existe en la base de datos');
-                return false;
+            // Optimización máxima: Usar MERGE de SQL Server en una sola operación
+            // MERGE es más eficiente que EXISTS + INSERT/UPDATE porque hace todo en una transacción atómica
+            // Inicializar cache de columnas solo una vez
+            if (self::$hasFechaCreacionCache === null) {
+                $hasFechaCreacion = DB::selectOne("
+                    SELECT COUNT(*) as existe 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = ? AND COLUMN_NAME = 'Fecha_Creacion'
+                ", [$this->table]);
+                self::$hasFechaCreacionCache = ($hasFechaCreacion && $hasFechaCreacion->existe > 0);
+            }
+            
+            if (self::$hasFechaActualizacionCache === null) {
+                $hasFechaActualizacion = DB::selectOne("
+                    SELECT COUNT(*) as existe 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = ? AND COLUMN_NAME = 'Fecha_Actualizacion'
+                ", [$this->table]);
+                self::$hasFechaActualizacionCache = ($hasFechaActualizacion && $hasFechaActualizacion->existe > 0);
             }
 
-            // Verificar si la respuesta ya existe
-            $existe = DB::table($this->table)
-                ->where('Id_Evaluacion', $idEvaluacion)
-                ->where('Id_Pregunta', $idPregunta)
-                ->exists();
+            $hasFechaCreacion = self::$hasFechaCreacionCache;
+            $hasFechaActualizacion = self::$hasFechaActualizacionCache;
 
-            // Verificar columnas disponibles
-            $columnas = DB::select("
-                SELECT COLUMN_NAME 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = ?
-            ", [$this->table]);
-
-            $columnasDisponibles = array_map(function ($col) {
-                return $col->COLUMN_NAME;
-            }, $columnas);
-
-            $hasFechaCreacion = in_array('Fecha_Creacion', $columnasDisponibles);
-            $hasFechaActualizacion = in_array('Fecha_Actualizacion', $columnasDisponibles);
-
-            if ($existe) {
-                // Actualizar respuesta existente
-                $datosUpdate = [
-                    'Respuesta_Usuario' => $respuesta,
-                ];
-
-                if ($hasFechaActualizacion) {
-                    $datosUpdate['Fecha_Actualizacion'] = DB::raw('GETDATE()');
-                }
-
-                DB::table($this->table)
-                    ->where('Id_Evaluacion', $idEvaluacion)
-                    ->where('Id_Pregunta', $idPregunta)
-                    ->update($datosUpdate);
+            // Construir MERGE optimizado según columnas disponibles
+            if ($hasFechaCreacion && $hasFechaActualizacion) {
+                // MERGE con ambas columnas de fecha
+                DB::statement("
+                    MERGE [{$this->table}] AS target
+                    USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
+                    ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
+                    WHEN MATCHED THEN
+                        UPDATE SET 
+                            Respuesta_Usuario = source.Respuesta_Usuario,
+                            Fecha_Actualizacion = GETDATE()
+                    WHEN NOT MATCHED THEN
+                        INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario, Fecha_Creacion)
+                        VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario, GETDATE());
+                ", [$idEvaluacion, $idPregunta, $respuesta]);
+            } elseif ($hasFechaCreacion) {
+                // MERGE solo con Fecha_Creacion
+                DB::statement("
+                    MERGE [{$this->table}] AS target
+                    USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
+                    ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
+                    WHEN MATCHED THEN
+                        UPDATE SET Respuesta_Usuario = source.Respuesta_Usuario
+                    WHEN NOT MATCHED THEN
+                        INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario, Fecha_Creacion)
+                        VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario, GETDATE());
+                ", [$idEvaluacion, $idPregunta, $respuesta]);
+            } elseif ($hasFechaActualizacion) {
+                // MERGE solo con Fecha_Actualizacion
+                DB::statement("
+                    MERGE [{$this->table}] AS target
+                    USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
+                    ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
+                    WHEN MATCHED THEN
+                        UPDATE SET 
+                            Respuesta_Usuario = source.Respuesta_Usuario,
+                            Fecha_Actualizacion = GETDATE()
+                    WHEN NOT MATCHED THEN
+                        INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario)
+                        VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario);
+                ", [$idEvaluacion, $idPregunta, $respuesta]);
             } else {
-                // Insertar nueva respuesta
-                $datosInsert = [
-                    'Id_Evaluacion' => $idEvaluacion,
-                    'Id_Pregunta' => $idPregunta,
-                    'Respuesta_Usuario' => $respuesta,
-                ];
-
-                if ($hasFechaCreacion) {
-                    DB::statement("
-                        INSERT INTO [{$this->table}] 
-                        ([Id_Evaluacion], [Id_Pregunta], [Respuesta_Usuario], [Fecha_Creacion]) 
-                        VALUES (?, ?, ?, GETDATE())
-                    ", [
-                        $datosInsert['Id_Evaluacion'],
-                        $datosInsert['Id_Pregunta'],
-                        $datosInsert['Respuesta_Usuario']
-                    ]);
-                } else {
-                    DB::table($this->table)->insert($datosInsert);
-                }
+                // MERGE sin columnas de fecha (más rápido)
+                DB::statement("
+                    MERGE [{$this->table}] AS target
+                    USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
+                    ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
+                    WHEN MATCHED THEN
+                        UPDATE SET Respuesta_Usuario = source.Respuesta_Usuario
+                    WHEN NOT MATCHED THEN
+                        INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario)
+                        VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario);
+                ", [$idEvaluacion, $idPregunta, $respuesta]);
             }
 
             return true;

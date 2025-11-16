@@ -13,6 +13,12 @@ class EvaluacionRepository
     protected string $table = 'Evaluacion';
 
     /**
+     * Cache estático para verificaciones de tabla y columnas
+     */
+    protected static ?bool $tablaExisteCache = null;
+    protected static ?array $columnasCache = null;
+
+    /**
      * Obtiene todas las evaluaciones de un usuario
      *
      * @param int $idUsuario
@@ -48,28 +54,34 @@ class EvaluacionRepository
     public function obtenerFormateadasPorUsuario(int $idUsuario): array
     {
         try {
-            // Verificar si la tabla existe
-            $tablaExiste = DB::selectOne("
-                SELECT COUNT(*) as existe 
-                FROM INFORMATION_SCHEMA.TABLES 
-                WHERE TABLE_NAME = ?
-            ", [$this->table]);
+            // Verificar si la tabla existe (usar cache)
+            if (self::$tablaExisteCache === null) {
+                $tablaExiste = DB::selectOne("
+                    SELECT COUNT(*) as existe 
+                    FROM INFORMATION_SCHEMA.TABLES 
+                    WHERE TABLE_NAME = ?
+                ", [$this->table]);
+                self::$tablaExisteCache = ($tablaExiste && $tablaExiste->existe > 0);
+            }
 
-            if (!$tablaExiste || $tablaExiste->existe == 0) {
+            if (!self::$tablaExisteCache) {
                 Log::warning('La tabla Evaluacion no existe en la base de datos');
                 return [];
             }
 
-            // Obtener columnas disponibles
-            $columnas = DB::select("
-                SELECT COLUMN_NAME 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = ?
-            ", [$this->table]);
+            // Obtener columnas disponibles (usar cache)
+            if (self::$columnasCache === null) {
+                $columnas = DB::select("
+                    SELECT COLUMN_NAME 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = ?
+                ", [$this->table]);
+                self::$columnasCache = array_map(function ($col) {
+                    return $col->COLUMN_NAME;
+                }, $columnas);
+            }
 
-            $columnasDisponibles = array_map(function ($col) {
-                return $col->COLUMN_NAME;
-            }, $columnas);
+            $columnasDisponibles = self::$columnasCache;
 
             // Construir SELECT dinámico
             $selectColumns = ['Id_Evaluacion', 'Id_Usuario', 'Fecha'];
@@ -317,14 +329,17 @@ class EvaluacionRepository
     public function obtenerEstadisticas(int $idUsuario): array
     {
         try {
-            // Verificar si la tabla existe
-            $tablaExiste = DB::selectOne("
-                SELECT COUNT(*) as existe 
-                FROM INFORMATION_SCHEMA.TABLES 
-                WHERE TABLE_NAME = ?
-            ", [$this->table]);
+            // Verificar si la tabla existe (usar cache)
+            if (self::$tablaExisteCache === null) {
+                $tablaExiste = DB::selectOne("
+                    SELECT COUNT(*) as existe 
+                    FROM INFORMATION_SCHEMA.TABLES 
+                    WHERE TABLE_NAME = ?
+                ", [$this->table]);
+                self::$tablaExisteCache = ($tablaExiste && $tablaExiste->existe > 0);
+            }
 
-            if (!$tablaExiste || $tablaExiste->existe == 0) {
+            if (!self::$tablaExisteCache) {
                 Log::warning('La tabla Evaluacion no existe en la base de datos');
                 return [
                     'totalEvaluaciones' => 0,
@@ -543,29 +558,38 @@ class EvaluacionRepository
     public function obtenerIncompletaPorUsuario(int $idUsuario, int $totalPreguntas = 50): ?array
     {
         try {
-            // Obtener todas las evaluaciones del usuario ordenadas por fecha descendente
-            $evaluaciones = DB::table($this->table)
-                ->where('Id_Usuario', $idUsuario)
-                ->orderBy('Fecha', 'desc')
-                ->get();
+            // Optimización: Obtener evaluaciones con conteo de respuestas en una sola query
+            // Usar LEFT JOIN para obtener el conteo de respuestas directamente
+            $evaluaciones = DB::select("
+                SELECT 
+                    e.Id_Evaluacion,
+                    e.Id_Usuario,
+                    e.Fecha,
+                    e.Estado,
+                    e.Tiempo,
+                    e.Puntuacion,
+                    COUNT(r.Id_Respuesta) as total_respuestas
+                FROM [{$this->table}] e
+                LEFT JOIN [Respuestas] r ON e.Id_Evaluacion = r.Id_Evaluacion
+                WHERE e.Id_Usuario = ?
+                GROUP BY e.Id_Evaluacion, e.Id_Usuario, e.Fecha, e.Estado, e.Tiempo, e.Puntuacion
+                ORDER BY e.Fecha DESC
+            ", [$idUsuario]);
 
-            if ($evaluaciones->isEmpty()) {
+            if (empty($evaluaciones)) {
                 return null;
             }
 
-            // Verificar cada evaluación para ver si está incompleta
-            $respuestasRepository = new \Database\Models\RespuestasRepository();
-            
+            // Buscar la primera evaluación incompleta
             foreach ($evaluaciones as $evaluacion) {
                 $idEvaluacion = $evaluacion->Id_Evaluacion;
+                $totalRespuestas = (int) $evaluacion->total_respuestas;
+                $estado = $evaluacion->Estado ?? null;
                 
                 // Verificar si el estado es "Completada" - si es así, no es incompleta
-                $estado = $evaluacion->Estado ?? null;
                 if ($estado === 'Completada' || $estado === 'Completado') {
                     continue; // Saltar evaluaciones completadas
                 }
-                
-                $totalRespuestas = $respuestasRepository->contarPorEvaluacion($idEvaluacion);
                 
                 // Si tiene exactamente 50 respuestas, considerarla completada (aunque el estado no lo indique)
                 if ($totalRespuestas >= $totalPreguntas) {
@@ -580,8 +604,15 @@ class EvaluacionRepository
                 
                 // Si tiene menos respuestas que el total esperado, está incompleta
                 if ($totalRespuestas < $totalPreguntas) {
-                    $evalArray = (array) $evaluacion;
-                    $evalArray['total_respuestas'] = $totalRespuestas;
+                    $evalArray = [
+                        'Id_Evaluacion' => $idEvaluacion,
+                        'Id_Usuario' => $evaluacion->Id_Usuario,
+                        'Fecha' => $evaluacion->Fecha,
+                        'Estado' => $estado,
+                        'Tiempo' => $evaluacion->Tiempo ?? null,
+                        'Puntuacion' => $evaluacion->Puntuacion ?? null,
+                        'total_respuestas' => $totalRespuestas,
+                    ];
                     return $evalArray;
                 }
             }

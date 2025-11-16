@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
+use App\Helpers\SessionHelper;
 use Database\Models\EvaluacionRepository;
 use Database\Models\RespuestasRepository;
 use Database\Models\ResultadosRepository;
@@ -50,40 +52,13 @@ class EvaluationController extends Controller
                 'id_evaluacion' => 'nullable|integer', // ID de evaluación existente (opcional)
             ]);
 
-            // Obtener el usuario de la sesión
-            $userData = $request->session()->get('user');
+            // Obtener userId de forma optimizada
+            $userId = SessionHelper::getUserId($request);
             
-            if (!$userData) {
+            if (!$userId) {
                 return response()->json([
                     'error' => 'Usuario no autenticado'
                 ], 401);
-            }
-
-            // Obtener el ID del usuario
-            $userId = $userData['id'] ?? $userData['Id'] ?? null;
-
-            if (!$userId) {
-                // Intentar obtener por correo
-                $correo = $userData['correo'] ?? $userData['Correo'] ?? null;
-                if ($correo) {
-                    $usuario = DB::table('usuario')
-                        ->select('Id')
-                        ->where('Correo', $correo)
-                        ->first();
-                    
-                    if ($usuario) {
-                        $userId = $usuario->Id;
-                        $userData['id'] = $userId;
-                        $request->session()->put('user', $userData);
-                        $request->session()->save();
-                    }
-                }
-            }
-
-            if (!$userId) {
-                return response()->json([
-                    'error' => 'No se pudo identificar al usuario'
-                ], 400);
             }
 
             // Obtener datos completos del usuario para metadatos
@@ -127,29 +102,14 @@ class EvaluationController extends Controller
                     ]);
                 }
             } else {
-                // Verificar si hay una evaluación en proceso (incompleta) para este usuario
-                $evaluacionIncompleta = $this->evaluacionRepository->obtenerIncompletaPorUsuario($userId, 50);
-                
-                if ($evaluacionIncompleta) {
-                    // Usar la evaluación existente
-                    $idEvaluacion = $evaluacionIncompleta['Id_Evaluacion'];
-                    
-                    // Actualizar el tiempo si se proporciona
-                    if ($request->tiempo !== null) {
-                        $this->evaluacionRepository->actualizar($idEvaluacion, [
-                            'Tiempo' => $request->tiempo,
-                        ]);
-                    }
-                } else {
-                    // Crear nueva evaluación en la base de datos
-                    $datosEvaluacion = [
-                        'Id_Usuario' => $userId,
-                        'Tiempo' => $request->tiempo ?? null,
-                        'Estado' => 'En proceso',
-                    ];
+                // Siempre crear una nueva evaluación
+                $datosEvaluacion = [
+                    'Id_Usuario' => $userId,
+                    'Tiempo' => $request->tiempo ?? null,
+                    'Estado' => 'En proceso',
+                ];
 
-                    $idEvaluacion = $this->evaluacionRepository->crear($datosEvaluacion);
-                }
+                $idEvaluacion = $this->evaluacionRepository->crear($datosEvaluacion);
             }
 
             Log::info('Evaluación creada', [
@@ -157,24 +117,30 @@ class EvaluationController extends Controller
                 'id_usuario' => $userId
             ]);
 
-            // Guardar respuestas en la tabla Respuestas
+            // Guardar respuestas en la tabla Respuestas (solo las que tienen contenido)
             // Convertir array de respuestas a formato [id_pregunta => respuesta]
             // donde id_pregunta es el número de pregunta (1, 2, 3...) no el índice (0, 1, 2...)
             $respuestasParaBD = [];
             foreach ($request->respuestas as $index => $respuesta) {
-                $idPregunta = $index + 1; // Convertir índice 0-based a pregunta 1-based
-                $respuestasParaBD[$idPregunta] = $respuesta;
+                // Solo guardar respuestas no vacías
+                if (!empty($respuesta) && trim($respuesta) !== '') {
+                    $idPregunta = $index + 1; // Convertir índice 0-based a pregunta 1-based
+                    $respuestasParaBD[$idPregunta] = $respuesta;
+                }
             }
             
-            $respuestasGuardadas = $this->respuestasRepository->guardarRespuestas(
-                $idEvaluacion,
-                $respuestasParaBD // Formato [1 => "respuesta1", 2 => "respuesta2", ...]
-            );
+            // Solo guardar si hay respuestas válidas
+            if (!empty($respuestasParaBD)) {
+                $respuestasGuardadas = $this->respuestasRepository->guardarRespuestas(
+                    $idEvaluacion,
+                    $respuestasParaBD // Formato [1 => "respuesta1", 2 => "respuesta2", ...]
+                );
 
-            if (!$respuestasGuardadas) {
-                Log::warning('No se pudieron guardar todas las respuestas', [
-                    'id_evaluacion' => $idEvaluacion
-                ]);
+                if (!$respuestasGuardadas) {
+                    Log::warning('No se pudieron guardar todas las respuestas', [
+                        'id_evaluacion' => $idEvaluacion
+                    ]);
+                }
             }
 
             // Verificar si se completaron todas las respuestas (50 preguntas)
@@ -327,73 +293,55 @@ class EvaluationController extends Controller
         }
     }
 
+
     /**
-     * Verifica si el usuario tiene una evaluación incompleta
+     * Crea una nueva evaluación vacía (solo la evaluación, sin respuestas)
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    public function checkIncompleteEvaluation(Request $request)
+    public function createEvaluation(Request $request)
     {
         try {
-            // Obtener el usuario de la sesión
-            $userData = $request->session()->get('user');
+            // Validar datos de entrada
+            $request->validate([
+                'tiempo' => 'nullable|numeric|min:0',
+            ]);
+
+            // Obtener userId de forma optimizada
+            $userId = SessionHelper::getUserId($request);
             
-            if (!$userData) {
+            if (!$userId) {
                 return response()->json([
                     'error' => 'Usuario no autenticado'
                 ], 401);
             }
 
-            // Obtener el ID del usuario
-            $userId = $userData['id'] ?? $userData['Id'] ?? null;
+            // Crear evaluación vacía (rápido, sin procesar respuestas)
+            $datosEvaluacion = [
+                'Id_Usuario' => $userId,
+                'Tiempo' => $request->tiempo ?? 0,
+                'Estado' => 'En proceso',
+            ];
 
-            if (!$userId) {
-                return response()->json([
-                    'error' => 'ID de usuario no encontrado'
-                ], 400);
-            }
-
-            // Buscar evaluación incompleta
-            $evaluacionIncompleta = $this->evaluacionRepository->obtenerIncompletaPorUsuario($userId, 50);
-
-            if ($evaluacionIncompleta) {
-                // Obtener las respuestas guardadas
-                $respuestas = $this->respuestasRepository->obtenerPorEvaluacion($evaluacionIncompleta['Id_Evaluacion']);
-                
-                // Formatear respuestas para el frontend
-                $respuestasFormateadas = [];
-                foreach ($respuestas as $respuesta) {
-                    $idPregunta = (int) $respuesta['Id_Pregunta'];
-                    $respuestasFormateadas[$idPregunta - 1] = $respuesta['Respuesta_Usuario']; // Convertir a 0-based
-                }
-
-                return response()->json([
-                    'success' => true,
-                    'has_incomplete' => true,
-                    'data' => [
-                        'id_evaluacion' => $evaluacionIncompleta['Id_Evaluacion'],
-                        'total_respuestas' => $evaluacionIncompleta['total_respuestas'] ?? 0,
-                        'respuestas' => $respuestasFormateadas,
-                        'fecha' => $evaluacionIncompleta['Fecha'] ?? null,
-                    ]
-                ], 200);
-            }
+            $idEvaluacion = $this->evaluacionRepository->crear($datosEvaluacion);
 
             return response()->json([
                 'success' => true,
-                'has_incomplete' => false,
-                'data' => null
-            ], 200);
+                'message' => 'Evaluación creada exitosamente',
+                'data' => [
+                    'id_evaluacion' => $idEvaluacion
+                ]
+            ], 201);
 
         } catch (\Exception $e) {
-            Log::error('Error al verificar evaluación incompleta', [
+            Log::error('Error al crear evaluación', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
-                'error' => 'Error al verificar evaluación incompleta',
+                'error' => 'Error al crear la evaluación',
                 'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
             ], 500);
         }
@@ -415,10 +363,10 @@ class EvaluationController extends Controller
                 'respuesta' => 'required|string',
             ]);
 
-            // Obtener el usuario de la sesión
-            $userData = $request->session()->get('user');
+            // Obtener userId de forma optimizada
+            $userId = SessionHelper::getUserId($request);
             
-            if (!$userData) {
+            if (!$userId) {
                 return response()->json([
                     'error' => 'Usuario no autenticado'
                 ], 401);
@@ -428,26 +376,22 @@ class EvaluationController extends Controller
             $preguntaIndex = $request->input('pregunta_index'); // 0-based
             $respuesta = $request->input('respuesta');
 
-            // Verificar que la evaluación pertenece al usuario
-            $evaluacion = $this->evaluacionRepository->obtenerPorId($idEvaluacion);
+            // Optimización: Verificar pertenencia de evaluación en una sola query con EXISTS (más rápido)
+            $evaluacionValida = DB::table('Evaluacion')
+                ->where('Id_Evaluacion', $idEvaluacion)
+                ->where('Id_Usuario', $userId)
+                ->exists();
             
-            if (!$evaluacion) {
+            if (!$evaluacionValida) {
                 return response()->json([
-                    'error' => 'Evaluación no encontrada'
+                    'error' => 'Evaluación no encontrada o no autorizada'
                 ], 404);
-            }
-
-            $userId = $userData['id'] ?? $userData['Id'] ?? null;
-            if ($evaluacion['Id_Usuario'] != $userId) {
-                return response()->json([
-                    'error' => 'No tienes permiso para modificar esta evaluación'
-                ], 403);
             }
 
             // Convertir índice 0-based a 1-based para la BD
             $idPregunta = $preguntaIndex + 1;
 
-            // Guardar la respuesta
+            // Guardar la respuesta (optimizado: sin verificar tabla/columnas cada vez)
             $guardado = $this->respuestasRepository->guardarRespuesta($idEvaluacion, $idPregunta, $respuesta);
 
             if ($guardado) {
@@ -489,10 +433,10 @@ class EvaluationController extends Controller
     public function loadEvaluation(Request $request, int $idEvaluacion)
     {
         try {
-            // Obtener el usuario de la sesión
-            $userData = $request->session()->get('user');
+            // Obtener userId de forma optimizada
+            $userId = SessionHelper::getUserId($request);
             
-            if (!$userData) {
+            if (!$userId) {
                 return response()->json([
                     'error' => 'Usuario no autenticado'
                 ], 401);
@@ -507,7 +451,6 @@ class EvaluationController extends Controller
                 ], 404);
             }
 
-            $userId = $userData['id'] ?? $userData['Id'] ?? null;
             if ($evaluacion['Id_Usuario'] != $userId) {
                 return response()->json([
                     'error' => 'No tienes permiso para acceder a esta evaluación'
@@ -564,38 +507,25 @@ class EvaluationController extends Controller
                 'id_evaluacion' => 'nullable|integer', // ID de evaluación (opcional)
             ]);
 
-            // Obtener el usuario de la sesión
-            $userData = $request->session()->get('user');
+            // Obtener userId de forma optimizada
+            $userId = SessionHelper::getUserId($request);
             
-            if (!$userData) {
+            if (!$userId) {
                 return response()->json([
                     'error' => 'Usuario no autenticado'
                 ], 401);
-            }
-
-            $userId = $userData['id'] ?? $userData['Id'] ?? null;
-            if (!$userId) {
-                return response()->json([
-                    'error' => 'ID de usuario no encontrado'
-                ], 400);
             }
 
             $file = $request->file('documento');
             $indice = $request->input('indice');
             $idEvaluacion = $request->input('id_evaluacion');
 
-            // Si no se proporciona id_evaluacion, buscar la evaluación incompleta del usuario
+            // Si no se proporciona id_evaluacion, crear una nueva evaluación
             if (!$idEvaluacion) {
-                $evaluacionIncompleta = $this->evaluacionRepository->obtenerIncompletaPorUsuario($userId, 50);
-                if ($evaluacionIncompleta) {
-                    $idEvaluacion = $evaluacionIncompleta['Id_Evaluacion'];
-                } else {
-                    // Si no hay evaluación incompleta, crear una nueva
-                    $idEvaluacion = $this->evaluacionRepository->crear([
-                        'Id_Usuario' => $userId,
-                        'Estado' => 'En proceso',
-                    ]);
-                }
+                $idEvaluacion = $this->evaluacionRepository->crear([
+                    'Id_Usuario' => $userId,
+                    'Estado' => 'En proceso',
+                ]);
             } else {
                 // Verificar que la evaluación pertenece al usuario
                 $evaluacion = $this->evaluacionRepository->obtenerPorId($idEvaluacion);

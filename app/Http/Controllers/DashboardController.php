@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use App\Helpers\SessionHelper;
 use Database\Models\EvaluacionRepository;
 
 class DashboardController extends Controller
@@ -24,49 +26,21 @@ class DashboardController extends Controller
     public function getStats(Request $request)
     {
         try {
-            // Obtener el usuario de la sesión (se guarda como 'user' en LoginController)
-            $userData = $request->session()->get('user');
+            // Obtener userId de forma optimizada
+            $userId = SessionHelper::getUserId($request);
             
-            if (!$userData) {
+            if (!$userId) {
                 Log::warning('No se encontró usuario en la sesión para las estadísticas del dashboard');
                 return response()->json([
                     'error' => 'Usuario no autenticado'
                 ], 401);
             }
 
-            // Obtener el ID del usuario desde userData
-            $userId = $userData['id'] ?? $userData['Id'] ?? null;
-
-            if (!$userId) {
-                // Intentar obtener por correo si no hay ID
-                $correo = $userData['correo'] ?? $userData['Correo'] ?? null;
-                if ($correo) {
-                    $usuario = \Illuminate\Support\Facades\DB::table('usuario')
-                        ->select('Id')
-                        ->where('Correo', $correo)
-                        ->first();
-                    
-                    if ($usuario) {
-                        $userId = $usuario->Id;
-                        // Actualizar la sesión con el ID
-                        $userData['id'] = $userId;
-                        $request->session()->put('user', $userData);
-                        $request->session()->save();
-                    }
-                }
-            }
-
-            if (!$userId) {
-                Log::warning('No se pudo obtener el ID del usuario para las estadísticas del dashboard', [
-                    'userData_keys' => array_keys($userData ?? [])
-                ]);
-                return response()->json([
-                    'error' => 'Usuario no autenticado'
-                ], 401);
-            }
-
-            // Obtener estadísticas del repositorio
-            $estadisticas = $this->evaluacionRepository->obtenerEstadisticas($userId);
+            // Cachear estadísticas por 2 minutos para mejorar rendimiento
+            $cacheKey = "dashboard_stats_user_{$userId}";
+            $estadisticas = Cache::remember($cacheKey, 120, function () use ($userId) {
+                return $this->evaluacionRepository->obtenerEstadisticas($userId);
+            });
 
             Log::info('Estadísticas del dashboard obtenidas', [
                 'user_id' => $userId,
@@ -100,54 +74,27 @@ class DashboardController extends Controller
     public function getEvaluations(Request $request)
     {
         try {
-            // Obtener el usuario de la sesión
-            $userData = $request->session()->get('user');
+            // Obtener userId de forma optimizada
+            $userId = SessionHelper::getUserId($request);
             
-            if (!$userData) {
+            if (!$userId) {
                 Log::warning('No se encontró usuario en la sesión para obtener evaluaciones');
                 return response()->json([
                     'error' => 'Usuario no autenticado'
                 ], 401);
             }
 
-            // Obtener el ID del usuario desde userData
-            $userId = $userData['id'] ?? $userData['Id'] ?? null;
-
-            if (!$userId) {
-                // Intentar obtener por correo si no hay ID
-                $correo = $userData['correo'] ?? $userData['Correo'] ?? null;
-                if ($correo) {
-                    $usuario = \Illuminate\Support\Facades\DB::table('usuario')
-                        ->select('Id')
-                        ->where('Correo', $correo)
-                        ->first();
-                    
-                    if ($usuario) {
-                        $userId = $usuario->Id;
-                        // Actualizar la sesión con el ID
-                        $userData['id'] = $userId;
-                        $request->session()->put('user', $userData);
-                        $request->session()->save();
-                    }
-                }
-            }
-
-            if (!$userId) {
-                Log::warning('No se pudo obtener el ID del usuario para obtener evaluaciones', [
-                    'userData_keys' => array_keys($userData ?? [])
-                ]);
-                return response()->json([
-                    'error' => 'Usuario no autenticado'
-                ], 401);
-            }
-
-            // Obtener evaluaciones formateadas del repositorio
+            // NO cachear evaluaciones para detectar cambios inmediatos (evaluaciones incompletas)
+            // El cache causaba que no se detectaran evaluaciones recién guardadas
             $evaluaciones = $this->evaluacionRepository->obtenerFormateadasPorUsuario($userId);
 
-            Log::info('Evaluaciones obtenidas', [
-                'user_id' => $userId,
-                'total' => count($evaluaciones)
-            ]);
+            // Remover logging excesivo en producción
+            if (config('app.debug')) {
+                Log::info('Evaluaciones obtenidas', [
+                    'user_id' => $userId,
+                    'total' => count($evaluaciones)
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

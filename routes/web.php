@@ -48,7 +48,7 @@ Route::middleware(['web'])->group(function () {
 
 // Rutas de evaluación
 Route::middleware(['web'])->group(function () {
-    Route::get('/api/evaluation/check-incomplete', [EvaluationController::class, 'checkIncompleteEvaluation']);
+    Route::post('/api/evaluation/create', [EvaluationController::class, 'createEvaluation']);
     Route::get('/api/evaluation/{id}/load', [EvaluationController::class, 'loadEvaluation']);
     Route::post('/api/evaluation/save-progress', [EvaluationController::class, 'saveProgress']);
     Route::post('/api/evaluation/submit', [EvaluationController::class, 'submitEvaluation']);

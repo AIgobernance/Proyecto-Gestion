@@ -41,6 +41,7 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'ce9671a430e4846b44e1c68c7611f9f5' => __DIR__ . '/..' . '/mockery/mockery/library/Mockery.php',
         'a1cfe24d14977df6878b9bf804af2d1c' => __DIR__ . '/..' . '/nunomaduro/collision/src/Adapters/Phpunit/Autoload.php',
         'ec07570ca5a812141189b1fa81503674' => __DIR__ . '/..' . '/phpunit/phpunit/src/Framework/Assert/Functions.php',
+        '71172401222a06a49527f8afb1c3dbc6' => __DIR__ . '/../..' . '/app/Helpers/SessionHelper.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -534,10 +535,12 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
     );
 
     public static $classMap = array (
+        'App\\Helpers\\SessionHelper' => __DIR__ . '/../..' . '/app/Helpers/SessionHelper.php',
         'App\\Http\\Controllers\\AdminRegisterController' => __DIR__ . '/../..' . '/app/Http/Controllers/AdminRegisterController.php',
         'App\\Http\\Controllers\\Controller' => __DIR__ . '/../..' . '/app/Http/Controllers/Controller.php',
         'App\\Http\\Controllers\\CsrfController' => __DIR__ . '/../..' . '/app/Http/Controllers/CsrfController.php',
         'App\\Http\\Controllers\\DashboardController' => __DIR__ . '/../..' . '/app/Http/Controllers/DashboardController.php',
+        'App\\Http\\Controllers\\EvaluationController' => __DIR__ . '/../..' . '/app/Http/Controllers/EvaluationController.php',
         'App\\Http\\Controllers\\LoginController' => __DIR__ . '/../..' . '/app/Http/Controllers/LoginController.php',
         'App\\Http\\Controllers\\PasswordResetController' => __DIR__ . '/../..' . '/app/Http/Controllers/PasswordResetController.php',
         'App\\Http\\Controllers\\ProfileController' => __DIR__ . '/../..' . '/app/Http/Controllers/ProfileController.php',
@@ -545,6 +548,7 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'App\\Http\\Controllers\\UserManagementController' => __DIR__ . '/../..' . '/app/Http/Controllers/UserManagementController.php',
         'App\\Models\\User' => __DIR__ . '/../..' . '/app/Models/User.php',
         'App\\Providers\\AppServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AppServiceProvider.php',
+        'App\\Services\\N8nService' => __DIR__ . '/../..' . '/app/Services/N8nService.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
         'Brick\\Math\\BigDecimal' => __DIR__ . '/..' . '/brick/math/src/BigDecimal.php',
         'Brick\\Math\\BigInteger' => __DIR__ . '/..' . '/brick/math/src/BigInteger.php',
@@ -669,7 +673,10 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'Database\\Factories\\UsuarioFactoryManager' => __DIR__ . '/../..' . '/database/factories/UsuarioFactoryManager.php',
         'Database\\Factories\\UsuarioNormalFactory' => __DIR__ . '/../..' . '/database/factories/UsuarioNormalFactory.php',
         'Database\\Models\\Administrador' => __DIR__ . '/../..' . '/database/models/Administrador.php',
+        'Database\\Models\\DocumentosAdjuntosRepository' => __DIR__ . '/../..' . '/database/models/DocumentosAdjuntosRepository.php',
         'Database\\Models\\EvaluacionRepository' => __DIR__ . '/../..' . '/database/models/EvaluacionRepository.php',
+        'Database\\Models\\RespuestasRepository' => __DIR__ . '/../..' . '/database/models/RespuestasRepository.php',
+        'Database\\Models\\ResultadosRepository' => __DIR__ . '/../..' . '/database/models/ResultadosRepository.php',
         'Database\\Models\\UsuarioInterface' => __DIR__ . '/../..' . '/database/models/UsuarioInterface.php',
         'Database\\Models\\UsuarioNormal' => __DIR__ . '/../..' . '/database/models/UsuarioNormal.php',
         'Database\\Models\\UsuarioRepository' => __DIR__ . '/../..' . '/database/models/UsuarioRepository.php',
