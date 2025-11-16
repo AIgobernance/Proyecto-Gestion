@@ -90,5 +90,81 @@ class DashboardController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Obtiene todas las evaluaciones del usuario autenticado formateadas
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getEvaluations(Request $request)
+    {
+        try {
+            // Obtener el usuario de la sesión
+            $userData = $request->session()->get('user');
+            
+            if (!$userData) {
+                Log::warning('No se encontró usuario en la sesión para obtener evaluaciones');
+                return response()->json([
+                    'error' => 'Usuario no autenticado'
+                ], 401);
+            }
+
+            // Obtener el ID del usuario desde userData
+            $userId = $userData['id'] ?? $userData['Id'] ?? null;
+
+            if (!$userId) {
+                // Intentar obtener por correo si no hay ID
+                $correo = $userData['correo'] ?? $userData['Correo'] ?? null;
+                if ($correo) {
+                    $usuario = \Illuminate\Support\Facades\DB::table('usuario')
+                        ->select('Id')
+                        ->where('Correo', $correo)
+                        ->first();
+                    
+                    if ($usuario) {
+                        $userId = $usuario->Id;
+                        // Actualizar la sesión con el ID
+                        $userData['id'] = $userId;
+                        $request->session()->put('user', $userData);
+                        $request->session()->save();
+                    }
+                }
+            }
+
+            if (!$userId) {
+                Log::warning('No se pudo obtener el ID del usuario para obtener evaluaciones', [
+                    'userData_keys' => array_keys($userData ?? [])
+                ]);
+                return response()->json([
+                    'error' => 'Usuario no autenticado'
+                ], 401);
+            }
+
+            // Obtener evaluaciones formateadas del repositorio
+            $evaluaciones = $this->evaluacionRepository->obtenerFormateadasPorUsuario($userId);
+
+            Log::info('Evaluaciones obtenidas', [
+                'user_id' => $userId,
+                'total' => count($evaluaciones)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $evaluaciones
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener evaluaciones', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Error al obtener las evaluaciones',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
 

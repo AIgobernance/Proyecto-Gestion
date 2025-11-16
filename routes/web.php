@@ -39,6 +39,7 @@ Route::middleware(['web'])->group(function () {
 // Rutas de dashboard
 Route::middleware(['web'])->group(function () {
     Route::get('/api/dashboard/stats', [DashboardController::class, 'getStats']);
+    Route::get('/api/evaluations', [DashboardController::class, 'getEvaluations']);
 });
 
 // Rutas de administración de usuarios (requieren autenticación admin)

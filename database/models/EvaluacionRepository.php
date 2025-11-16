@@ -40,6 +40,143 @@ class EvaluacionRepository
     }
 
     /**
+     * Obtiene todas las evaluaciones de un usuario formateadas para el frontend
+     *
+     * @param int $idUsuario
+     * @return array
+     */
+    public function obtenerFormateadasPorUsuario(int $idUsuario): array
+    {
+        try {
+            // Verificar si la tabla existe
+            $tablaExiste = DB::selectOne("
+                SELECT COUNT(*) as existe 
+                FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_NAME = ?
+            ", [$this->table]);
+
+            if (!$tablaExiste || $tablaExiste->existe == 0) {
+                Log::warning('La tabla Evaluacion no existe en la base de datos');
+                return [];
+            }
+
+            // Obtener columnas disponibles
+            $columnas = DB::select("
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_NAME = ?
+            ", [$this->table]);
+
+            $columnasDisponibles = array_map(function ($col) {
+                return $col->COLUMN_NAME;
+            }, $columnas);
+
+            // Construir SELECT dinámico
+            $selectColumns = ['Id_Evaluacion', 'Id_Usuario', 'Fecha'];
+            $hasTiempo = in_array('Tiempo', $columnasDisponibles);
+            $hasPuntuacion = in_array('Puntuacion', $columnasDisponibles);
+            $hasNombre = in_array('Nombre', $columnasDisponibles);
+            $hasMarco = in_array('Marco', $columnasDisponibles);
+            $hasFramework = in_array('Framework', $columnasDisponibles);
+            $hasEstado = in_array('Estado', $columnasDisponibles);
+
+            if ($hasTiempo) $selectColumns[] = 'Tiempo';
+            if ($hasPuntuacion) $selectColumns[] = 'Puntuacion';
+            if ($hasNombre) $selectColumns[] = 'Nombre';
+            if ($hasMarco) $selectColumns[] = 'Marco';
+            if ($hasFramework) $selectColumns[] = 'Framework';
+            if ($hasEstado) $selectColumns[] = 'Estado';
+
+            $evaluaciones = DB::table($this->table)
+                ->select($selectColumns)
+                ->where('Id_Usuario', $idUsuario)
+                ->orderBy('Fecha', 'desc')
+                ->get();
+
+            return array_map(function ($evaluacion) use ($hasTiempo, $hasPuntuacion, $hasNombre, $hasMarco, $hasFramework) {
+                $eval = (array) $evaluacion;
+                
+                // Formatear fecha
+                $fecha = null;
+                if (isset($eval['Fecha'])) {
+                    try {
+                        $fechaObj = is_string($eval['Fecha']) 
+                            ? new \DateTime($eval['Fecha']) 
+                            : $eval['Fecha'];
+                        
+                        if ($fechaObj instanceof \DateTime) {
+                            $fecha = $fechaObj->format('d/m/Y');
+                            $hora = $fechaObj->format('H:i');
+                        } else {
+                            $fecha = 'N/A';
+                            $hora = 'N/A';
+                        }
+                    } catch (\Exception $e) {
+                        $fecha = 'N/A';
+                        $hora = 'N/A';
+                    }
+                } else {
+                    $fecha = 'N/A';
+                    $hora = 'N/A';
+                }
+
+                // Formatear tiempo
+                $tiempo = null;
+                if ($hasTiempo && isset($eval['Tiempo']) && $eval['Tiempo'] !== null) {
+                    $minutos = (float) $eval['Tiempo'];
+                    if ($minutos < 60) {
+                        $tiempo = round($minutos) . ' min';
+                    } else {
+                        $horas = floor($minutos / 60);
+                        $mins = round($minutos % 60);
+                        $tiempo = $horas . 'h ' . $mins . ' min';
+                    }
+                } else {
+                    $tiempo = 'N/A';
+                }
+
+                // Obtener puntuación
+                $puntuacion = $hasPuntuacion && isset($eval['Puntuacion']) 
+                    ? (int) $eval['Puntuacion'] 
+                    : 0;
+
+                // Obtener nombre
+                $nombre = $hasNombre && isset($eval['Nombre']) 
+                    ? $eval['Nombre'] 
+                    : ($hasFramework && isset($eval['Framework']) 
+                        ? 'Evaluación ' . $eval['Framework'] 
+                        : 'Evaluación #' . ($eval['Id_Evaluacion'] ?? 'N/A'));
+
+                // Obtener marco/framework
+                $marco = ($hasMarco && isset($eval['Marco'])) 
+                    ? $eval['Marco'] 
+                    : ($hasFramework && isset($eval['Framework']) 
+                        ? $eval['Framework'] 
+                        : 'N/A');
+
+                return [
+                    'id' => $eval['Id_Evaluacion'] ?? null,
+                    'name' => $nombre,
+                    'date' => $fecha,
+                    'time' => $hora,
+                    'tiempo' => $tiempo,
+                    'score' => $puntuacion,
+                    'framework' => $marco,
+                    'status' => ($hasEstado && isset($eval['Estado'])) ? $eval['Estado'] : 'Completada',
+                ];
+            }, $evaluaciones->toArray());
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener evaluaciones formateadas del usuario', [
+                'id_usuario' => $idUsuario,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return [];
+        }
+    }
+
+    /**
      * Obtiene el conteo total de evaluaciones de un usuario
      *
      * @param int $idUsuario
