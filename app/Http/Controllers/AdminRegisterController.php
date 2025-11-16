@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Database\Models\UsuarioRepository;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
+use App\Observer\ObserverManager;
 
 class AdminRegisterController extends Controller
 {
@@ -79,6 +80,16 @@ class AdminRegisterController extends Controller
 
             // Ocultar la contraseña en la respuesta
             unset($usuario->Contrasena);
+
+            // Disparar notificación de usuario registrado (Patrón Observer)
+            $notificador = ObserverManager::obtenerNotificador('usuario_registrado');
+            if ($notificador instanceof \App\Observer\Notificadores\NotificadorUsuarioRegistrado) {
+                $notificador->registrarUsuario($userId, [
+                    'nombre' => $request->nombre,
+                    'correo' => $request->correo,
+                    'rol' => 'admin'
+                ]);
+            }
 
             return response()->json([
                 'message' => 'Administrador registrado correctamente',

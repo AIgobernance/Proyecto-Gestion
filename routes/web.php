@@ -43,6 +43,7 @@ Route::middleware(['web'])->group(function () {
 // Rutas de dashboard
 Route::middleware(['web'])->group(function () {
     Route::get('/api/dashboard/stats', [DashboardController::class, 'getStats']);
+    Route::get('/api/dashboard/general-stats', [DashboardController::class, 'getGeneralStats']);
     Route::get('/api/evaluations', [DashboardController::class, 'getEvaluations']);
 });
 

@@ -1,19 +1,19 @@
 // resources/js/GeneralDashboardPage.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import imgLogo from "../assets/logo-principal.jpg";
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  LineChart, Line, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
-  Users, ClipboardCheck, FileText, Download, Filter, TrendingUp, ArrowLeft,
-  BarChart3, Activity, Calendar as CalIcon, ChevronDown, AlertCircle, Award,
+  TrendingUp, ArrowLeft,
+  BarChart3, Calendar as CalIcon, Download,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { motion } from "motion/react";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 /* ===== Estilos coherentes + FIX Select (portal) y Tabs centradas ===== */
@@ -74,21 +74,29 @@ const styles = `
 }
 
 /* ====== TABS centradas y del mismo tamaño ====== */
-.tabs-wrap{display:flex;justify-content:center;margin:0 0 16px}
+.tabs-wrap{display:flex;justify-content:center;margin:24px 0 32px}
 .tabs-list{
-  display:flex !important; gap:12px;
-  background:#fff;border:1px solid #e9edf5;border-radius:999px;box-shadow:var(--shadow);
+  display:flex !important; gap:8px;
+  background:#fff;border:1px solid #e9edf5;border-radius:16px;box-shadow:var(--shadow);
   padding:6px; width:fit-content;
 }
 .tabs-trigger{
-  border-radius:999px;padding:12px 18px;font-weight:800;color:#173b8f;
-  min-width: 220px; text-align:center; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:12px;padding:14px 24px;font-weight:700;color:#173b8f;
+  min-width: 200px; text-align:center; display:inline-flex; align-items:center; justify-content:center;
+  transition:all 0.2s ease;
 }
-.tabs-trigger[data-state="active"]{ background:linear-gradient(90deg,#4d82bc,#5a8fc9); color:#fff; }
+.tabs-trigger[data-state="active"]{ 
+  background:linear-gradient(135deg,#4d82bc,#5a8fc9); 
+  color:#fff; 
+  box-shadow:0 4px 12px rgba(77,130,188,0.3);
+}
+.tabs-trigger:hover:not([data-state="active"]){ 
+  background:#f6f8fc;
+}
 
 /* Grids de charts */
-.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-@media (max-width: 1020px){ .charts{grid-template-columns:1fr} }
+.charts{display:grid;grid-template-columns:1fr;gap:24px;max-width:900px;margin:0 auto}
+@media (min-width: 1200px){ .charts{grid-template-columns:1fr 1fr;max-width:100%} }
 
 /* Botón Primario */
 .btn-primary{
@@ -100,39 +108,17 @@ const styles = `
 .btn-primary:hover{filter:brightness(1.02)}
 `;
 
-/* ===== Datos de ejemplo ===== */
-const userTrendData = [
-  { month: "Ene", users: 45 }, { month: "Feb", users: 58 }, { month: "Mar", users: 72 },
-  { month: "Abr", users: 95 }, { month: "May", users: 112 }, { month: "Jun", users: 130 },
-];
-
-const evaluationsPerMonthData = [
-  { month: "Ene", evaluations: 85 }, { month: "Feb", evaluations: 70 }, { month: "Mar", evaluations: 55 },
-  { month: "Abr", evaluations: 95 }, { month: "May", evaluations: 110 },
-];
-
-const documentTypeData = [
-  { name: "ISO 42001", value: 30, color: "#3b82f6" },
-  { name: "NIS2/AI Act", value: 25, color: "#8b5cf6" },
-  { name: "CONPES 4144", value: 20, color: "#ec4899" },
-  { name: "ISO 27090", value: 25, color: "#10b981" },
-];
-
-const documentsPerMonthData = [
-  { month: "Ene", documents: 50 }, { month: "Feb", documents: 75 }, { month: "Mar", documents: 60 },
-  { month: "Abr", documents: 85 }, { month: "May", documents: 92 },
-];
-
-const recentActivity = [
-  { user: "Ana García", action: "Completó evaluación ISO 42001", time: "Hace 2 horas" },
-  { user: "Carlos López", action: "Generó reporte NIS2", time: "Hace 3 horas" },
-  { user: "María Rodríguez", action: "Inició evaluación", time: "Hace 5 horas" },
-];
-
-const kpiData = {
-  users: { current: 130, percentChange: 36.8 },
-  evaluations: { current: 110, percentChange: 29.4 },
-  documents: { current: 92, percentChange: 22.7 },
+/* ===== Datos iniciales (se reemplazarán con datos reales) ===== */
+const initialData = {
+  kpis: {
+    users: { current: 0, percentChange: 0 },
+    evaluations: { current: 0, percentChange: 0 },
+    documents: { current: 0, percentChange: 0 }
+  },
+  userTrend: [],
+  evaluationsPerMonth: [],
+  distributionByFramework: [],
+  documentsPerMonth: []
 };
 
 export default function GeneralDashboardPage({
@@ -141,15 +127,110 @@ export default function GeneralDashboardPage({
       ? window.history.back()
       : window.location.assign("/admin/dashboard")),
 }) {
-  console.log('GeneralDashboardPage - Función ejecutada');
-  const handleDownload = (name) => console.log("Descargando", name);
+  const [data, setData] = useState(initialData);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Debug: verificar que el componente se está renderizando
-  React.useEffect(() => {
-    console.log('GeneralDashboardPage se está renderizando - useEffect');
+  // Funciones para exportar gráficos
+  const exportChartAsPNG = (chartId, filename) => {
+    const chartElement = document.getElementById(chartId);
+    if (!chartElement) return;
+
+    import('html2canvas').then(html2canvas => {
+      html2canvas.default(chartElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `${filename}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+    }).catch(err => console.error('Error al exportar PNG:', err));
+  };
+
+  const exportChartAsSVG = (chartId, filename) => {
+    const chartElement = document.getElementById(chartId);
+    if (!chartElement) return;
+
+    const svgElement = chartElement.querySelector('svg');
+    if (!svgElement) return;
+
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    const link = document.createElement('a');
+    link.download = `${filename}.svg`;
+    link.href = svgUrl;
+    link.click();
+    URL.revokeObjectURL(svgUrl);
+  };
+
+  const exportChartAsPDF = (chartId, filename) => {
+    const chartElement = document.getElementById(chartId);
+    if (!chartElement) return;
+
+    import('html2canvas').then(html2canvas => {
+      return import('jspdf').then(jsPDF => {
+        html2canvas.default(chartElement, {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          logging: false
+        }).then(canvas => {
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF.default('landscape', 'mm', 'a4');
+          const imgWidth = 280;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+          pdf.save(`${filename}.pdf`);
+        });
+      });
+    }).catch(err => console.error('Error al exportar PDF:', err));
+  };
+
+  // Cargar datos del dashboard
+  useEffect(() => {
+    loadGeneralStats();
   }, []);
 
-  console.log('GeneralDashboardPage - Retornando JSX');
+  const loadGeneralStats = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      // Siempre forzar refresh para obtener datos actualizados
+      const response = await axiosClient.get('/api/dashboard/general-stats', {
+        params: {
+          refresh: 'true',
+          _t: Date.now()
+        },
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      if (response.data && response.data.success && response.data.data) {
+        setData(response.data.data);
+      } else {
+        console.error('Respuesta inesperada:', response.data);
+        setError('No se pudieron cargar las estadísticas. Por favor, intenta más tarde.');
+      }
+    } catch (err) {
+      console.error('Error al cargar estadísticas generales:', err);
+      setError('No se pudieron cargar las estadísticas. Por favor, intenta más tarde.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = (name) => console.log("Descargando", name);
   return (
     <div className="page">
       <style>{styles}</style>
@@ -179,16 +260,21 @@ export default function GeneralDashboardPage({
               <CardHeader style={{padding:"16px 18px 8px"}}>
                 <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <span style={{color:"#5b677a",fontSize:14}}>Usuarios registrados</span>
-                  <span className="icon-pill"><Users className="w-5 h-5" /></span>
                 </CardTitle>
               </CardHeader>
               <CardContent style={{padding:18}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontSize:38,color:"#173b8f",fontWeight:900}}>{kpiData.users.current}</div>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
-                    <TrendingUp className="w-3 h-3" /> +{kpiData.users.percentChange}%
-                  </Badge>
-                </div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:38,color:"#173b8f"}}>
+                    <div className="animate-spin" style={{width:24,height:24,border:"3px solid #e5e7eb",borderTopColor:"#173b8f",borderRadius:"50%"}}></div>
+                  </div>
+                ) : (
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{fontSize:38,color:"#173b8f",fontWeight:900}}>{data.kpis.users.current}</div>
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
+                      <TrendingUp className="w-3 h-3" /> {data.kpis.users.percentChange >= 0 ? '+' : ''}{data.kpis.users.percentChange}%
+                    </Badge>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -198,16 +284,21 @@ export default function GeneralDashboardPage({
               <CardHeader style={{padding:"16px 18px 8px"}}>
                 <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <span style={{color:"#5b677a",fontSize:14}}>Evaluaciones completadas</span>
-                  <span className="icon-pill" style={{background:"#7a4fd6"}}><ClipboardCheck className="w-5 h-5" /></span>
                 </CardTitle>
               </CardHeader>
               <CardContent style={{padding:18}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontSize:38,color:"#173b8f",fontWeight:900}}>{kpiData.evaluations.current}</div>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
-                    <TrendingUp className="w-3 h-3" /> +{kpiData.evaluations.percentChange}%
-                  </Badge>
-                </div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:38,color:"#173b8f"}}>
+                    <div className="animate-spin" style={{width:24,height:24,border:"3px solid #e5e7eb",borderTopColor:"#173b8f",borderRadius:"50%"}}></div>
+                  </div>
+                ) : (
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{fontSize:38,color:"#173b8f",fontWeight:900}}>{data.kpis.evaluations.current}</div>
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
+                      <TrendingUp className="w-3 h-3" /> {data.kpis.evaluations.percentChange >= 0 ? '+' : ''}{data.kpis.evaluations.percentChange}%
+                    </Badge>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -217,22 +308,27 @@ export default function GeneralDashboardPage({
               <CardHeader style={{padding:"16px 18px 8px"}}>
                 <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                   <span style={{color:"#5b677a",fontSize:14}}>Documentos generados</span>
-                  <span className="icon-pill" style={{background:"#10b981"}}><FileText className="w-5 h-5" /></span>
                 </CardTitle>
               </CardHeader>
               <CardContent style={{padding:18}}>
-                <div style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{fontSize:38,color:"#173b8f",fontWeight:900}}>{kpiData.documents.current}</div>
-                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
-                    <TrendingUp className="w-3 h-3" /> +{kpiData.documents.percentChange}%
-                  </Badge>
-                </div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:38,color:"#173b8f"}}>
+                    <div className="animate-spin" style={{width:24,height:24,border:"3px solid #e5e7eb",borderTopColor:"#173b8f",borderRadius:"50%"}}></div>
+                  </div>
+                ) : (
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{fontSize:38,color:"#173b8f",fontWeight:900}}>{data.kpis.documents.current}</div>
+                    <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
+                      <TrendingUp className="w-3 h-3" /> {data.kpis.documents.percentChange >= 0 ? '+' : ''}{data.kpis.documents.percentChange}%
+                    </Badge>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
         </section>
 
-        {/* Toolbar: filtros/estado */}
+        {/* Toolbar: período, tabs y actualización */}
         <section className="toolbar">
           <div className="toolbar-left">
             <Select defaultValue="month">
@@ -246,42 +342,7 @@ export default function GeneralDashboardPage({
                 <SelectItem value="year">Último año</SelectItem>
               </SelectContent>
             </Select>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="btn-outline">
-                  <Filter className="w-4 h-4" /> Filtros avanzados <ChevronDown className="w-4 h-4" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Tipo de Marco</h4>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Todos los marcos" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="iso42001">ISO 42001</SelectItem>
-                        <SelectItem value="nis2">NIS2/AI Act</SelectItem>
-                        <SelectItem value="conpes">CONPES 4144</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-2">Estado</h4>
-                    <Select>
-                      <SelectTrigger><SelectValue placeholder="Todos los estados" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="completed">Completadas</SelectItem>
-                        <SelectItem value="pending">Pendientes</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <button className="btn-primary" style={{width:"100%"}}>Aplicar filtros</button>
-                </div>
-              </PopoverContent>
-            </Popover>
+            
           </div>
 
           <div style={{display:"inline-flex",alignItems:"center",gap:8,color:"#5b677a"}}>
@@ -290,189 +351,201 @@ export default function GeneralDashboardPage({
           </div>
         </section>
 
-        {/* Tabs centradas */}
-        <div className="tabs-wrap">
-          <Tabs defaultValue="analytics" className="space-y-6" style={{width:"100%"}}>
-            <TabsList className="tabs-list">
-              <TabsTrigger value="analytics" className="tabs-trigger">
-                <BarChart3 className="w-4 h-4" /> Analíticas
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="tabs-trigger">
-                <Activity className="w-4 h-4" /> Actividad Reciente
-              </TabsTrigger>
-            </TabsList>
+        {/* Mensaje de error */}
+        {error && (
+          <div style={{
+            marginBottom: 20,
+            padding: 16,
+            background: "#fee2e2",
+            border: "1px solid #fecaca",
+            borderRadius: 12,
+            color: "#991b1b"
+          }}>
+            <p style={{margin: 0, fontSize: 14}}>{error}</p>
+          </div>
+        )}
 
-            {/* Analíticas */}
-            <TabsContent value="analytics" className="space-y-6">
+        {/* Contenido de Tabs */}
+        <div className="space-y-6" style={{width:"100%"}}>
+          <div className="space-y-6" style={{width:"100%"}}>
               <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="charts">
                 {/* Tendencia de Usuarios */}
-                <Card className="card">
-                  <CardHeader>
-                    <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:18}}>
-                        <TrendingUp className="w-5 h-5" style={{color:"#4d82bc"}} />
+                <Card className="card" style={{boxShadow:"0 4px 20px rgba(0,0,0,0.08)"}}>
+                  <CardHeader style={{padding:"20px 24px 12px"}}>
+                    <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:10,fontSize:20,fontWeight:700,color:"#0f172a"}}>
                         Tendencia de usuarios
                       </span>
-                      <Badge variant="outline" className="text-blue-600">6 meses</Badge>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <Badge variant="outline" style={{background:"#eff6ff",borderColor:"#bfdbfe",color:"#1e40af",fontWeight:600}}>6 meses</Badge>
+                        <div style={{display:"flex",gap:4}}>
+                          <button 
+                            onClick={() => exportChartAsPNG('chart-users', 'tendencia-usuarios')}
+                            style={{padding:"6px 10px",border:"1px solid #e5e7eb",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12}}
+                            title="Descargar PNG"
+                          >
+                            PNG
+                          </button>
+                          <button 
+                            onClick={() => exportChartAsSVG('chart-users', 'tendencia-usuarios')}
+                            style={{padding:"6px 10px",border:"1px solid #e5e7eb",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12}}
+                            title="Descargar SVG"
+                          >
+                            SVG
+                          </button>
+                          <button 
+                            onClick={() => exportChartAsPDF('chart-users', 'tendencia-usuarios')}
+                            style={{padding:"6px 10px",border:"1px solid #e5e7eb",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12}}
+                            title="Descargar PDF"
+                          >
+                            PDF
+                          </button>
+                        </div>
+                      </div>
                     </CardTitle>
-                    <CardDescription>Crecimiento mensual de usuarios en la plataforma</CardDescription>
+                    <CardDescription style={{color:"#64748b",fontSize:14}}>Crecimiento mensual de usuarios en la plataforma</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <LineChart data={userTrendData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="month" stroke="#6b7280" />
-                        <YAxis stroke="#6b7280" />
-                        <Tooltip contentStyle={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:8}} />
-                        <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={3} dot={{fill:"#3b82f6",r:5}} activeDot={{r:7}} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                    <div style={{display:"flex",justifyContent:"center",marginTop:12}}>
-                      <button className="btn-outline" onClick={()=>handleDownload("Tendencia de Usuarios")}>
-                        <Download className="w-4 h-4" /> Descargar
-                      </button>
-                    </div>
+                  <CardContent style={{padding:"0 24px 24px"}}>
+                    {loading ? (
+                      <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:300}}>
+                        <div className="animate-spin" style={{width:40,height:40,border:"4px solid #e5e7eb",borderTopColor:"#4d82bc",borderRadius:"50%"}}></div>
+                      </div>
+                    ) : (
+                      <div id="chart-users">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <LineChart data={data.userTrend.length > 0 ? data.userTrend : [{month: 'Sin datos', users: 0}]} margin={{top:10,right:20,left:0,bottom:10}}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                          <XAxis dataKey="month" stroke="#64748b" style={{fontSize:12}} />
+                          <YAxis stroke="#64748b" style={{fontSize:12}} />
+                          <Tooltip 
+                            contentStyle={{
+                              background:"#fff",
+                              border:"1px solid #e5e7eb",
+                              borderRadius:12,
+                              boxShadow:"0 4px 12px rgba(0,0,0,0.1)",
+                              padding:"12px"
+                            }} 
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="users" 
+                            stroke="#4d82bc" 
+                            strokeWidth={3} 
+                            dot={{fill:"#4d82bc",r:6,strokeWidth:2,stroke:"#fff"}} 
+                            activeDot={{r:8,stroke:"#fff",strokeWidth:2}} 
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
                 {/* Evaluaciones por Mes */}
-                <Card className="card">
-                  <CardHeader>
-                    <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:18}}>
-                        <ClipboardCheck className="w-5 h-5" style={{color:"#7a4fd6"}} />
+                <Card className="card" style={{boxShadow:"0 4px 20px rgba(0,0,0,0.08)"}}>
+                  <CardHeader style={{padding:"20px 24px 12px"}}>
+                    <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                      <span style={{display:"inline-flex",alignItems:"center",gap:10,fontSize:20,fontWeight:700,color:"#0f172a"}}>
                         Evaluaciones por mes
                       </span>
-                      <Badge variant="outline" className="text-purple-600">5 meses</Badge>
-                    </CardTitle>
-                    <CardDescription>Número de evaluaciones finalizadas mensualmente</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={evaluationsPerMonthData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="month" stroke="#6b7280" />
-                        <YAxis stroke="#6b7280" />
-                        <Tooltip contentStyle={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:8}} />
-                        <Bar dataKey="evaluations" radius={[10,10,0,0]} fill="#8b5cf6" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div style={{display:"flex",justifyContent:"center",marginTop:12}}>
-                      <button className="btn-outline" onClick={()=>handleDownload("Evaluaciones por Mes")}>
-                        <Download className="w-4 h-4" /> Descargar
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.25}} className="charts">
-                {/* Distribución por Marco */}
-                <Card className="card">
-                  <CardHeader>
-                    <CardTitle style={{display:"flex",alignItems:"center",gap:8,fontSize:18}}>
-                      <Award className="w-5 h-5" style={{color:"#ec4899"}} />
-                      Distribución por marco de gobernanza
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <PieChart>
-                        <Pie data={documentTypeData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3} dataKey="value">
-                          {documentTypeData.map((e, i) => <Cell key={i} fill={e.color} />)}
-                        </Pie>
-                        <Tooltip contentStyle={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:8}} />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div style={{display:"flex",justifyContent:"center",marginTop:12}}>
-                      <button className="btn-outline" onClick={()=>handleDownload("Distribución de Marcos")}>
-                        <Download className="w-4 h-4" /> Descargar
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Documentos por Mes */}
-                <Card className="card">
-                  <CardHeader>
-                    <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:8,fontSize:18}}>
-                        <FileText className="w-5 h-5" style={{color:"#10b981"}} />
-                        Documentos por mes
-                      </span>
-                      <Badge variant="outline" className="text-green-600">5 meses</Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={250}>
-                      <BarChart data={documentsPerMonthData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis dataKey="month" stroke="#6b7280" />
-                        <YAxis stroke="#6b7280" />
-                        <Tooltip contentStyle={{background:"#fff",border:"1px solid #e5e7eb",borderRadius:8}} />
-                        <Bar dataKey="documents" radius={[10,10,0,0]} fill="#10b981" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                    <div style={{display:"flex",justifyContent:"center",marginTop:12}}>
-                      <button className="btn-outline" onClick={()=>handleDownload("Documentos por Mes")}>
-                        <Download className="w-4 h-4" /> Descargar
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            {/* Actividad reciente */}
-            <TabsContent value="activity">
-              <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.25}}>
-                <Card className="card">
-                  <CardHeader>
-                    <CardTitle style={{display:"flex",alignItems:"center",gap:8,fontSize:20}}>
-                      <Activity className="w-5 h-5" style={{color:"#4d82bc"}} />
-                      Actividad reciente del sistema
-                    </CardTitle>
-                    <CardDescription>Últimas acciones realizadas por los usuarios</CardDescription>
-                  </CardHeader>
-                  <CardContent style={{padding:18}}>
-                    <div style={{display:"grid",gap:12}}>
-                      {recentActivity.map((a, i) => (
-                        <div key={i} style={{
-                          display:"flex",alignItems:"center",gap:12,
-                          background:"linear-gradient(90deg,#f6faff,#f3f0ff)", border:"1px solid #e9edf5",
-                          borderRadius:16,padding:12
-                        }}>
-                          <span className="icon-pill"><ClipboardCheck className="w-4 h-4" /></span>
-                          <div style={{flex:1}}>
-                            <div style={{color:"#173b8f",fontWeight:700}}>{a.user}</div>
-                            <div style={{color:"#475569",fontSize:14}}>{a.action}</div>
-                          </div>
-                          <Badge variant="outline" className="text-gray-600">{a.time}</Badge>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div style={{marginTop:16,background:"#fff6db",border:"1px solid #fde68a",borderRadius:12,padding:12}}>
-                      <div style={{display:"flex",alignItems:"flex-start",gap:8,color:"#a16207"}}>
-                        <AlertCircle className="w-5 h-5" />
-                        <div>
-                          <div style={{fontWeight:800}}>Nota sobre la actividad</div>
-                          <div style={{fontSize:14}}>Se muestra la actividad de las últimas 24 horas. Para ver el historial completo, descarga el reporte detallado.</div>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <Badge variant="outline" style={{background:"#f3e8ff",borderColor:"#d8b4fe",color:"#7c3aed",fontWeight:600}}>5 meses</Badge>
+                        <div style={{display:"flex",gap:4}}>
+                          <button 
+                            onClick={() => exportChartAsPNG('chart-evaluations', 'evaluaciones-por-mes')}
+                            style={{padding:"6px 10px",border:"1px solid #e5e7eb",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12}}
+                            title="Descargar PNG"
+                          >
+                            PNG
+                          </button>
+                          <button 
+                            onClick={() => exportChartAsSVG('chart-evaluations', 'evaluaciones-por-mes')}
+                            style={{padding:"6px 10px",border:"1px solid #e5e7eb",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12}}
+                            title="Descargar SVG"
+                          >
+                            SVG
+                          </button>
+                          <button 
+                            onClick={() => exportChartAsPDF('chart-evaluations', 'evaluaciones-por-mes')}
+                            style={{padding:"6px 10px",border:"1px solid #e5e7eb",borderRadius:8,background:"#fff",cursor:"pointer",fontSize:12}}
+                            title="Descargar PDF"
+                          >
+                            PDF
+                          </button>
                         </div>
                       </div>
-                    </div>
+                    </CardTitle>
+                    <CardDescription style={{color:"#64748b",fontSize:14}}>Número de evaluaciones finalizadas mensualmente</CardDescription>
+                  </CardHeader>
+                  <CardContent style={{padding:"0 24px 24px"}}>
+                    {loading ? (
+                      <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:300}}>
+                        <div className="animate-spin" style={{width:40,height:40,border:"4px solid #e5e7eb",borderTopColor:"#7a4fd6",borderRadius:"50%"}}></div>
+                      </div>
+                    ) : (
+                      <div id="chart-evaluations">
+                        <ResponsiveContainer width="100%" height={300}>
+                          <BarChart data={data.evaluationsPerMonth.length > 0 ? data.evaluationsPerMonth : [{month: 'Sin datos', evaluations: 0}]} margin={{top:10,right:20,left:0,bottom:10}}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                          <XAxis dataKey="month" stroke="#64748b" style={{fontSize:12}} />
+                          <YAxis stroke="#64748b" style={{fontSize:12}} />
+                          <Tooltip 
+                            contentStyle={{
+                              background:"#fff",
+                              border:"1px solid #e5e7eb",
+                              borderRadius:12,
+                              boxShadow:"0 4px 12px rgba(0,0,0,0.1)",
+                              padding:"12px"
+                            }} 
+                          />
+                          <Bar dataKey="evaluations" radius={[12,12,0,0]} fill="url(#evaluationsGradient)" />
+                          <defs>
+                            <linearGradient id="evaluationsGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1}/>
+                              <stop offset="100%" stopColor="#7a4fd6" stopOpacity={0.8}/>
+                            </linearGradient>
+                          </defs>
+                        </BarChart>
+                      </ResponsiveContainer>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                    <div style={{display:"flex",justifyContent:"center",marginTop:14}}>
-                      <button className="btn-primary">
-                        <Download className="w-4 h-4" /> Descargar reporte de actividad
-                      </button>
-                    </div>
+                {/* Total de Documentos Subidos */}
+                <Card className="card" style={{boxShadow:"0 4px 20px rgba(0,0,0,0.08)"}}>
+                  <CardHeader style={{padding:"20px 24px 12px"}}>
+                    <CardTitle style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                      <span style={{fontSize:20,fontWeight:700,color:"#0f172a"}}>
+                        Total de documentos subidos
+                      </span>
+                    </CardTitle>
+                    <CardDescription style={{color:"#64748b",fontSize:14}}>Documentos subidos como evidencia en evaluaciones</CardDescription>
+                  </CardHeader>
+                  <CardContent style={{padding:"24px"}}>
+                    {loading ? (
+                      <div style={{display:"flex",justifyContent:"center",alignItems:"center",height:200}}>
+                        <div className="animate-spin" style={{width:40,height:40,border:"4px solid #e5e7eb",borderTopColor:"#10b981",borderRadius:"50%"}}></div>
+                      </div>
+                    ) : (
+                      <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
+                        <div style={{fontSize:64,color:"#10b981",fontWeight:900}}>
+                          {data.kpis.documents.current}
+                        </div>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100" variant="outline">
+                            <TrendingUp className="w-3 h-3" /> {data.kpis.documents.percentChange >= 0 ? '+' : ''}{data.kpis.documents.percentChange}%
+                          </Badge>
+                        </div>
+                        <div style={{color:"#64748b",fontSize:14,textAlign:"center"}}>
+                          Documentos de evidencia en el sistema
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
-            </TabsContent>
-          </Tabs>
+          </div>
         </div>
       </main>
     </div>

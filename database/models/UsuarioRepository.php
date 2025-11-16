@@ -15,7 +15,7 @@ class UsuarioRepository
     protected string $table = 'usuario';
     
     /**
-     * Cache para verificación de columna Fecha_Creacion
+     * Cache para verificación de columna FechaCrea
      */
     protected static ?bool $tieneFechaCreacionCache = null;
 
@@ -86,19 +86,19 @@ class UsuarioRepository
             
             $lastError = null;
             
-            // Verificar si la columna Fecha_Creacion existe (usar cache estático)
+            // Verificar si la columna FechaCrea existe (usar cache estático)
             if (self::$tieneFechaCreacionCache === null) {
                 try {
                     $columnaExiste = DB::selectOne("
                         SELECT COUNT(*) as existe 
                         FROM INFORMATION_SCHEMA.COLUMNS 
-                        WHERE TABLE_NAME = ? AND COLUMN_NAME = 'Fecha_Creacion'
+                        WHERE TABLE_NAME = ? AND COLUMN_NAME = 'FechaCrea'
                     ", [$this->table]);
                     self::$tieneFechaCreacionCache = ($columnaExiste && $columnaExiste->existe > 0);
                 } catch (\Exception $e) {
                     // Si no se puede verificar, asumir que no existe
                     self::$tieneFechaCreacionCache = false;
-                    Log::warning('No se pudo verificar si existe la columna Fecha_Creacion', [
+                    Log::warning('No se pudo verificar si existe la columna FechaCrea', [
                         'error' => $e->getMessage()
                     ]);
                 }
@@ -108,11 +108,11 @@ class UsuarioRepository
             foreach ($activateAttempts as $activateAttempt) {
                 try {
                     // Construir la consulta SQL directa
-                    // Incluir Fecha_Creacion solo si la columna existe
+                    // Incluir FechaCrea solo si la columna existe
                     if ($tieneFechaCreacion) {
                         $sql = "INSERT INTO [{$this->table}] 
                                 ([Nombre_Usuario], [Empresa], [NIT], [Tipo_Documento], [Numero_Documento], 
-                                 [Sector], [Pais], [Correo], [Telefono], [Contrasena], [Rol], [Activate], [Fecha_Creacion]) 
+                                 [Sector], [Pais], [Correo], [Telefono], [Contrasena], [Rol], [Activate], [FechaCrea]) 
                                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
                     } else {
                         $sql = "INSERT INTO [{$this->table}] 

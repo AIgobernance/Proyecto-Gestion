@@ -8,6 +8,7 @@ use Database\Models\UsuarioRepository;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use App\Observer\ObserverManager;
 
 class RegisterController extends Controller
 {
@@ -85,6 +86,16 @@ class RegisterController extends Controller
 
             // Ocultar la contraseña en la respuesta
             unset($usuario->Contrasena);
+
+            // Disparar notificación de usuario registrado (Patrón Observer)
+            $notificador = ObserverManager::obtenerNotificador('usuario_registrado');
+            if ($notificador instanceof \App\Observer\Notificadores\NotificadorUsuarioRegistrado) {
+                $notificador->registrarUsuario($userId, [
+                    'nombre' => $request->usuario,
+                    'correo' => $request->correo,
+                    'rol' => 'usuario'
+                ]);
+            }
 
         return response()->json([
             'message' => 'Usuario registrado correctamente',

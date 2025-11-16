@@ -6,6 +6,7 @@ use App\Observer\Notificadores\NotificadorCierreSesion;
 use App\Observer\Notificadores\NotificadorEvaluacionCompletada;
 use App\Observer\Notificadores\NotificadorResultadosGenerados;
 use App\Observer\Notificadores\NotificadorHojaRuta;
+use App\Observer\Notificadores\NotificadorUsuarioRegistrado;
 use App\Observer\Suscriptores\SuscriptorInvalidarCache;
 use App\Observer\Suscriptores\SuscriptorNotificarCompletado;
 use App\Observer\Suscriptores\SuscriptorActualizarDashboard;
@@ -53,6 +54,7 @@ class ObserverManager
         self::$notificadores['evaluacion_completada'] = new NotificadorEvaluacionCompletada();
         self::$notificadores['resultados_generados'] = new NotificadorResultadosGenerados();
         self::$notificadores['hoja_ruta'] = new NotificadorHojaRuta();
+        self::$notificadores['usuario_registrado'] = new NotificadorUsuarioRegistrado();
 
         // RF 4: Cierre de sesión
         self::$notificadores['cierre_sesion']->suscribir(self::$suscriptores['invalidar_cache']);
