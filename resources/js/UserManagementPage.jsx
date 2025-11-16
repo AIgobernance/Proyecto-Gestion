@@ -10,6 +10,7 @@ import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../ui/dialog";
 import { UploadPhotoModal } from "./UploadPhotoModal";
+import { PasswordResetSuccessModal } from "./PasswordResetSuccessModal";
 
 import {
   Users,
@@ -208,7 +209,7 @@ export function UserManagementPage({ onBack }) {
 
   // Form reset pass
   const [resetPassword, setResetPassword] = useState({
-    usuario: "",
+    correo: "",
     nuevaContrasena: "",
     confirmarContrasena: "",
   });
@@ -397,9 +398,28 @@ export function UserManagementPage({ onBack }) {
     setLoading(true);
     setError("");
 
+    // Validar correo
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!resetPassword.correo.trim()) {
+      setError("El correo es requerido");
+      setLoading(false);
+      return;
+    } else if (!emailRe.test(resetPassword.correo)) {
+      setError("Ingrese un correo válido");
+      setLoading(false);
+      return;
+    }
+
     // Validar que las contraseñas coincidan
     if (resetPassword.nuevaContrasena !== resetPassword.confirmarContrasena) {
       setError("Las contraseñas no coinciden");
+      setLoading(false);
+      return;
+    }
+
+    // Validar longitud de contraseña
+    if (resetPassword.nuevaContrasena.length < 8) {
+      setError("La contraseña debe tener al menos 8 caracteres");
       setLoading(false);
       return;
     }
@@ -412,7 +432,7 @@ export function UserManagementPage({ onBack }) {
 
       const axiosClient = window.axios || axios;
       const response = await axiosClient.post('/admin/users/reset-password', {
-        usuario: resetPassword.usuario,
+        correo: resetPassword.correo,
         nuevaContrasena: resetPassword.nuevaContrasena,
         confirmarContrasena: resetPassword.confirmarContrasena,
       });
@@ -439,13 +459,13 @@ export function UserManagementPage({ onBack }) {
   };
 
   const handleContinueAfterPasswordReset = () => {
-    setResetPassword({ usuario: "", nuevaContrasena: "", confirmarContrasena: "" });
+    setResetPassword({ correo: "", nuevaContrasena: "", confirmarContrasena: "" });
     setShowPasswordResetSuccessModal(false);
     setActiveTab("usuarios");
   };
 
   const handleCancelResetPassword = () => {
-    setResetPassword({ usuario: "", nuevaContrasena: "", confirmarContrasena: "" });
+    setResetPassword({ correo: "", nuevaContrasena: "", confirmarContrasena: "" });
   };
 
   return (
@@ -913,18 +933,39 @@ export function UserManagementPage({ onBack }) {
 
               <form onSubmit={handleResetPassword} className="form" style={{maxWidth:560}}>
                 <div>
-                  <label>Usuario</label>
-                  <Input value={resetPassword.usuario} onChange={(e)=>setResetPassword({...resetPassword,usuario:e.target.value})} className="input" />
+                  <Label htmlFor="correoReset" style={{color:"#0b1324"}}>Correo Electrónico *</Label>
+                  <Input 
+                    id="correoReset"
+                    type="email" 
+                    value={resetPassword.correo} 
+                    onChange={(e)=>setResetPassword({...resetPassword,correo:e.target.value})} 
+                    className="input" 
+                    placeholder="correo@ejemplo.com"
+                  />
                 </div>
 
                 <div>
-                  <label>Nueva contraseña</label>
-                  <Input type="password" value={resetPassword.nuevaContrasena} onChange={(e)=>setResetPassword({...resetPassword,nuevaContrasena:e.target.value})} className="input" />
+                  <Label htmlFor="nuevaContrasenaReset" style={{color:"#0b1324"}}>Nueva contraseña *</Label>
+                  <Input 
+                    id="nuevaContrasenaReset"
+                    type="password" 
+                    value={resetPassword.nuevaContrasena} 
+                    onChange={(e)=>setResetPassword({...resetPassword,nuevaContrasena:e.target.value})} 
+                    className="input" 
+                    placeholder="Mínimo 8 caracteres"
+                  />
                 </div>
 
                 <div>
-                  <label>Confirmar contraseña</label>
-                  <Input type="password" value={resetPassword.confirmarContrasena} onChange={(e)=>setResetPassword({...resetPassword,confirmarContrasena:e.target.value})} className="input" />
+                  <Label htmlFor="confirmarContrasenaReset" style={{color:"#0b1324"}}>Confirmar contraseña *</Label>
+                  <Input 
+                    id="confirmarContrasenaReset"
+                    type="password" 
+                    value={resetPassword.confirmarContrasena} 
+                    onChange={(e)=>setResetPassword({...resetPassword,confirmarContrasena:e.target.value})} 
+                    className="input" 
+                    placeholder="Repita la nueva contraseña"
+                  />
                 </div>
 
                 {error && (
@@ -989,35 +1030,9 @@ export function UserManagementPage({ onBack }) {
       </Dialog>
 
       {/* ===== Modal Éxito: Restablecer Contraseña ===== */}
-      <Dialog open={showPasswordResetSuccessModal} onOpenChange={setShowPasswordResetSuccessModal}>
-        <DialogContent className="max-w-[520px] p-0">
-          <DialogTitle className="sr-only">Contraseña cambiada</DialogTitle>
-          <DialogDescription className="sr-only">La contraseña se cambió correctamente</DialogDescription>
-
-          <button 
-            className="modal-success-close" 
-            aria-label="Cerrar" 
-            onClick={handleContinueAfterPasswordReset}
-          >
-            <X className="w-5 h-5" style={{color:"#64748b"}} />
-          </button>
-
-          <div className="modal-success-head">
-            <div className="modal-success-icon">
-              <CheckCircle2 className="w-9 h-9" />
-            </div>
-            <h3 className="modal-success-title">¡Contraseña cambiada!</h3>
-            <p className="modal-success-desc">El usuario ya puede iniciar sesión con su nueva contraseña.</p>
-          </div>
-
-          <div className="modal-success-body">
-            <button className="modal-success-btn" onClick={handleContinueAfterPasswordReset}>
-              <CheckCircle2 className="w-5 h-5" />
-              Continuar
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {showPasswordResetSuccessModal && (
+        <PasswordResetSuccessModal onContinue={handleContinueAfterPasswordReset} />
+      )}
 
       {/* ===== Modal: Subir Foto de Perfil ===== */}
       <UploadPhotoModal

@@ -220,7 +220,7 @@ class UserManagementController extends Controller
     {
         // Validar los datos del formulario
         $validator = Validator::make($request->all(), [
-            'usuario' => 'required|string',
+            'correo' => 'required|email',
             'nuevaContrasena' => 'required|string|min:8',
             'confirmarContrasena' => 'required|string|min:8|same:nuevaContrasena',
         ]);
@@ -233,17 +233,13 @@ class UserManagementController extends Controller
         }
 
         try {
-            // Buscar el usuario por nombre de usuario o correo
-            $usuarioBD = $this->usuarioRepository->obtenerPorNombreUsuario($request->usuario);
-            
-            if (!$usuarioBD) {
-                $usuarioBD = $this->usuarioRepository->obtenerPorCorreo($request->usuario);
-            }
+            // Buscar el usuario por correo
+            $usuarioBD = $this->usuarioRepository->obtenerPorCorreo($request->correo);
 
             if (!$usuarioBD) {
                 return response()->json([
                     'message' => 'Usuario no encontrado',
-                    'errors' => ['usuario' => ['No se encontró un usuario con ese nombre o correo']]
+                    'errors' => ['correo' => ['No se encontró un usuario con ese correo electrónico']]
                 ], 404);
             }
 
