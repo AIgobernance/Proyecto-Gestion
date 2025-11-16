@@ -12,6 +12,7 @@ use Database\Models\RespuestasRepository;
 use Database\Models\ResultadosRepository;
 use Database\Models\DocumentosAdjuntosRepository;
 use App\Services\N8nService;
+use App\Observer\ObserverManager;
 
 class EvaluationController extends Controller
 {
@@ -158,6 +159,19 @@ class EvaluationController extends Controller
                     'id_evaluacion' => $idEvaluacion,
                     'total_respuestas' => $totalRespuestas
                 ]);
+
+                // Disparar notificación de evaluación completada (Patrón Observer - RF 9)
+                $notificador = ObserverManager::obtenerNotificador('evaluacion_completada');
+                if ($notificador instanceof \App\Observer\Notificadores\NotificadorEvaluacionCompletada) {
+                    $notificador->completarEvaluacion(
+                        $idEvaluacion,
+                        $userId,
+                        [
+                            'total_respuestas' => $totalRespuestas,
+                            'tiempo' => $request->tiempo ?? null,
+                        ]
+                    );
+                }
             }
 
             // Preparar metadatos para N8N
@@ -237,10 +251,25 @@ class EvaluationController extends Controller
                     $this->resultadosRepository->guardarResultado($idEvaluacion, $resultadosN8N);
 
                     // Actualizar estado de la evaluación (ya está marcada como Completada arriba, solo actualizar puntuación y PDF)
+                    $puntuacion = $resultadosN8N['puntuacion'] ?? $resultadosN8N['score'] ?? null;
+                    $pdfPath = $resultadosN8N['pdf_path'] ?? $resultadosN8N['PDF_Path'] ?? null;
+                    
                     $this->evaluacionRepository->actualizar($idEvaluacion, [
-                        'Puntuacion' => $resultadosN8N['puntuacion'] ?? $resultadosN8N['score'] ?? null,
-                        'PDF_Path' => $resultadosN8N['pdf_path'] ?? $resultadosN8N['PDF_Path'] ?? null,
+                        'Puntuacion' => $puntuacion,
+                        'PDF_Path' => $pdfPath,
                     ]);
+
+                    // Disparar notificación de resultados generados (Patrón Observer - RF 10)
+                    $notificador = ObserverManager::obtenerNotificador('resultados_generados');
+                    if ($notificador instanceof \App\Observer\Notificadores\NotificadorResultadosGenerados) {
+                        $notificador->generarResultados(
+                            $idEvaluacion,
+                            $userId,
+                            $resultadosN8N,
+                            $pdfPath,
+                            $puntuacion
+                        );
+                    }
                 }
 
                 Log::info('Evaluación procesada exitosamente por N8N', [

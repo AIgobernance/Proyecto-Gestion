@@ -152,7 +152,12 @@ export function ViewEvaluationsPage({
       }
 
       const axiosClient = window.axios || axios;
-      const response = await axiosClient.get('/api/evaluations');
+      // Forzar actualización agregando timestamp para evitar caché
+      const response = await axiosClient.get('/api/evaluations', {
+        params: {
+          _t: Date.now() // Timestamp para evitar caché del navegador
+        }
+      });
 
       if (response.data && response.data.success && response.data.data) {
         setEvaluations(response.data.data);

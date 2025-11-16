@@ -142,7 +142,13 @@ export function DashboardPage({
       }
 
       const axiosClient = window.axios || axios;
-      const response = await axiosClient.get('/api/dashboard/stats');
+      // Forzar actualización agregando timestamp para evitar caché del navegador
+      const response = await axiosClient.get('/api/dashboard/stats', {
+        params: {
+          refresh: 'true',
+          _t: Date.now() // Timestamp para evitar caché del navegador
+        }
+      });
 
       if (response.data && response.data.success && response.data.data) {
         setUserStats({

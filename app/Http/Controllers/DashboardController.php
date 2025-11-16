@@ -36,11 +36,21 @@ class DashboardController extends Controller
                 ], 401);
             }
 
-            // Cachear estadísticas por 2 minutos para mejorar rendimiento
+            // Cachear estadísticas por 30 segundos para mejorar rendimiento
+            // Permitir forzar actualización con parámetro ?refresh=true
+            $forceRefresh = $request->has('refresh') && $request->input('refresh') === 'true';
             $cacheKey = "dashboard_stats_user_{$userId}";
-            $estadisticas = Cache::remember($cacheKey, 120, function () use ($userId) {
-                return $this->evaluacionRepository->obtenerEstadisticas($userId);
-            });
+            
+            if ($forceRefresh) {
+                // Forzar actualización: limpiar caché y obtener datos frescos
+                Cache::forget($cacheKey);
+                $estadisticas = $this->evaluacionRepository->obtenerEstadisticas($userId);
+            } else {
+                // Usar caché con duración reducida (30 segundos en lugar de 2 minutos)
+                $estadisticas = Cache::remember($cacheKey, 30, function () use ($userId) {
+                    return $this->evaluacionRepository->obtenerEstadisticas($userId);
+                });
+            }
 
             Log::info('Estadísticas del dashboard obtenidas', [
                 'user_id' => $userId,

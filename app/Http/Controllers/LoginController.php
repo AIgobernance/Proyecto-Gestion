@@ -9,6 +9,7 @@ use Database\Factories\UsuarioFactoryManager;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use App\Observer\ObserverManager;
 
 class LoginController extends Controller
 {
@@ -169,6 +170,14 @@ class LoginController extends Controller
                 Log::warning('Error al cerrar sesión usando Factory Method', [
                     'error' => $e->getMessage()
                 ]);
+            }
+        }
+        
+        // Disparar notificación de cierre de sesión (Patrón Observer)
+        if ($userData) {
+            $notificador = ObserverManager::obtenerNotificador('cierre_sesion');
+            if ($notificador instanceof \App\Observer\Notificadores\NotificadorCierreSesion) {
+                $notificador->cerrarSesion($userData);
             }
         }
         
