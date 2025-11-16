@@ -6,6 +6,8 @@ import logoSuccess from "../assets/check-solid.svg";
 import { Switch } from "../ui/switch";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../ui/dialog";
 import { UploadPhotoModal } from "./UploadPhotoModal";
 
@@ -17,6 +19,7 @@ import {
   CheckCircle2,
   BadgeCheck,
   Camera,
+  X,
 } from "lucide-react";
 
 /* ===== Estilos coherentes con el resto del proyecto ===== */
@@ -75,7 +78,24 @@ const styles = `
 .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media (max-width: 820px){ .row{grid-template-columns:1fr} }
 label{color:#0b1324;font-weight:700;margin-bottom:6px;display:block}
-.input{background:#fff;border:1px solid #dfe7f4;border-radius:10px;height:40px;padding:8px 12px}
+.input{background:#fff;color:#0b1324;border:1px solid #dfe7f4;border-radius:10px;height:40px;padding:8px 12px}
+.input::placeholder{color:#64748b}
+
+/* Selects con texto negro */
+[data-slot="select-trigger"]{background:#fff;color:#0b1324;border-radius:10px;height:40px;padding:8px 12px;border:1px solid #dfe7f4}
+[data-slot="select-content"]{background:#fff;color:#0b1324;border:1px solid #e5e7eb;border-radius:12px;box-shadow:var(--shadow);padding:6px}
+[data-slot="select-item"]{color:#0b1324;padding:8px 34px 8px 12px;border-radius:8px;cursor:pointer;position:relative}
+[data-slot="select-item"]:hover{background:#eef2ff}
+[data-slot="select-item"]::after{content:"";position:absolute;right:10px;top:50%;transform:translateY(-50%);opacity:0;transition:opacity .15s}
+[data-slot="select-item"]:hover::after{content:"✓";opacity:1;font-weight:700;color:#0b1324}
+[data-slot="select-item"][data-state="checked"]::after{content:"✓";opacity:1;color:#0b1324}
+
+/* Checkbox cuadrado visible */
+.chkbox{appearance:none;-webkit-appearance:none;-moz-appearance:none;width:18px;height:18px;border:2px solid var(--brand);border-radius:4px;display:inline-block;position:relative;background:#fff;cursor:pointer;flex-shrink:0;margin-top:2px}
+.chkbox:checked{background:var(--brand);border-color:var(--brand)}
+.chkbox:checked::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:10px;border:2px solid #fff;border-top:0;border-left:0;transform:rotate(45deg)}
+.chkbox:hover{border-color:var(--brand-2)}
+.chkbox:focus{outline:2px solid var(--brand-2);outline-offset:2px}
 
 /* Botones */
 .btn-primary{
@@ -91,12 +111,65 @@ label{color:#0b1324;font-weight:700;margin-bottom:6px;display:block}
 
 /* Diálogos */
 [data-slot="dialog-content"]{
-  border-radius:22px !important; border:none !important;
-  box-shadow:0 28px 60px rgba(2,6,23,.35) !important;
+  border-radius:24px !important; border:none !important;
+  box-shadow:0 24px 64px rgba(2,6,23,.28) !important;
+  padding:0 !important;
+  position:relative;
+  overflow:hidden;
 }
-.modal-head{display:flex;align-items:center;gap:12px;background:#f6f9ff;border-bottom:1px solid #e9edf5;padding:14px 18px;border-top-left-radius:22px;border-top-right-radius:22px}
-.modal-body{padding:28px 18px}
-.modal-card{background:#e8f1ff;border:1px solid #d8e4ff;border-radius:18px;padding:24px;max-width:420px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:16px}
+
+/* Modal de éxito mejorado */
+.modal-success-close{
+  position:absolute; top:12px; right:12px;
+  width:36px;height:36px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;
+  display:inline-flex;align-items:center;justify-content:center; cursor:pointer;
+  z-index:10;
+  transition:background .15s ease;
+}
+.modal-success-close:hover{ background:#f7f9ff }
+
+.modal-success-head{
+  padding:28px 28px 12px;
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+}
+
+.modal-success-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:linear-gradient(135deg,#e8fff3,#f5fff9);
+  color:#129c55;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 10px 26px rgba(18,156,85,.18);
+}
+
+.modal-success-title{
+  margin:0;font-size:24px;font-weight:900;color:#0f172a;text-align:center;
+}
+
+.modal-success-desc{
+  margin:0;font-size:15px;color:#334155;text-align:center;
+}
+
+.modal-success-body{
+  padding:16px 28px 28px;
+}
+
+.modal-success-btn{
+  width:100%;
+  background:linear-gradient(90deg,#4d82bc,#5a8fc9);
+  color:#fff;
+  border-radius:999px;
+  padding:12px 20px;
+  font-weight:800;
+  border:none;
+  cursor:pointer;
+  box-shadow:0 12px 30px rgba(2,6,23,.18);
+  transition:filter .15s ease;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+}
+
+.modal-success-btn:hover{
+  filter:brightness(1.02);
+}
 `;
 
 /* ======================== Componente ======================== */
@@ -129,6 +202,9 @@ export function UserManagementPage({ onBack }) {
     confirmarContrasena: "",
     aceptaPoliticas: false,
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Form reset pass
   const [resetPassword, setResetPassword] = useState({
@@ -166,6 +242,22 @@ export function UserManagementPage({ onBack }) {
   };
 
   const handleToggleUser = async (userId) => {
+    // Obtener el usuario actual para saber su estado
+    const usuarioActual = users.find(u => u.id === userId);
+    if (!usuarioActual) return;
+
+    // Actualizar el estado local inmediatamente para feedback visual
+    const nuevoEstado = !usuarioActual.activado;
+    setUsers(users.map(u => u.id === userId
+      ? { 
+          ...u, 
+          activado: nuevoEstado,
+          estado: nuevoEstado ? "Activo" : "Inactivo"
+        }
+      : u
+    ));
+
+    setError("");
     try {
       const token = document.head?.querySelector('meta[name="csrf-token"]');
       if (token) {
@@ -176,33 +268,70 @@ export function UserManagementPage({ onBack }) {
       const response = await axiosClient.put(`/admin/users/${userId}/toggle-status`);
 
       if (response.status === 200) {
-        // Actualizar el estado local
+        // Confirmar el estado desde el servidor
+        const estadoConfirmado = response.data.activate === 1 || response.data.activate === true;
         setUsers(users.map(u => u.id === userId
           ? { 
               ...u, 
-              activado: response.data.activate === 1 || response.data.activate === true,
-              estado: (response.data.activate == 1 || response.data.activate === true) ? "Activo" : "Inactivo"
+              activado: estadoConfirmado,
+              estado: estadoConfirmado ? "Activo" : "Inactivo"
             }
           : u
         ));
       }
     } catch (error) {
       console.error('Error al cambiar estado del usuario:', error);
-      setError("Error al cambiar el estado del usuario");
+      // Revertir el cambio si falla
+      setUsers(users.map(u => u.id === userId
+        ? { 
+            ...u, 
+            activado: usuarioActual.activado,
+            estado: usuarioActual.activado ? "Activo" : "Inactivo"
+          }
+        : u
+      ));
+      
+      if (error.response && error.response.data) {
+        setError(error.response.data.message || "Error al cambiar el estado del usuario");
+      } else {
+        setError("Error al cambiar el estado del usuario");
+      }
     }
+  };
+
+  const validateForm = () => {
+    const e = {};
+    if (!newUser.usuario.trim()) e.usuario = "El usuario es requerido";
+    if (!newUser.empresa.trim()) e.empresa = "La empresa es requerida";
+    if (!newUser.nit.trim()) e.nit = "El NIT es requerido";
+    else if (!/^\d{7,15}$/.test(newUser.nit.replace(/\D/g, ""))) e.nit = "Ingrese un NIT válido";
+    if (!newUser.tipoDocumento) e.tipoDocumento = "Seleccione un tipo de documento";
+    if (!newUser.numeroDocumento.trim()) e.numeroDocumento = "El número de documento es requerido";
+    if (!newUser.sector) e.sector = "Seleccione un sector";
+    if (!newUser.pais) e.pais = "Seleccione un país";
+    if (!newUser.tamanoOrganizacional) e.tamanoOrganizacional = "Seleccione el tamaño organizacional";
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!newUser.correo.trim()) e.correo = "El correo es requerido";
+    else if (!emailRe.test(newUser.correo)) e.correo = "Ingrese un correo válido";
+    if (!newUser.telefono.trim()) e.telefono = "El teléfono es requerido";
+    else if (newUser.telefono.replace(/\D/g, "").length < 10) e.telefono = "Ingrese un teléfono válido";
+    if (!newUser.crearContrasena) e.crearContrasena = "La contraseña es requerida";
+    else if (newUser.crearContrasena.length < 8) e.crearContrasena = "La contraseña debe tener al menos 8 caracteres";
+    if (!newUser.confirmarContrasena) e.confirmarContrasena = "Confirme su contraseña";
+    else if (newUser.crearContrasena !== newUser.confirmarContrasena) e.confirmarContrasena = "Las contraseñas no coinciden";
+    if (!newUser.aceptaPoliticas) e.aceptaPoliticas = "Debe aceptar las políticas de protección de datos";
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    // Validar que las contraseñas coincidan
-    if (newUser.crearContrasena !== newUser.confirmarContrasena) {
-      setError("Las contraseñas no coinciden");
-      setLoading(false);
+    if (!validateForm()) {
+      setError("Por favor corrija los errores en el formulario.");
       return;
     }
+    setLoading(true);
+    setError("");
 
     try {
       const token = document.head?.querySelector('meta[name="csrf-token"]');
@@ -255,6 +384,9 @@ export function UserManagementPage({ onBack }) {
       sector: "", pais: "", tamanoOrganizacional: "", correo: "",
       telefono: "", crearContrasena: "", confirmarContrasena: "", aceptaPoliticas: false,
     });
+    setErrors({});
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setShowSuccessModal(false);
     setActiveTab("usuarios");
     setError("");
@@ -364,7 +496,17 @@ export function UserManagementPage({ onBack }) {
         {activeTab === "usuarios" && (
           <section className="card">
             <div className="card__body">
-              <table className="table">
+              {error && (
+                <div style={{padding:12,marginBottom:12,background:"#ffefef",border:"1px solid #a11a1a",borderRadius:8,color:"#a11a1a"}}>
+                  {error}
+                </div>
+              )}
+              {loading ? (
+                <div style={{textAlign:"center",padding:40,color:"#173b8f"}}>Cargando usuarios...</div>
+              ) : users.length === 0 ? (
+                <div style={{textAlign:"center",padding:40,color:"#334155"}}>No hay usuarios registrados</div>
+              ) : (
+                <table className="table">
                 <thead>
                   <tr>
                     <th className="th">Usuario</th>
@@ -431,11 +573,16 @@ export function UserManagementPage({ onBack }) {
                       </td>
                       <td className="td">
                         <div style={{display:"inline-flex",alignItems:"center",gap:10}}>
-                          <span style={{fontWeight:800}}>{u.activado ? "Activo" : "Desactivado"}</span>
+                          <span style={{
+                            fontWeight:800,
+                            color:u.activado ? "#10713a" : "#a11a1a",
+                            fontSize:14
+                          }}>
+                            {u.activado ? "Activo" : "Desactivado"}
+                          </span>
                           <Switch 
                             checked={u.activado} 
                             onCheckedChange={()=>handleToggleUser(u.id)}
-                            disabled={loading}
                           />
                         </div>
                       </td>
@@ -443,6 +590,7 @@ export function UserManagementPage({ onBack }) {
                   ))}
                 </tbody>
               </table>
+              )}
             </div>
           </section>
         )}
@@ -453,77 +601,300 @@ export function UserManagementPage({ onBack }) {
             <div className="card__body">
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
                 <UserPlus className="w-5 h-5" style={{color:"#4d82bc"}} />
-                <h2 style={{margin:0,color:"#173b8f",fontWeight:900,fontSize:18}}>Crear usuario</h2>
+                <h2 style={{margin:0,color:"#0b1324",fontWeight:900,fontSize:18}}>Crear usuario</h2>
               </div>
 
+              {error && (
+                <div style={{padding:12,marginBottom:12,background:"#ffefef",border:"1px solid #a11a1a",borderRadius:8,color:"#a11a1a"}}>
+                  {error}
+                </div>
+              )}
+
               <form onSubmit={handleCreateUser} className="form">
-                <div className="row">
-                  <div>
-                    <label>Usuario</label>
-                    <Input value={newUser.usuario} onChange={(e)=>setNewUser({...newUser,usuario:e.target.value})} className="input" />
+                {/* Información Personal */}
+                <section style={{marginTop:12}}>
+                  <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Información Personal</h3>
+                  <div className="row">
+                    <div>
+                      <Label htmlFor="usuario" style={{color:"#0b1324"}}>Usuario *</Label>
+                      <Input 
+                        id="usuario" 
+                        value={newUser.usuario} 
+                        onChange={(e)=>setNewUser({...newUser,usuario:e.target.value})} 
+                        className="input" 
+                        placeholder="Ingrese su usuario"
+                        aria-invalid={!!errors.usuario}
+                      />
+                      {errors.usuario && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.usuario}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="empresa" style={{color:"#0b1324"}}>Empresa *</Label>
+                      <Input 
+                        id="empresa" 
+                        value={newUser.empresa} 
+                        onChange={(e)=>setNewUser({...newUser,empresa:e.target.value})} 
+                        className="input" 
+                        placeholder="Nombre de su empresa"
+                        aria-invalid={!!errors.empresa}
+                      />
+                      {errors.empresa && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.empresa}</p>}
+                    </div>
                   </div>
-                  <div>
-                    <label>Empresa</label>
-                    <Input value={newUser.empresa} onChange={(e)=>setNewUser({...newUser,empresa:e.target.value})} className="input" />
+                  <div className="row" style={{marginTop:12}}>
+                    <div>
+                      <Label htmlFor="nit" style={{color:"#0b1324"}}>NIT *</Label>
+                      <Input 
+                        id="nit" 
+                        value={newUser.nit} 
+                        onChange={(e)=>setNewUser({...newUser,nit:e.target.value})} 
+                        className="input" 
+                        placeholder="Ej. 900123456"
+                        aria-invalid={!!errors.nit}
+                      />
+                      {errors.nit && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.nit}</p>}
+                    </div>
+                    <div />
                   </div>
-                </div>
+                </section>
 
-                <div className="row">
-                  <div>
-                    <label>Número de documento *</label>
-                    <Input value={newUser.numeroDocumento} onChange={(e)=>setNewUser({...newUser,numeroDocumento:e.target.value})} className="input" required />
+                {/* Documentación */}
+                <section style={{marginTop:16}}>
+                  <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Documentación</h3>
+                  <div className="row">
+                    <div>
+                      <Label htmlFor="tipoDocumento" style={{color:"#0b1324"}}>Tipo de Documento *</Label>
+                      <Select value={newUser.tipoDocumento} onValueChange={(v)=>setNewUser({...newUser,tipoDocumento:v})}>
+                        <SelectTrigger className="input" aria-invalid={!!errors.tipoDocumento}>
+                          <SelectValue placeholder="Seleccione tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="CC">Cédula de Ciudadanía</SelectItem>
+                          <SelectItem value="CE">Cédula de Extranjería</SelectItem>
+                          <SelectItem value="Pasaporte">Pasaporte</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.tipoDocumento && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.tipoDocumento}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="numeroDocumento" style={{color:"#0b1324"}}>Número de Documento *</Label>
+                      <Input 
+                        id="numeroDocumento" 
+                        value={newUser.numeroDocumento} 
+                        onChange={(e)=>setNewUser({...newUser,numeroDocumento:e.target.value})} 
+                        className="input" 
+                        placeholder="Número de documento"
+                        aria-invalid={!!errors.numeroDocumento}
+                      />
+                      {errors.numeroDocumento && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.numeroDocumento}</p>}
+                    </div>
                   </div>
-                  <div>
-                    <label>Sector *</label>
-                    <Input value={newUser.sector} onChange={(e)=>setNewUser({...newUser,sector:e.target.value})} className="input" required />
-                  </div>
-                </div>
+                </section>
 
-                <div className="row">
-                  <div>
-                    <label>País *</label>
-                    <Input value={newUser.pais} onChange={(e)=>setNewUser({...newUser,pais:e.target.value})} className="input" required />
+                {/* Organización */}
+                <section style={{marginTop:16}}>
+                  <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Información Organizacional</h3>
+                  <div className="row">
+                    <div>
+                      <Label htmlFor="sector" style={{color:"#0b1324"}}>Sector *</Label>
+                      <Select value={newUser.sector} onValueChange={(v)=>setNewUser({...newUser,sector:v})}>
+                        <SelectTrigger className="input" aria-invalid={!!errors.sector}>
+                          <SelectValue placeholder="Seleccione sector" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Tecnología">Tecnología</SelectItem>
+                          <SelectItem value="Financiero">Financiero</SelectItem>
+                          <SelectItem value="Salud">Salud</SelectItem>
+                          <SelectItem value="Educación">Educación</SelectItem>
+                          <SelectItem value="Retail">Retail</SelectItem>
+                          <SelectItem value="Manufactura">Manufactura</SelectItem>
+                          <SelectItem value="Otro">Otro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.sector && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.sector}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="pais" style={{color:"#0b1324"}}>País *</Label>
+                      <Select value={newUser.pais} onValueChange={(v)=>setNewUser({...newUser,pais:v})}>
+                        <SelectTrigger className="input" aria-invalid={!!errors.pais}>
+                          <SelectValue placeholder="Seleccione país" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Colombia">Colombia</SelectItem>
+                          <SelectItem value="México">México</SelectItem>
+                          <SelectItem value="España">España</SelectItem>
+                          <SelectItem value="Argentina">Argentina</SelectItem>
+                          <SelectItem value="Chile">Chile</SelectItem>
+                          <SelectItem value="Perú">Perú</SelectItem>
+                          <SelectItem value="Otro">Otro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {errors.pais && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.pais}</p>}
+                    </div>
                   </div>
-                  <div>
-                    <label>Tamaño organizacional *</label>
-                    <Input value={newUser.tamanoOrganizacional} onChange={(e)=>setNewUser({...newUser,tamanoOrganizacional:e.target.value})} className="input" required />
-                  </div>
-                </div>
 
-                <div className="row">
-                  <div>
-                    <label>Correo *</label>
-                    <Input type="email" value={newUser.correo} onChange={(e)=>setNewUser({...newUser,correo:e.target.value})} className="input" required />
+                  <div style={{marginTop:12}}>
+                    <Label htmlFor="tamanoOrganizacional" style={{color:"#0b1324"}}>Tamaño Organizacional *</Label>
+                    <Select value={newUser.tamanoOrganizacional} onValueChange={(v)=>setNewUser({...newUser,tamanoOrganizacional:v})}>
+                      <SelectTrigger className="input" aria-invalid={!!errors.tamanoOrganizacional}>
+                        <SelectValue placeholder="Seleccione tamaño" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pequeña (1-50 empleados)">Pequeña (1-50 empleados)</SelectItem>
+                        <SelectItem value="Mediana (51-250 empleados)">Mediana (51-250 empleados)</SelectItem>
+                        <SelectItem value="Grande (251+ empleados)">Grande (251+ empleados)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.tamanoOrganizacional && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.tamanoOrganizacional}</p>}
                   </div>
-                  <div>
-                    <label>Teléfono *</label>
-                    <Input type="tel" value={newUser.telefono} onChange={(e)=>setNewUser({...newUser,telefono:e.target.value})} className="input" required />
-                  </div>
-                </div>
+                </section>
 
-                <div className="row">
-                  <div>
-                    <label>Crear contraseña *</label>
-                    <Input type="password" value={newUser.crearContrasena} onChange={(e)=>setNewUser({...newUser,crearContrasena:e.target.value})} className="input" required />
+                {/* Contacto */}
+                <section style={{marginTop:16}}>
+                  <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Información de Contacto</h3>
+                  <div className="row">
+                    <div>
+                      <Label htmlFor="correo" style={{color:"#0b1324"}}>Correo Electrónico *</Label>
+                      <Input 
+                        id="correo" 
+                        type="email" 
+                        value={newUser.correo} 
+                        onChange={(e)=>setNewUser({...newUser,correo:e.target.value})} 
+                        className="input" 
+                        placeholder="correo@ejemplo.com"
+                        aria-invalid={!!errors.correo}
+                      />
+                      {errors.correo && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.correo}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="telefono" style={{color:"#0b1324"}}>Teléfono *</Label>
+                      <Input 
+                        id="telefono" 
+                        type="tel" 
+                        value={newUser.telefono} 
+                        onChange={(e)=>setNewUser({...newUser,telefono:e.target.value})} 
+                        className="input" 
+                        placeholder="+57 300 000 0000"
+                        aria-invalid={!!errors.telefono}
+                      />
+                      {errors.telefono && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.telefono}</p>}
+                    </div>
                   </div>
-                  <div>
-                    <label>Confirmar contraseña *</label>
-                    <Input type="password" value={newUser.confirmarContrasena} onChange={(e)=>setNewUser({...newUser,confirmarContrasena:e.target.value})} className="input" required />
+                </section>
+
+                {/* Seguridad */}
+                <section style={{marginTop:16}}>
+                  <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Seguridad</h3>
+                  <div className="row">
+                    <div>
+                      <Label htmlFor="crearContrasena" style={{color:"#0b1324"}}>Contraseña *</Label>
+                      <div style={{position:"relative"}}>
+                        <Input 
+                          id="crearContrasena" 
+                          type={showPassword ? "text" : "password"} 
+                          value={newUser.crearContrasena} 
+                          onChange={(e)=>setNewUser({...newUser,crearContrasena:e.target.value})} 
+                          className="input" 
+                          placeholder="Mínimo 8 caracteres"
+                          aria-invalid={!!errors.crearContrasena}
+                        />
+                        <button 
+                          type="button" 
+                          aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                          onClick={()=>setShowPassword((v)=>!v)}
+                          style={{position:"absolute",right:10,top:8,background:"transparent",border:0,cursor:"pointer",opacity:.7}}
+                        >
+                          {showPassword ? (
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2">
+                              <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C5 20 1 12 1 12a21.73 21.73 0 0 1 5.06-6.94" />
+                              <path d="M23 1 1 23" />
+                              <path d="M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-.88" />
+                            </svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2">
+                              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      {errors.crearContrasena && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.crearContrasena}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor="confirmarContrasena" style={{color:"#0b1324"}}>Confirmar Contraseña *</Label>
+                      <div style={{position:"relative"}}>
+                        <Input 
+                          id="confirmarContrasena" 
+                          type={showConfirmPassword ? "text" : "password"} 
+                          value={newUser.confirmarContrasena} 
+                          onChange={(e)=>setNewUser({...newUser,confirmarContrasena:e.target.value})} 
+                          className="input" 
+                          placeholder="Repita su contraseña"
+                          aria-invalid={!!errors.confirmarContrasena}
+                        />
+                        <button 
+                          type="button" 
+                          aria-label={showConfirmPassword ? "Ocultar confirmación" : "Mostrar confirmación"}
+                          onClick={()=>setShowConfirmPassword((v)=>!v)}
+                          style={{position:"absolute",right:10,top:8,background:"transparent",border:0,cursor:"pointer",opacity:.7}}
+                        >
+                          {showConfirmPassword ? (
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2">
+                              <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20C5 20 1 12 1 12a21.73 21.73 0 0 1 5.06-6.94" />
+                              <path d="M23 1 1 23" />
+                              <path d="M9.88 9.88A3 3 0 0 0 12 15a3 3 0 0 0 2.12-.88" />
+                            </svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2">
+                              <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                      {newUser.confirmarContrasena && newUser.crearContrasena === newUser.confirmarContrasena && (
+                        <p style={{color:"#15803d",display:"flex",gap:6,alignItems:"center",fontSize:12,marginTop:4}}>
+                          <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" strokeWidth="2.5">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          Las contraseñas coinciden
+                        </p>
+                      )}
+                      {errors.confirmarContrasena && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.confirmarContrasena}</p>}
+                    </div>
                   </div>
-                </div>
+                </section>
 
-                <div style={{display:"flex",alignItems:"center",gap:10,justifyContent:"center",marginTop:8}}>
-                  <Checkbox
-                    id="politicas"
-                    checked={newUser.aceptaPoliticas}
-                    onCheckedChange={(v)=>setNewUser({...newUser,aceptaPoliticas:v})}
-                  />
-                  <label htmlFor="politicas" style={{cursor:"pointer",fontWeight:800}}>Acepto Políticas de Protección de Datos</label>
-                </div>
+                {/* Políticas */}
+                <section style={{marginTop:16}}>
+                  <div style={{display:"flex",gap:12,alignItems:"flex-start",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:12,padding:12,color:"#0f172a"}}>
+                    <input
+                      id="politicas"
+                      type="checkbox"
+                      className="chkbox"
+                      checked={newUser.aceptaPoliticas}
+                      onChange={(e)=>setNewUser({...newUser,aceptaPoliticas:e.target.checked})}
+                      aria-invalid={!!errors.aceptaPoliticas}
+                    />
+                    <div style={{flex:1}}>
+                      <Label htmlFor="politicas" style={{cursor:"pointer",fontWeight:700,color:"#0b1324",display:"block"}}>
+                        <span style={{display:"inline-flex",gap:8,alignItems:"center"}}>
+                          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" strokeWidth="2">
+                            <path d="M12 2l8 3v6c0 5-4 9-8 11C8 20 4 16 4 11V5z" />
+                          </svg>
+                          Acepto las Políticas de Protección de Datos *
+                        </span>
+                      </Label>
+                      <small style={{display:"block",color:"#334155",marginTop:4,fontSize:13}}>Al marcar esta casilla, acepto que mis datos sean procesados según la política de privacidad.</small>
+                      {errors.aceptaPoliticas && <p style={{color:"#b91c1c",fontSize:12,marginTop:6}}>{errors.aceptaPoliticas}</p>}
+                    </div>
+                  </div>
+                </section>
 
-                <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:14}}>
-                  <button type="submit" className="btn-primary">
-                    <CheckCircle2 className="w-4 h-4" /> Crear cuenta
+                {/* Acciones */}
+                <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:18}}>
+                  <button type="submit" className="btn-primary" disabled={loading}>
+                    <CheckCircle2 className="w-4 h-4" /> 
+                    {loading ? "Creando cuenta..." : "Crear Cuenta"}
                   </button>
                 </div>
               </form>
@@ -588,48 +959,62 @@ export function UserManagementPage({ onBack }) {
 
       {/* ===== Modal Éxito: Crear Usuario ===== */}
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="max-w-[640px] p-0">
+        <DialogContent className="max-w-[520px] p-0">
           <DialogTitle className="sr-only">Usuario creado</DialogTitle>
           <DialogDescription className="sr-only">Usuario creado con éxito</DialogDescription>
 
-          <div className="modal-head">
-            <img src={logoSuccess} alt="ok" style={{width:40,height:40}} />
-            <strong style={{color:"#173b8f"}}>Usuario creado con éxito</strong>
+          <button 
+            className="modal-success-close" 
+            aria-label="Cerrar" 
+            onClick={handleContinueAfterSuccess}
+          >
+            <X className="w-5 h-5" style={{color:"#64748b"}} />
+          </button>
+
+          <div className="modal-success-head">
+            <div className="modal-success-icon">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+            <h3 className="modal-success-title">¡Usuario creado con éxito!</h3>
+            <p className="modal-success-desc">El usuario fue agregado a la plataforma correctamente.</p>
           </div>
 
-          <div className="modal-body">
-            <div className="modal-card">
-              <p style={{margin:0,fontWeight:900,fontSize:18,color:"#0b1324"}}>¡Listo!</p>
-              <p style={{margin:0,color:"#334155",textAlign:"center"}}>El usuario fue agregado a la plataforma.</p>
-
-              <button onClick={handleContinueAfterSuccess} className="btn-secondary" style={{marginTop:6}}>
-                Continuar
-              </button>
-            </div>
+          <div className="modal-success-body">
+            <button className="modal-success-btn" onClick={handleContinueAfterSuccess}>
+              <CheckCircle2 className="w-5 h-5" />
+              Continuar
+            </button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* ===== Modal Éxito: Restablecer Contraseña ===== */}
       <Dialog open={showPasswordResetSuccessModal} onOpenChange={setShowPasswordResetSuccessModal}>
-        <DialogContent className="max-w-[640px] p-0">
+        <DialogContent className="max-w-[520px] p-0">
           <DialogTitle className="sr-only">Contraseña cambiada</DialogTitle>
           <DialogDescription className="sr-only">La contraseña se cambió correctamente</DialogDescription>
 
-          <div className="modal-head">
-            <img src={logoSuccess} alt="ok" style={{width:40,height:40}} />
-            <strong style={{color:"#173b8f"}}>Contraseña cambiada con éxito</strong>
+          <button 
+            className="modal-success-close" 
+            aria-label="Cerrar" 
+            onClick={handleContinueAfterPasswordReset}
+          >
+            <X className="w-5 h-5" style={{color:"#64748b"}} />
+          </button>
+
+          <div className="modal-success-head">
+            <div className="modal-success-icon">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+            <h3 className="modal-success-title">¡Contraseña cambiada!</h3>
+            <p className="modal-success-desc">El usuario ya puede iniciar sesión con su nueva contraseña.</p>
           </div>
 
-          <div className="modal-body">
-            <div className="modal-card">
-              <p style={{margin:0,fontWeight:900,fontSize:18,color:"#0b1324"}}>¡Hecho!</p>
-              <p style={{margin:0,color:"#334155",textAlign:"center"}}>El usuario ya puede iniciar sesión con su nueva contraseña.</p>
-
-              <button onClick={handleContinueAfterPasswordReset} className="btn-secondary" style={{marginTop:6}}>
-                Continuar
-              </button>
-            </div>
+          <div className="modal-success-body">
+            <button className="modal-success-btn" onClick={handleContinueAfterPasswordReset}>
+              <CheckCircle2 className="w-5 h-5" />
+              Continuar
+            </button>
           </div>
         </DialogContent>
       </Dialog>

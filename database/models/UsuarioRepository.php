@@ -259,6 +259,40 @@ class UsuarioRepository
             'rol' => $rol
         ]);
         
+        // Verificar si el usuario está activo antes de autenticar
+        // El campo Activate puede ser: 'True'/'False' (string), 1/0 (int), true/false (bool)
+        $activateValue = $usuarioBD->Activate ?? 1;
+        
+        // Normalizar el valor para determinar si está activo
+        $isActive = false;
+        if (is_string($activateValue)) {
+            // Si es string, verificar si es 'True' (case-insensitive)
+            $isActive = (strtolower(trim($activateValue)) === 'true' || $activateValue === '1');
+        } elseif (is_bool($activateValue)) {
+            $isActive = $activateValue;
+        } elseif (is_numeric($activateValue)) {
+            $isActive = ((int)$activateValue == 1);
+        }
+        
+        Log::info('Verificación de estado Activate', [
+            'correo' => $usuarioBD->Correo ?? 'NO_CORREO',
+            'activate_raw' => $activateValue,
+            'activate_type' => gettype($activateValue),
+            'isActive' => $isActive
+        ]);
+        
+        if (!$isActive) {
+            Log::warning('Intento de login de usuario desactivado', [
+                'correo' => $usuarioBD->Correo ?? 'NO_CORREO',
+                'nombre' => $usuarioBD->Nombre_Usuario ?? 'NO_NOMBRE',
+                'activate_raw' => $activateValue,
+                'activate_type' => gettype($activateValue)
+            ]);
+            // Retornar null para indicar que el usuario está desactivado
+            // El LoginController manejará este caso específicamente
+            return null;
+        }
+        
         // Crear instancia del usuario usando Factory Method
         $usuario = UsuarioFactoryManager::crearUsuario($datosUsuario, $rol);
         
@@ -314,17 +348,98 @@ class UsuarioRepository
         }
 
         try {
-            $filasAfectadas = DB::table($this->table)
-                ->where('Id', $id)
-                ->update($datosActualizar);
+            // Si se está actualizando el campo Activate, usar SQL directo para manejar el constraint
+            if (isset($datosActualizar['Activate'])) {
+                $activateValue = $datosActualizar['Activate'];
+                unset($datosActualizar['Activate']); // Remover de datosActualizar para manejarlo por separado
+                
+                // Intentar diferentes formatos para el constraint CK_usuario_Activate_TrueFalse
+                $activateAttempts = [
+                    'True',   // String 'True'
+                    'False',  // String 'False'
+                    1,        // Bit 1
+                    0,        // Bit 0
+                    true,     // Booleano true
+                    false     // Booleano false
+                ];
+                
+                // Determinar qué valor intentar basado en el valor deseado
+                $targetValue = ($activateValue == 1 || $activateValue === 'True' || $activateValue === true || $activateValue === '1');
+                // Intentar todos los valores posibles, empezando por los más probables
+                $attemptsToTry = $targetValue 
+                    ? ['True', 1, true, '1'] 
+                    : ['False', 0, false, '0'];
+                
+                $lastError = null;
+                $activateUpdated = false;
+                
+                foreach ($attemptsToTry as $activateAttempt) {
+                    try {
+                        // Construir la consulta SQL para actualizar Activate
+                        $sql = "UPDATE [{$this->table}] SET [Activate] = ? WHERE [Id] = ?";
+                        $params = [$activateAttempt, $id];
+                        
+                        DB::update($sql, $params);
+                        
+                        Log::info('Campo Activate actualizado exitosamente', [
+                            'usuario_id' => $id,
+                            'activate_value' => $activateAttempt,
+                            'target_value' => $targetValue
+                        ]);
+                        
+                        $activateUpdated = true;
+                        break; // Salir del loop si funcionó
+                        
+                    } catch (\Exception $e) {
+                        $lastError = $e;
+                        
+                        // Si es un error de constraint, continuar con el siguiente intento
+                        if (strpos($e->getMessage(), 'CHECK constraint') !== false) {
+                            Log::warning('Intento fallido al actualizar Activate', [
+                                'activate_value' => $activateAttempt,
+                                'error' => $e->getMessage()
+                            ]);
+                            continue; // Intentar con el siguiente valor
+                        }
+                        
+                        // Si es otro tipo de error, relanzarlo inmediatamente
+                        throw $e;
+                    }
+                }
+                
+                // Si no se pudo actualizar Activate, lanzar error
+                if (!$activateUpdated && $lastError) {
+                    Log::error('No se pudo actualizar Activate después de todos los intentos', [
+                        'usuario_id' => $id,
+                        'last_error' => $lastError->getMessage()
+                    ]);
+                    throw new \Exception('No se pudo actualizar el estado del usuario. El constraint CK_usuario_Activate_TrueFalse rechazó todos los valores intentados. Último error: ' . $lastError->getMessage());
+                }
+            }
             
-            Log::info('Actualización de usuario ejecutada', [
+            // Actualizar los demás campos si hay alguno
+            if (!empty($datosActualizar)) {
+                $filasAfectadas = DB::table($this->table)
+                    ->where('Id', $id)
+                    ->update($datosActualizar);
+                
+                Log::info('Campos adicionales actualizados', [
+                    'usuario_id' => $id,
+                    'filas_afectadas' => $filasAfectadas,
+                    'campos_actualizados' => array_keys($datosActualizar)
+                ]);
+            }
+            
+            Log::info('Actualización de usuario ejecutada exitosamente', [
                 'usuario_id' => $id,
-                'filas_afectadas' => $filasAfectadas,
-                'campos_actualizados' => array_keys($datosActualizar)
+                'campos_actualizados' => array_merge(
+                    isset($datos['Activate']) ? ['Activate'] : [],
+                    array_keys($datosActualizar)
+                )
             ]);
             
-            return $filasAfectadas > 0;
+            return true;
+            
         } catch (\Exception $e) {
             Log::error('Error al actualizar usuario en BD', [
                 'usuario_id' => $id,

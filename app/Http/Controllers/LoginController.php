@@ -35,6 +35,43 @@ class LoginController extends Controller
         }
 
         try {
+            // Primero verificar si el usuario existe y está activo
+            $usuarioBD = $this->usuarioRepository->obtenerPorCorreo($request->username);
+            if (!$usuarioBD) {
+                $usuarioBD = $this->usuarioRepository->obtenerPorNombreUsuario($request->username);
+            }
+            
+            // Si el usuario existe, verificar si está activo
+            if ($usuarioBD) {
+                $activateValue = $usuarioBD->Activate ?? 1;
+                
+                // Normalizar el valor para determinar si está activo
+                $isActive = false;
+                if (is_string($activateValue)) {
+                    // Si es string, verificar si es 'True' (case-insensitive)
+                    $isActive = (strtolower(trim($activateValue)) === 'true' || $activateValue === '1');
+                } elseif (is_bool($activateValue)) {
+                    $isActive = $activateValue;
+                } elseif (is_numeric($activateValue)) {
+                    $isActive = ((int)$activateValue == 1);
+                }
+                
+                Log::info('Verificación previa de estado Activate en LoginController', [
+                    'correo' => $usuarioBD->Correo ?? 'NO_CORREO',
+                    'activate_raw' => $activateValue,
+                    'activate_type' => gettype($activateValue),
+                    'isActive' => $isActive
+                ]);
+                
+                if (!$isActive) {
+                    return response()->json([
+                        'message' => 'Usuario desactivado',
+                        'errors' => ['username' => ['Su cuenta ha sido desactivada. Por favor, contacte con soporte para más información.']],
+                        'deactivated' => true
+                    ], 403); // 403 Forbidden para usuario desactivado
+                }
+            }
+            
             // Intentar autenticar al usuario usando Factory Method
             $usuario = $this->usuarioRepository->autenticar(
                 $request->username,

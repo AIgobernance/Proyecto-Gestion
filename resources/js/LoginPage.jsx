@@ -136,8 +136,23 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
       
+      // Manejar error 403 (Forbidden) - usuario desactivado
+      if (error.response && error.response.status === 403) {
+        const responseData = error.response.data;
+        if (responseData.deactivated) {
+          setError("Su cuenta ha sido desactivada. Por favor, contacte con soporte para más información.");
+        } else if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.username 
+            ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
+            : responseData.message || "Su cuenta ha sido desactivada. Por favor, contacte con soporte.";
+          setError(errorMessage);
+        } else {
+          setError(responseData.message || "Su cuenta ha sido desactivada. Por favor, contacte con soporte.");
+        }
+      }
       // Manejar error 401 (Unauthorized) - credenciales incorrectas
-      if (error.response && error.response.status === 401) {
+      else if (error.response && error.response.status === 401) {
         const responseData = error.response.data;
         if (responseData.errors) {
           const backendErrors = responseData.errors;
