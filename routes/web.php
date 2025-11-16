@@ -9,6 +9,7 @@ use App\Http\Controllers\CsrfController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EvaluationController;
 
 /*
 |---------------------------------------------------------------------------
@@ -40,6 +41,11 @@ Route::middleware(['web'])->group(function () {
 Route::middleware(['web'])->group(function () {
     Route::get('/api/dashboard/stats', [DashboardController::class, 'getStats']);
     Route::get('/api/evaluations', [DashboardController::class, 'getEvaluations']);
+});
+
+// Rutas de evaluación
+Route::middleware(['web'])->group(function () {
+    Route::post('/api/evaluation/submit', [EvaluationController::class, 'submitEvaluation']);
 });
 
 // Rutas de administración de usuarios (requieren autenticación admin)

@@ -384,5 +384,152 @@ class EvaluacionRepository
             ];
         }
     }
+
+    /**
+     * Crea una nueva evaluación en la base de datos
+     *
+     * @param array $datos Datos de la evaluación
+     * @return int ID de la evaluación creada
+     */
+    public function crear(array $datos): int
+    {
+        try {
+            // Verificar si la tabla existe
+            $tablaExiste = DB::selectOne("
+                SELECT COUNT(*) as existe 
+                FROM INFORMATION_SCHEMA.TABLES 
+                WHERE TABLE_NAME = ?
+            ", [$this->table]);
+
+            if (!$tablaExiste || $tablaExiste->existe == 0) {
+                throw new \Exception('La tabla Evaluacion no existe en la base de datos');
+            }
+
+            // Obtener columnas disponibles
+            $columnas = DB::select("
+                SELECT COLUMN_NAME 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_NAME = ?
+            ", [$this->table]);
+
+            $columnasDisponibles = array_map(function ($col) {
+                return $col->COLUMN_NAME;
+            }, $columnas);
+
+            // Preparar datos para inserción
+            $datosInsert = [
+                'Id_Usuario' => $datos['Id_Usuario'] ?? $datos['id_usuario'] ?? null,
+            ];
+
+            // Fecha - usar GETDATE() de SQL Server si existe columna Fecha
+            $hasFecha = in_array('Fecha', $columnasDisponibles);
+            if ($hasFecha) {
+                // Usar SQL directo para GETDATE()
+                $sql = "INSERT INTO [{$this->table}] ([Id_Usuario], [Fecha]) VALUES (?, GETDATE())";
+                $params = [$datosInsert['Id_Usuario']];
+            } else {
+                $datosInsert['Fecha'] = $datos['Fecha'] ?? $datos['fecha'] ?? now();
+                $sql = null;
+                $params = null;
+            }
+
+            // Agregar columnas opcionales si existen
+            if (in_array('Tiempo', $columnasDisponibles) && isset($datos['Tiempo'])) {
+                $datosInsert['Tiempo'] = $datos['Tiempo'];
+            }
+            if (in_array('Puntuacion', $columnasDisponibles) && isset($datos['Puntuacion'])) {
+                $datosInsert['Puntuacion'] = $datos['Puntuacion'];
+            }
+            if (in_array('Nombre', $columnasDisponibles) && isset($datos['Nombre'])) {
+                $datosInsert['Nombre'] = $datos['Nombre'];
+            }
+            if (in_array('Marco', $columnasDisponibles) && isset($datos['Marco'])) {
+                $datosInsert['Marco'] = $datos['Marco'];
+            }
+            if (in_array('Framework', $columnasDisponibles) && isset($datos['Framework'])) {
+                $datosInsert['Framework'] = $datos['Framework'];
+            }
+            if (in_array('Estado', $columnasDisponibles)) {
+                $datosInsert['Estado'] = $datos['Estado'] ?? 'En proceso';
+            }
+
+            // Insertar en la base de datos
+            if ($hasFecha) {
+                // Si usamos SQL directo para Fecha, construir la consulta completa
+                $columnasSQL = ['[Id_Usuario]', '[Fecha]'];
+                $valoresSQL = ['?', 'GETDATE()'];
+                $paramsSQL = [$datosInsert['Id_Usuario']];
+
+                foreach ($datosInsert as $campo => $valor) {
+                    if ($campo !== 'Id_Usuario' && $campo !== 'Fecha') {
+                        $columnasSQL[] = "[{$campo}]";
+                        $valoresSQL[] = '?';
+                        $paramsSQL[] = $valor;
+                    }
+                }
+
+                // Usar OUTPUT INSERTED.Id para obtener el ID en SQL Server
+                $sql = "INSERT INTO [{$this->table}] (" . implode(', ', $columnasSQL) . ") OUTPUT INSERTED.Id_Evaluacion VALUES (" . implode(', ', $valoresSQL) . ")";
+                $result = DB::select($sql, $paramsSQL);
+                $id = $result[0]->Id_Evaluacion ?? null;
+            } else {
+                $id = DB::table($this->table)->insertGetId($datosInsert);
+            }
+
+            Log::info('Evaluación creada exitosamente', [
+                'id_evaluacion' => $id,
+                'id_usuario' => $datosInsert['Id_Usuario'],
+            ]);
+
+            return $id;
+
+        } catch (\Exception $e) {
+            Log::error('Error al crear evaluación', [
+                'datos' => $datos,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Actualiza una evaluación existente
+     *
+     * @param int $idEvaluacion
+     * @param array $datos
+     * @return bool
+     */
+    public function actualizar(int $idEvaluacion, array $datos): bool
+    {
+        try {
+            $camposPermitidos = ['Puntuacion', 'Estado', 'PDF_Path', 'Tiempo', 'Nombre', 'Marco', 'Framework'];
+            $datosActualizar = [];
+
+            foreach ($camposPermitidos as $campo) {
+                if (isset($datos[$campo])) {
+                    $datosActualizar[$campo] = $datos[$campo];
+                }
+            }
+
+            if (empty($datosActualizar)) {
+                return false;
+            }
+
+            $filasAfectadas = DB::table($this->table)
+                ->where('Id_Evaluacion', $idEvaluacion)
+                ->update($datosActualizar);
+
+            return $filasAfectadas > 0;
+
+        } catch (\Exception $e) {
+            Log::error('Error al actualizar evaluación', [
+                'id_evaluacion' => $idEvaluacion,
+                'datos' => $datos,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
 }
 

@@ -356,7 +356,14 @@ export default function App() {
                 <EvaluationPage
                   onBack={() => navigate("/dashboard")}
                   onPause={() => navigate("/dashboard")}
-                  onComplete={() => navigate("/evaluation/completed")}
+                  onComplete={(answers, evaluationId) => {
+                    // Navegar a la página de completado con el ID de evaluación si está disponible
+                    if (evaluationId) {
+                      navigate(`/evaluation/${evaluationId}/completed`);
+                    } else {
+                      navigate("/evaluation/completed");
+                    }
+                  }}
                 />
               }
             />

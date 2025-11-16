@@ -473,7 +473,7 @@ export function UserManagementPage({ onBack }) {
               ) : users.length === 0 ? (
                 <div style={{textAlign:"center",padding:40,color:"#334155"}}>No hay usuarios registrados</div>
               ) : (
-                <table className="table">
+              <table className="table">
                 <thead>
                   <tr>
                     <th className="th">Usuario</th>
@@ -581,8 +581,8 @@ export function UserManagementPage({ onBack }) {
                 {/* Información Personal */}
                 <section style={{marginTop:12}}>
                   <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Información Personal</h3>
-                  <div className="row">
-                    <div>
+                <div className="row">
+                  <div>
                       <Label htmlFor="usuario" style={{color:"#0b1324"}}>Usuario *</Label>
                       <Input 
                         id="usuario" 
@@ -608,7 +608,7 @@ export function UserManagementPage({ onBack }) {
                     </div>
                   </div>
                   <div className="row" style={{marginTop:12}}>
-                    <div>
+                  <div>
                       <Label htmlFor="nit" style={{color:"#0b1324"}}>NIT *</Label>
                       <Input 
                         id="nit" 
@@ -627,8 +627,8 @@ export function UserManagementPage({ onBack }) {
                 {/* Documentación */}
                 <section style={{marginTop:16}}>
                   <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Documentación</h3>
-                  <div className="row">
-                    <div>
+                <div className="row">
+                  <div>
                       <Label htmlFor="tipoDocumento" style={{color:"#0b1324"}}>Tipo de Documento *</Label>
                       <Select value={newUser.tipoDocumento} onValueChange={(v)=>setNewUser({...newUser,tipoDocumento:v})}>
                         <SelectTrigger className="input" aria-invalid={!!errors.tipoDocumento}>
@@ -641,8 +641,8 @@ export function UserManagementPage({ onBack }) {
                         </SelectContent>
                       </Select>
                       {errors.tipoDocumento && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.tipoDocumento}</p>}
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                       <Label htmlFor="numeroDocumento" style={{color:"#0b1324"}}>Número de Documento *</Label>
                       <Input 
                         id="numeroDocumento" 
@@ -660,8 +660,8 @@ export function UserManagementPage({ onBack }) {
                 {/* Organización */}
                 <section style={{marginTop:16}}>
                   <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Información Organizacional</h3>
-                  <div className="row">
-                    <div>
+                <div className="row">
+                  <div>
                       <Label htmlFor="sector" style={{color:"#0b1324"}}>Sector *</Label>
                       <Select value={newUser.sector} onValueChange={(v)=>setNewUser({...newUser,sector:v})}>
                         <SelectTrigger className="input" aria-invalid={!!errors.sector}>
@@ -718,8 +718,8 @@ export function UserManagementPage({ onBack }) {
                 {/* Contacto */}
                 <section style={{marginTop:16}}>
                   <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Información de Contacto</h3>
-                  <div className="row">
-                    <div>
+                <div className="row">
+                  <div>
                       <Label htmlFor="correo" style={{color:"#0b1324"}}>Correo Electrónico *</Label>
                       <Input 
                         id="correo" 
@@ -731,8 +731,8 @@ export function UserManagementPage({ onBack }) {
                         aria-invalid={!!errors.correo}
                       />
                       {errors.correo && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.correo}</p>}
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                       <Label htmlFor="telefono" style={{color:"#0b1324"}}>Teléfono *</Label>
                       <Input 
                         id="telefono" 
@@ -751,8 +751,8 @@ export function UserManagementPage({ onBack }) {
                 {/* Seguridad */}
                 <section style={{marginTop:16}}>
                   <h3 style={{color:"#0b1324",margin:"0 0 8px",fontWeight:700,borderBottom:"1px solid #e5e7eb",paddingBottom:6}}>Seguridad</h3>
-                  <div className="row">
-                    <div>
+                <div className="row">
+                  <div>
                       <Label htmlFor="crearContrasena" style={{color:"#0b1324"}}>Contraseña *</Label>
                       <div style={{position:"relative"}}>
                         <Input 
@@ -785,8 +785,8 @@ export function UserManagementPage({ onBack }) {
                         </button>
                       </div>
                       {errors.crearContrasena && <p style={{color:"#b91c1c",fontSize:12,marginTop:4}}>{errors.crearContrasena}</p>}
-                    </div>
-                    <div>
+                  </div>
+                  <div>
                       <Label htmlFor="confirmarContrasena" style={{color:"#0b1324"}}>Confirmar Contraseña *</Label>
                       <div style={{position:"relative"}}>
                         <Input 
@@ -835,13 +835,13 @@ export function UserManagementPage({ onBack }) {
                 <section style={{marginTop:16}}>
                   <div style={{display:"flex",gap:12,alignItems:"flex-start",background:"#f8fafc",border:"1px solid #e2e8f0",borderRadius:12,padding:12,color:"#0f172a"}}>
                     <input
-                      id="politicas"
+                    id="politicas"
                       type="checkbox"
                       className="chkbox"
-                      checked={newUser.aceptaPoliticas}
+                    checked={newUser.aceptaPoliticas}
                       onChange={(e)=>setNewUser({...newUser,aceptaPoliticas:e.target.checked})}
                       aria-invalid={!!errors.aceptaPoliticas}
-                    />
+                  />
                     <div style={{flex:1}}>
                       <Label htmlFor="politicas" style={{cursor:"pointer",fontWeight:700,color:"#0b1324",display:"block"}}>
                         <span style={{display:"inline-flex",gap:8,alignItems:"center"}}>
@@ -854,7 +854,7 @@ export function UserManagementPage({ onBack }) {
                       <small style={{display:"block",color:"#334155",marginTop:4,fontSize:13}}>Al marcar esta casilla, acepto que mis datos sean procesados según la política de privacidad.</small>
                       {errors.aceptaPoliticas && <p style={{color:"#b91c1c",fontSize:12,marginTop:6}}>{errors.aceptaPoliticas}</p>}
                     </div>
-                  </div>
+                </div>
                 </section>
 
                 {/* Acciones */}
@@ -1005,13 +1005,13 @@ export function UserManagementPage({ onBack }) {
                 </div>
                 <h3 className="user-success-title">¡Usuario creado con éxito!</h3>
                 <p className="user-success-desc">El usuario fue agregado a la plataforma correctamente.</p>
-              </div>
+          </div>
 
               <div className="user-success-body">
                 <button className="user-success-btn" onClick={handleContinueAfterSuccess}>
                   <CheckCircle2 className="w-5 h-5" />
-                  Continuar
-                </button>
+                Continuar
+              </button>
               </div>
             </div>
           </div>

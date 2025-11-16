@@ -411,7 +411,7 @@ export function AdminRegisterPage({ onBack, onLoginRedirect }) {
         setNotice("Error de conexión. Verifique su conexión a internet e intente nuevamente.");
       }
     } finally {
-      setIsSubmitting(false);
+    setIsSubmitting(false);
     }
   };
 

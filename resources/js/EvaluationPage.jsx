@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,6 +10,7 @@ import {
   BookOpen,
   Target,
   Award,
+  Loader2,
 } from "lucide-react";
 import imgLogo from "../assets/logo-principal.jpg";
 
@@ -675,6 +677,8 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
   const [answers, setAnswers] = useState({});
   const [selected, setSelected] = useState(null);
   const [elapsed, setElapsed] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const currentQuestion = QUESTIONS[currentIndex];
 
@@ -705,16 +709,74 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
     setSelected(idx);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (selected === null) return;
     const newAnswers = { ...answers, [currentIndex]: selected };
     setAnswers(newAnswers);
 
     if (currentIndex === TOTAL_QUESTIONS - 1) {
-      onComplete?.(newAnswers);
+      // Última pregunta - enviar evaluación
+      await handleSubmitEvaluation(newAnswers);
       return;
     }
     setCurrentIndex((i) => i + 1);
+  };
+
+  const handleSubmitEvaluation = async (allAnswers) => {
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      // Obtener token CSRF
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      // Convertir respuestas a formato de array [0 => "a", 1 => "b", ...]
+      // donde el índice es el número de pregunta (0-based) y el valor es la opción seleccionada
+      const respuestasArray = [];
+      for (let i = 0; i < TOTAL_QUESTIONS; i++) {
+        if (allAnswers[i] !== undefined) {
+          // Obtener el texto de la opción seleccionada
+          const pregunta = QUESTIONS[i];
+          const opcionSeleccionada = pregunta.options[allAnswers[i]];
+          respuestasArray.push(opcionSeleccionada);
+        } else {
+          respuestasArray.push(''); // Pregunta no respondida
+        }
+      }
+
+      // Calcular tiempo en minutos
+      const tiempoMinutos = elapsed / 60;
+
+      // Preparar datos para enviar
+      const datosEnvio = {
+        respuestas: respuestasArray,
+        tiempo: parseFloat(tiempoMinutos.toFixed(2)),
+        prompt: '', // El usuario puede agregar un prompt personalizado si lo desea
+      };
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/api/evaluation/submit', datosEnvio);
+
+      if (response.data && response.data.success) {
+        // Éxito - llamar al callback con el ID de evaluación
+        onComplete?.(allAnswers, response.data.data?.id_evaluacion);
+      } else {
+        throw new Error(response.data?.error || 'Error al enviar la evaluación');
+      }
+
+    } catch (error) {
+      console.error('Error al enviar evaluación:', error);
+      setSubmitError(
+        error.response?.data?.error || 
+        error.response?.data?.message || 
+        'Error al enviar la evaluación. Por favor, intenta nuevamente.'
+      );
+      setIsSubmitting(false);
+      // No llamar a onComplete si hay error
+    }
   };
 
   const handlePrev = () => {
@@ -896,6 +958,21 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                 })}
               </div>
 
+              {/* Mensaje de error */}
+              {submitError && (
+                <div style={{
+                  marginTop: 12,
+                  padding: 12,
+                  background: "#fee2e2",
+                  border: "1px solid #fecaca",
+                  borderRadius: 12,
+                  color: "#991b1b",
+                  fontSize: 14
+                }}>
+                  {submitError}
+                </div>
+              )}
+
               {/* Navegación */}
               <div className="eval-nav">
                 <button
@@ -925,10 +1002,24 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                   type="button"
                   className="btn-nav btn-nav--next"
                   onClick={handleNext}
-                  disabled={selected === null}
+                  disabled={selected === null || isSubmitting}
                 >
-                  {currentIndex === TOTAL_QUESTIONS - 1 ? "Finalizar" : "Siguiente"}
-                  <ArrowRight size={16} />
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Enviando...
+                    </>
+                  ) : currentIndex === TOTAL_QUESTIONS - 1 ? (
+                    <>
+                      Finalizar
+                      <ArrowRight size={16} />
+                    </>
+                  ) : (
+                    <>
+                      Siguiente
+                      <ArrowRight size={16} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
