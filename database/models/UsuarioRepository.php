@@ -29,6 +29,23 @@ class UsuarioRepository
     }
 
     /**
+     * Verifica si ya existe un usuario con el mismo tipo y número de documento
+     *
+     * @param string $tipoDocumento
+     * @param string $numeroDocumento
+     * @return bool
+     */
+    public function existeDocumento(string $tipoDocumento, string $numeroDocumento): bool
+    {
+        $result = DB::table($this->table)
+            ->where('Tipo_Documento', $tipoDocumento)
+            ->where('Numero_Documento', $numeroDocumento)
+            ->first();
+
+        return $result !== null;
+    }
+
+    /**
      * Crea un nuevo usuario en la base de datos
      *
      * @param array $datos
@@ -177,6 +194,51 @@ class UsuarioRepository
         return DB::table($this->table)
             ->where('Correo', $correo)
             ->first();
+    }
+
+    /**
+     * Obtiene un usuario por su nombre de usuario
+     *
+     * @param string $nombreUsuario
+     * @return object|null
+     */
+    public function obtenerPorNombreUsuario(string $nombreUsuario): ?object
+    {
+        return DB::table($this->table)
+            ->where('Nombre_Usuario', $nombreUsuario)
+            ->first();
+    }
+
+    /**
+     * Autentica un usuario por correo o nombre de usuario y contraseña
+     *
+     * @param string $identificador Correo o nombre de usuario
+     * @param string $contrasena Contraseña sin hashear
+     * @return object|null Usuario si las credenciales son correctas, null si no
+     */
+    public function autenticar(string $identificador, string $contrasena): ?object
+    {
+        // Intentar buscar por correo primero
+        $usuario = $this->obtenerPorCorreo($identificador);
+        
+        // Si no se encuentra por correo, intentar por nombre de usuario
+        if (!$usuario) {
+            $usuario = $this->obtenerPorNombreUsuario($identificador);
+        }
+        
+        // Si no se encuentra el usuario, retornar null
+        if (!$usuario) {
+            return null;
+        }
+        
+        // Verificar la contraseña
+        if (Hash::check($contrasena, $usuario->Contrasena)) {
+            // Ocultar la contraseña antes de retornar
+            unset($usuario->Contrasena);
+            return $usuario;
+        }
+        
+        return null;
     }
 
     /**

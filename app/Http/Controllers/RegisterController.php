@@ -50,6 +50,14 @@ class RegisterController extends Controller
             ], 422);
         }
 
+        // Verificar si ya existe un usuario con el mismo tipo y número de documento
+        if ($this->usuarioRepository->existeDocumento($request->tipoDocumento, $request->numeroDocumento)) {
+            return response()->json([
+                'message' => 'Ya existe un usuario registrado con este tipo y número de documento',
+                'errors' => ['numeroDocumento' => ['Este documento ya está registrado']]
+            ], 422);
+        }
+
         try {
             // Preparar los datos para el repositorio
             // Nota: El constraint CK_usuario_Activate_TrueFalse puede requerir valores específicos
