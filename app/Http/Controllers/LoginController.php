@@ -9,6 +9,7 @@ use Database\Factories\UsuarioFactoryManager;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Cache;
 use App\Observer\ObserverManager;
 
 class LoginController extends Controller
@@ -49,6 +50,13 @@ class LoginController extends Controller
                 })
                 ->first();
             
+            // Determinar el identificador único para rastrear intentos (email o username)
+            $identifier = $usuarioBD ? ($usuarioBD->Correo ?? $request->username) : $request->username;
+            $cacheKey = 'login_attempts_' . md5($identifier);
+            
+            // Verificar intentos fallidos previos
+            $attempts = Cache::get($cacheKey, 0);
+            
             // Si el usuario existe, verificar si está activo
             if ($usuarioBD) {
                 $activateValue = $usuarioBD->Activate ?? 1;
@@ -82,11 +90,53 @@ class LoginController extends Controller
             );
 
             if (!$usuario) {
+                // Incrementar contador de intentos fallidos
+                $attempts++;
+                Cache::put($cacheKey, $attempts, now()->addMinutes(15)); // TTL de 15 minutos
+                
+                // Determinar mensaje según el número de intentos
+                $errorMessage = '';
+                $shouldBlock = false;
+                
+                if ($attempts == 1) {
+                    $errorMessage = 'Contraseña incorrecta';
+                } elseif ($attempts == 2) {
+                    $errorMessage = 'Contraseña incorrecta. Al tercer intento fallido, su cuenta será bloqueada';
+                } elseif ($attempts >= 3) {
+                    $errorMessage = 'Su cuenta ha sido bloqueada debido a múltiples intentos fallidos. Por favor, contacte con soporte para más información.';
+                    $shouldBlock = true;
+                    
+                    // Bloquear la cuenta si existe el usuario
+                    if ($usuarioBD && isset($usuarioBD->Id)) {
+                        try {
+                            $this->usuarioRepository->actualizar($usuarioBD->Id, [
+                                'Activate' => 0 // Bloquear cuenta
+                            ]);
+                            
+                            Log::warning('Cuenta bloqueada por intentos fallidos', [
+                                'user_id' => $usuarioBD->Id,
+                                'identifier' => $identifier,
+                                'attempts' => $attempts
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error('Error al bloquear cuenta después de intentos fallidos', [
+                                'user_id' => $usuarioBD->Id ?? 'NO_ID',
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
+                }
+                
                 return response()->json([
                     'message' => 'Credenciales inválidas',
-                    'errors' => ['username' => ['Usuario o contraseña incorrectos']]
+                    'errors' => ['username' => [$errorMessage]],
+                    'attempts' => $attempts,
+                    'blocked' => $shouldBlock
                 ], 401);
             }
+            
+            // Si el login es exitoso, limpiar los intentos fallidos
+            Cache::forget($cacheKey);
 
             // Obtener datos del usuario usando el método toArray() de la interfaz
             $userData = $usuario->toArray();
