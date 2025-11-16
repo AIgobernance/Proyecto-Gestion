@@ -7,9 +7,8 @@ use Illuminate\Http\Request;
 use Database\Models\UsuarioRepository;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 
-class RegisterController extends Controller
+class AdminRegisterController extends Controller
 {
     protected UsuarioRepository $usuarioRepository;
 
@@ -20,16 +19,11 @@ class RegisterController extends Controller
 
     public function register(Request $request)
     {
-        // Validar los datos del formulario
+        // Validar los datos del formulario (solo campos básicos para administrador)
         $validator = Validator::make($request->all(), [
-            'usuario' => 'required|string|max:255',
-            'empresa' => 'required|string|max:255',
-            'nit' => 'required|string|max:50',
+            'nombre' => 'required|string|max:255',
             'tipoDocumento' => 'required|string|in:CC,CE,Pasaporte',
             'numeroDocumento' => 'required|string|max:50',
-            'sector' => 'required|string|max:255',
-            'pais' => 'required|string|max:255',
-            'tamanoOrganizacional' => 'required|string|max:255',
             'correo' => 'required|email|max:255',
             'telefono' => 'required|string|max:20',
             'contrasena' => 'required|string|min:8',
@@ -59,25 +53,25 @@ class RegisterController extends Controller
         }
 
         try {
-            // Preparar los datos para el repositorio
-            // Nota: El constraint CK_usuario_Activate_TrueFalse puede requerir valores específicos
-            // Usar 1 por defecto (activo) ya que el constraint no acepta 0
+            // Preparar los datos para el repositorio - Usando Factory Method para crear Administrador
+            // Los administradores no requieren información de empresa
             $datosUsuario = [
-                'usuario' => $request->usuario,
-            'empresa' => $request->empresa,
-            'nit' => $request->nit,
+                'usuario' => $request->nombre, // Usar el nombre como usuario
+                'empresa' => $request->empresa ?? 'N/A', // Opcional, valor por defecto
+                'nit' => $request->nit ?? 'N/A', // Opcional, valor por defecto
                 'tipoDocumento' => $request->tipoDocumento,
                 'numeroDocumento' => $request->numeroDocumento,
-            'sector' => $request->sector,
-            'pais' => $request->pais,
+                'sector' => $request->sector ?? 'N/A', // Opcional, valor por defecto
+                'pais' => $request->pais ?? 'Colombia', // Opcional, valor por defecto
+                'tamanoOrganizacional' => $request->tamanoOrganizacional ?? 'N/A', // Opcional, valor por defecto
                 'correo' => $request->correo,
-            'telefono' => $request->telefono,
+                'telefono' => $request->telefono,
                 'contrasena' => $request->contrasena,
-                'rol' => 'usuario', // Por defecto es usuario
-                'activate' => 1, // Usar 1 ya que el constraint no acepta 0
+                'rol' => 'admin', // Rol de administrador
+                'activate' => 1,
             ];
 
-            // Crear el usuario usando el repositorio
+            // Crear el administrador usando el repositorio (que usa Factory Method internamente)
             $userId = $this->usuarioRepository->crear($datosUsuario);
 
             // Obtener el usuario creado para retornarlo
@@ -86,14 +80,13 @@ class RegisterController extends Controller
             // Ocultar la contraseña en la respuesta
             unset($usuario->Contrasena);
 
-        return response()->json([
-            'message' => 'Usuario registrado correctamente',
+            return response()->json([
+                'message' => 'Administrador registrado correctamente',
                 'user' => $usuario
-        ], 201);
+            ], 201);
 
         } catch (\Exception $e) {
-            // Log del error completo para debugging
-            Log::error('Error al registrar usuario', [
+            Log::error('Error al registrar administrador', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
                 'file' => $e->getFile(),
@@ -101,7 +94,7 @@ class RegisterController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Error al registrar el usuario',
+                'message' => 'Error al registrar el administrador',
                 'error' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor',
                 'details' => config('app.debug') ? [
                     'file' => $e->getFile(),
@@ -112,3 +105,4 @@ class RegisterController extends Controller
         }
     }
 }
+

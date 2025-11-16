@@ -141,8 +141,15 @@ export default function GeneralDashboardPage({
       ? window.history.back()
       : window.location.assign("/admin/dashboard")),
 }) {
+  console.log('GeneralDashboardPage - Función ejecutada');
   const handleDownload = (name) => console.log("Descargando", name);
 
+  // Debug: verificar que el componente se está renderizando
+  React.useEffect(() => {
+    console.log('GeneralDashboardPage se está renderizando - useEffect');
+  }, []);
+
+  console.log('GeneralDashboardPage - Retornando JSX');
   return (
     <div className="page">
       <style>{styles}</style>

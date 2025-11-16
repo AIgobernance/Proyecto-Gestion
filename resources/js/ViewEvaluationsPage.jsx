@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import axios from "axios";
 import imgLogo from "../assets/logo-principal.jpg";
 import { motion } from "motion/react";
 import {
@@ -11,6 +12,7 @@ import {
   Clock,
   X,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Progress } from "../ui/progress";
@@ -99,14 +101,19 @@ const styles = `
   box-shadow:0 12px 28px rgba(2,6,23,.18); cursor:pointer;
 }
 .btn-primary:hover{filter:brightness(1.02)}
+
+/* Animación de carga */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
 `;
 
-/* Datos de ejemplo */
-const MOCK_EVALUATIONS = [
-  { id: 1, name: "Evaluación ISO 27090", date: "15/10/2024", time: "14:30", score: 95, framework: "ISO 27090", status: "Completada" },
-  { id: 2, name: "Evaluación NIS2/AI Act", date: "20/09/2024", time: "10:15", score: 85, framework: "NIS2/AI Act", status: "Completada" },
-  { id: 3, name: "Evaluación ISO 42001", date: "05/08/2024", time: "16:45", score: 78, framework: "ISO 42001", status: "Completada" },
-];
+/* Datos de ejemplo (fallback si no hay datos) */
+const MOCK_EVALUATIONS = [];
 
 /* Utils */
 const parseDMY = (str) => { const [d, m, y] = str.split("/").map(Number); return new Date(y, m - 1, d); };
@@ -124,6 +131,43 @@ export function ViewEvaluationsPage({
   onExit = () => window.location.assign("/dashboard"),
   onViewResults = (id) => window.location.assign(`/evaluation/${id}/completed`),
 }) {
+  /* ====== Estado ====== */
+  const [evaluations, setEvaluations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  /* ====== Cargar evaluaciones ====== */
+  useEffect(() => {
+    loadEvaluations();
+  }, []);
+
+  const loadEvaluations = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.get('/api/evaluations');
+
+      if (response.data && response.data.success && response.data.data) {
+        setEvaluations(response.data.data);
+      } else {
+        setEvaluations([]);
+      }
+    } catch (err) {
+      console.error('Error al cargar evaluaciones:', err);
+      setError('No se pudieron cargar las evaluaciones. Por favor, intenta más tarde.');
+      setEvaluations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* ====== Filtros ====== */
   // Fecha (rango)
   const [openCal, setOpenCal] = useState(false);
@@ -150,14 +194,21 @@ export function ViewEvaluationsPage({
 
   /* Filtrado */
   const filtered = useMemo(() => {
-    if (!range.from && !range.to) return MOCK_EVALUATIONS;
-    return MOCK_EVALUATIONS.filter((ev) => {
-      const d = parseDMY(ev.date);
-      if (range.from && d < new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate())) return false;
-      if (range.to && d > new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate())) return false;
-      return true;
-    });
-  }, [range]);
+    let filteredEvals = evaluations;
+    
+    // Aplicar filtro de fecha si existe
+    if (range.from || range.to) {
+      filteredEvals = evaluations.filter((ev) => {
+        const d = parseDMY(ev.date);
+        if (!d) return false;
+        if (range.from && d < new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate())) return false;
+        if (range.to && d > new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate())) return false;
+        return true;
+      });
+    }
+    
+    return filteredEvals;
+  }, [evaluations, range]);
 
   const avgScore = filtered.length
     ? Math.round(filtered.reduce((acc, ev) => acc + ev.score, 0) / filtered.length)
@@ -300,10 +351,26 @@ export function ViewEvaluationsPage({
             </CardHeader>
 
             <CardContent style={{padding:18,display:"grid",gap:12}}>
-              {filtered.map((ev, i) => {
+              {loading ? (
+                <div style={{textAlign:"center",padding:"48px 8px",color:"#5b677a"}}>
+                  <Loader2 className="w-8 h-8 animate-spin" style={{margin:"0 auto 16px",color:"#4d82bc"}} />
+                  <p>Cargando evaluaciones...</p>
+                </div>
+              ) : error ? (
+                <div style={{textAlign:"center",padding:"36px 8px",color:"#ef4444"}}>
+                  <p>{error}</p>
+                  <button 
+                    className="btn-primary" 
+                    onClick={loadEvaluations}
+                    style={{marginTop:16}}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              ) : filtered.map((ev, i) => {
                 const badge = getScoreBadge(ev.score);
                 return (
-                  <motion.div key={ev.id} initial={{opacity:0, x:-12}} animate={{opacity:1, x:0}} transition={{duration:0.22, delay:0.05*i}}>
+                  <motion.div key={ev.id || i} initial={{opacity:0, x:-12}} animate={{opacity:1, x:0}} transition={{duration:0.22, delay:0.05*i}}>
                     <div className="item" style={{padding:16,background:"#fff"}}>
                       <div style={{display:"flex",alignItems:"stretch",gap:16}}>
                         {/* Columna info */}
@@ -314,6 +381,11 @@ export function ViewEvaluationsPage({
                               <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
                                 <div className="row"><CalIcon className="w-4 h-4" /> {ev.date}</div>
                                 <div className="row"><Clock className="w-4 h-4" /> {ev.time}</div>
+                                {ev.tiempo && ev.tiempo !== 'N/A' && (
+                                  <div className="row" style={{color:"#7c3aed"}}>
+                                    <Clock className="w-4 h-4" /> Duración: {ev.tiempo}
+                                  </div>
+                                )}
                               </div>
                             </div>
                             <span className={`badge ${badge.cls}`}>{badge.label}</span>

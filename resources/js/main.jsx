@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import "./bootstrap.js"; // ⬅️ Importar bootstrap para configurar axios
 import App from "./app.jsx"; // ⬅️ tu componente de rutas
 import "../css/app.css";
 const el = document.getElementById("root"); // ⬅️ coincide con tu Blade

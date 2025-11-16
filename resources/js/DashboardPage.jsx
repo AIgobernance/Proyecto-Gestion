@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import imgLogo from "../assets/logo-principal.jpg";
 import {
   User, FileText, LogOut, PlayCircle, BarChart3,
-  TrendingUp, Award, CheckCircle2, Clock, Info
+  TrendingUp, Award, CheckCircle2, Clock, Info, Loader2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -100,6 +101,15 @@ const styles = `
   align-items:center;      /* centra el h4 y el small como columna */
   text-align:center;       /* alinea el texto al centro */
 }
+
+/* Animación de carga */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
 `;
 
 export function DashboardPage({
@@ -109,11 +119,90 @@ export function DashboardPage({
   onStartEvaluation = () => window.location.assign("/evaluation/start"),
   onViewProfile = () => window.location.assign("/profile"),
 }) {
-  const userStats = {
-    totalEvaluations: 3,
-    lastEvaluation: "15 Oct 2024",
-    averageScore: 78,
-    completionRate: 100,
+  const [userStats, setUserStats] = useState({
+    totalEvaluations: 0,
+    lastEvaluation: "N/A",
+    averageScore: 0,
+    completitud: 100,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [incompleteEvaluation, setIncompleteEvaluation] = useState(null);
+  const [loadingIncomplete, setLoadingIncomplete] = useState(true);
+
+  useEffect(() => {
+    loadDashboardStats();
+    checkIncompleteEvaluation();
+  }, []);
+
+  // Verificar evaluación incompleta cuando el componente se vuelve a montar (al volver del dashboard)
+  useEffect(() => {
+    const handleFocus = () => {
+      checkIncompleteEvaluation();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  const checkIncompleteEvaluation = async () => {
+    setLoadingIncomplete(true);
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.get('/api/evaluation/check-incomplete');
+
+      if (response.data && response.data.success && response.data.has_incomplete) {
+        setIncompleteEvaluation(response.data.data);
+      } else {
+        setIncompleteEvaluation(null);
+      }
+    } catch (err) {
+      console.error('Error al verificar evaluación incompleta:', err);
+      setIncompleteEvaluation(null);
+    } finally {
+      setLoadingIncomplete(false);
+    }
+  };
+
+  const loadDashboardStats = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.get('/api/dashboard/stats');
+
+      if (response.data && response.data.success && response.data.data) {
+        setUserStats({
+          totalEvaluations: response.data.data.totalEvaluaciones || 0,
+          lastEvaluation: response.data.data.ultimaEvaluacion || "N/A",
+          averageScore: Math.round(response.data.data.promedioPuntuacion || 0),
+          completitud: Math.round(response.data.data.completitud || 100),
+        });
+      }
+    } catch (err) {
+      console.error('Error al cargar estadísticas del dashboard:', err);
+      setError('No se pudieron cargar las estadísticas. Por favor, intenta más tarde.');
+      // Mantener valores por defecto en caso de error
+      setUserStats({
+        totalEvaluations: 0,
+        lastEvaluation: "N/A",
+        averageScore: 0,
+        completitud: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -161,7 +250,13 @@ export function DashboardPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.totalEvaluations}</div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:32,color:"#173b8f"}}>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.totalEvaluations}</div>
+                )}
                 <CardDescription className="text-slate-500 text-xs mt-1">Completadas</CardDescription>
               </CardContent>
             </Card>
@@ -176,7 +271,13 @@ export function DashboardPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div style={{fontSize:18,color:"#173b8f",fontWeight:700}}>{userStats.lastEvaluation}</div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:18,color:"#173b8f"}}>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  </div>
+                ) : (
+                  <div style={{fontSize:18,color:"#173b8f",fontWeight:700}}>{userStats.lastEvaluation}</div>
+                )}
                 <CardDescription className="text-slate-500 text-xs mt-1">Fecha reciente</CardDescription>
               </CardContent>
             </Card>
@@ -191,7 +292,13 @@ export function DashboardPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.averageScore}%</div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:32,color:"#173b8f"}}>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.averageScore}%</div>
+                )}
                 <CardDescription className="text-slate-500 text-xs mt-1">Nivel de madurez</CardDescription>
               </CardContent>
             </Card>
@@ -206,11 +313,31 @@ export function DashboardPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.completionRate}%</div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:32,color:"#173b8f"}}>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.completitud}%</div>
+                )}
                 <CardDescription className="text-slate-500 text-xs mt-1">Cuestionarios</CardDescription>
               </CardContent>
             </Card>
           </section>
+
+          {/* Mensaje de error */}
+          {error && (
+            <div style={{
+              marginTop: 20,
+              padding: 16,
+              background: "#fee2e2",
+              border: "1px solid #fecaca",
+              borderRadius: 12,
+              color: "#991b1b"
+            }}>
+              <p style={{margin: 0, fontSize: 14}}>{error}</p>
+            </div>
+          )}
 
           {/* CTA + Acciones */}
           <section className="cols">
@@ -237,11 +364,48 @@ export function DashboardPage({
                   </ul>
                 </div>
 
-                <div style={{marginTop:16}}>
-                  <button className="btn-primary" onClick={onStartEvaluation} aria-label="Iniciar nueva evaluación">
+                <div style={{marginTop:16, display:"flex", flexDirection:"column", gap:12}}>
+                  {incompleteEvaluation && (
+                    <button 
+                      className="btn-primary" 
+                      onClick={onStartEvaluation} 
+                      aria-label="Continuar evaluación"
+                      style={{
+                        background: "linear-gradient(90deg, #f59e0b, #f97316)",
+                        color: "#fff",
+                      }}
+                    >
+                      <PlayCircle className="w-5 h-5" />
+                      Continuar Evaluación ({incompleteEvaluation.total_respuestas || 0}/50)
+                    </button>
+                  )}
+                  <button 
+                    className="btn-primary" 
+                    onClick={onStartEvaluation} 
+                    aria-label="Iniciar nueva evaluación"
+                    disabled={incompleteEvaluation !== null}
+                    style={{
+                      opacity: incompleteEvaluation !== null ? 0.5 : 1,
+                      cursor: incompleteEvaluation !== null ? "not-allowed" : "pointer",
+                      background: incompleteEvaluation !== null 
+                        ? "linear-gradient(90deg, #9ca3af, #6b7280)" 
+                        : undefined,
+                    }}
+                  >
                     <PlayCircle className="w-5 h-5" />
-                    Iniciar Nueva Evaluación
+                    {incompleteEvaluation ? "Iniciar Nueva Evaluación (Bloqueado)" : "Iniciar Nueva Evaluación"}
                   </button>
+                  {incompleteEvaluation && (
+                    <p style={{
+                      fontSize: 12,
+                      color: "#f59e0b",
+                      margin: 0,
+                      textAlign: "center",
+                      fontWeight: 500,
+                    }}>
+                      ⚠️ Debes completar la evaluación anterior antes de iniciar una nueva
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>

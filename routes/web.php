@@ -2,6 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\AdminRegisterController;
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\PasswordResetController;
+use App\Http\Controllers\CsrfController;
+use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EvaluationController;
+
 /*
 |---------------------------------------------------------------------------
 | Rutas para SPA (React)
@@ -11,6 +20,49 @@ use App\Http\Controllers\RegisterController;
 */
 
 Route::view('/', 'app');                      // Home
+
+// Rutas API (deben ir antes de las rutas de vista)
+// Estas rutas necesitan el middleware 'web' para tener acceso a sesión y CSRF
+Route::middleware(['web'])->group(function () {
+    Route::get('/csrf-token', [CsrfController::class, 'getToken']);
+    Route::post('/register', [RegisterController::class, 'register']);
+    Route::post('/admin/register', [AdminRegisterController::class, 'register']);
+    Route::post('/login', [LoginController::class, 'login']);
+    Route::post('/logout', [LoginController::class, 'logout']);
+    Route::get('/auth/check', [LoginController::class, 'check']);
+    Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
+});
+
+// Rutas de perfil de usuario
+Route::middleware(['web'])->group(function () {
+    Route::get('/profile/data', [ProfileController::class, 'getProfile']);
+    Route::put('/profile/update', [ProfileController::class, 'updateProfile']);
+    Route::post('/profile/upload-photo', [ProfileController::class, 'uploadProfilePhoto']);
+});
+
+// Rutas de dashboard
+Route::middleware(['web'])->group(function () {
+    Route::get('/api/dashboard/stats', [DashboardController::class, 'getStats']);
+    Route::get('/api/evaluations', [DashboardController::class, 'getEvaluations']);
+});
+
+// Rutas de evaluación
+Route::middleware(['web'])->group(function () {
+    Route::get('/api/evaluation/check-incomplete', [EvaluationController::class, 'checkIncompleteEvaluation']);
+    Route::get('/api/evaluation/{id}/load', [EvaluationController::class, 'loadEvaluation']);
+    Route::post('/api/evaluation/save-progress', [EvaluationController::class, 'saveProgress']);
+    Route::post('/api/evaluation/submit', [EvaluationController::class, 'submitEvaluation']);
+    Route::post('/api/evaluation/upload-document', [EvaluationController::class, 'uploadDocument']);
+});
+
+// Rutas de administración de usuarios (requieren autenticación admin)
+Route::middleware(['web'])->group(function () {
+    Route::get('/admin/users/list', [UserManagementController::class, 'index']);
+    Route::post('/admin/users', [UserManagementController::class, 'store']);
+    Route::put('/admin/users/{id}/toggle-status', [UserManagementController::class, 'toggleStatus']);
+    Route::post('/admin/users/reset-password', [UserManagementController::class, 'resetPassword']);
+    Route::post('/admin/users/{id}/upload-photo', [UserManagementController::class, 'uploadProfilePhoto']);
+});
 
 // Públicas
 Route::view('/login', 'app');
@@ -39,7 +91,3 @@ Route::view('/admin/users', 'app');
 */
 Route::get('/{any}', fn () => view('app'))
     ->where('any', '^(?!api).*$');
-
-
-// Registro
-Route::post('/register', [RegisterController::class, 'register']);

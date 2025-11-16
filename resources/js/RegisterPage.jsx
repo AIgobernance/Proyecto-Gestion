@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import imgRectangle13 from "../assets/logo-principal.jpg";
 import { ActivationLinkModal } from "./ActivationLinkModal";
 import { RegistrationSuccessModal } from "./RegistrationSuccessModal";
@@ -184,34 +185,117 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
   };
 
   const handleCreateAccount = async () => {
-  if (!validateForm()) {
-    setNotice("Por favor corrija los errores en el formulario.");
-    return;
-  }
+    if (!validateForm()) { setNotice("Por favor corrija los errores en el formulario."); return; }
+    setIsSubmitting(true); setNotice("");
+    try {
+      // Obtener token CSRF
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        if (window.axios) {
+          window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+      }
 
-  setIsSubmitting(true);
-  setNotice("");
+      // Usar window.axios (configurado en bootstrap.js) o axios como fallback
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/register', {
+        usuario: formData.usuario,
+        empresa: formData.empresa,
+        nit: formData.nit,
+        tipoDocumento: formData.tipoDocumento,
+        numeroDocumento: formData.numeroDocumento,
+        sector: formData.sector,
+        pais: formData.pais,
+        tamanoOrganizacional: formData.tamanoOrganizacional,
+        correo: formData.correo,
+        telefono: formData.telefono,
+        contrasena: formData.contrasena,
+      });
 
-  try {
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-
-    if (!res.ok) throw new Error("Error en el registro");
-
-    const data = await res.json();
-    console.log("Registrado:", data);
-
-    setShowActivation(true);
-  } catch (error) {
-    setNotice("Error al crear la cuenta. Intente nuevamente.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
+      if (response.status === 201) {
+        setShowActivation(true);
+      }
+    } catch (error) {
+      console.error('Error al registrar:', error);
+      
+      // Si es un error 419 (CSRF token mismatch), intentar refrescar el token y reintentar
+      if (error.response && error.response.status === 419) {
+        try {
+          // Obtener nuevo token CSRF
+          const tokenResponse = await axios.get('/csrf-token');
+          if (tokenResponse.data && tokenResponse.data.token) {
+            // Actualizar token
+            axios.defaults.headers.common['X-CSRF-TOKEN'] = tokenResponse.data.token;
+            if (window.axios) {
+              window.axios.defaults.headers.common['X-CSRF-TOKEN'] = tokenResponse.data.token;
+            }
+            // Actualizar meta tag
+            const metaToken = document.head?.querySelector('meta[name="csrf-token"]');
+            if (metaToken) {
+              metaToken.setAttribute('content', tokenResponse.data.token);
+            }
+            
+            // Reintentar la petición
+            const axiosClient = window.axios || axios;
+            const retryResponse = await axiosClient.post('/register', {
+              usuario: formData.usuario,
+              empresa: formData.empresa,
+              nit: formData.nit,
+              tipoDocumento: formData.tipoDocumento,
+              numeroDocumento: formData.numeroDocumento,
+              sector: formData.sector,
+              pais: formData.pais,
+              tamanoOrganizacional: formData.tamanoOrganizacional,
+              correo: formData.correo,
+              telefono: formData.telefono,
+              contrasena: formData.contrasena,
+            });
+            
+            if (retryResponse.status === 201) {
+              setShowActivation(true);
+            }
+            return;
+          }
+        } catch (retryError) {
+          console.error('Error al reintentar registro:', retryError);
+          setNotice("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        
+        // Manejar errores de validación del backend
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const newErrors = {};
+          Object.keys(backendErrors).forEach(key => {
+            newErrors[key] = Array.isArray(backendErrors[key]) 
+              ? backendErrors[key][0] 
+              : backendErrors[key];
+          });
+          setErrors(newErrors);
+          setNotice(responseData.message || "Por favor corrija los errores en el formulario.");
+        } else {
+          // Mostrar el error específico si está disponible
+          const errorMessage = responseData.error || responseData.message || "Error al crear la cuenta. Intente nuevamente.";
+          setNotice(errorMessage);
+          
+          // Si hay detalles de debug, mostrarlos en consola
+          if (responseData.details) {
+            console.error('Detalles del error:', responseData.details);
+          }
+        }
+      } else {
+        setNotice("Error de conexión. Verifique su conexión a internet e intente nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleAcceptActivation = () => { setShowActivation(false); setShowSuccess(true); };
 

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import imgLogo from "../assets/logo-principal.jpg";
 import { VerificationMethodModal } from "./VerificationMethodModal";
 import { CodeVerificationModal } from "./CodeVerificationModal";
@@ -11,6 +12,16 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Alert, AlertDescription } from "../ui/alert";
 import { Separator } from "../ui/separator";
 import { ArrowLeft, Lock, User, AlertCircle } from "lucide-react";
+
+// Configurar axios
+const token = document.head?.querySelector('meta[name="csrf-token"]');
+if (token) {
+  axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+}
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.withCredentials = true;
 
 /* ===== Estilos coherentes con Registro ===== */
 const styles = `
@@ -86,25 +97,117 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
   const [error, setError] = useState("");
 
   // Estados para restablecer contraseña
-  const [resetUsername, setResetUsername] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetError, setResetError] = useState("");
 
-  const handleAccept = () => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userData, setUserData] = useState(null); // Guardar datos del usuario después del login
+
+  const handleAccept = async () => {
     if (!username || !password) {
       setError("Por favor, complete todos los campos");
       return;
     }
+    
     setError("");
+    setIsSubmitting(true);
+    
+    try {
+      // Asegurar que el token CSRF esté configurado antes de enviar
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+      
+      // Enviar petición de login al backend
+      const response = await axios.post('/login', {
+        username: username,
+        password: password,
+      });
+
+      if (response.status === 200 && response.data.user) {
+        // Login exitoso - Guardar datos del usuario y mostrar modal de selección de método de verificación
+        setUserData(response.data.user);
     setVerificationStep("selectMethod");
+        return;
+      }
+    } catch (error) {
+      console.error('Error al iniciar sesión:', error);
+      
+      // Manejar error 403 (Forbidden) - usuario desactivado
+      if (error.response && error.response.status === 403) {
+        const responseData = error.response.data;
+        if (responseData.deactivated) {
+          setError("Su cuenta ha sido desactivada. Por favor, contacte con soporte para más información.");
+        } else if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.username 
+            ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
+            : responseData.message || "Su cuenta ha sido desactivada. Por favor, contacte con soporte.";
+          setError(errorMessage);
+        } else {
+          setError(responseData.message || "Su cuenta ha sido desactivada. Por favor, contacte con soporte.");
+        }
+      }
+      // Manejar error 401 (Unauthorized) - credenciales incorrectas
+      else if (error.response && error.response.status === 401) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.username 
+            ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
+            : responseData.message || "Usuario o contraseña incorrectos";
+          setError(errorMessage);
+        } else {
+          setError(responseData.message || "Usuario o contraseña incorrectos");
+        }
+      } 
+      // Manejar error 419 (CSRF token mismatch)
+      else if (error.response && error.response.status === 419) {
+        setError("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
+        // Intentar refrescar el token CSRF
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+      }
+      // Otros errores
+      else if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.username 
+            ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
+            : responseData.message || "Error al iniciar sesión";
+          setError(errorMessage);
+        } else {
+          setError(responseData.message || "Error al iniciar sesión. Verifica tus credenciales.");
+        }
+      } else {
+        setError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSelectEmail = () => { setVerificationMethod("email"); setVerificationStep("enterCode"); };
   const handleSelectPhone = () => { setVerificationMethod("phone"); setVerificationStep("enterCode"); };
 
-  const handleVerify = (code) => {
-    if (onLoginSuccess) onLoginSuccess(username);
+  const handleVerify = async (code) => {
+    // Verificar el código de verificación aquí
+    // TODO: Implementar verificación real del código con el backend
+    // Por ahora, si el código es válido, llamar al callback de éxito
+    // En una implementación real, aquí harías una petición al backend para verificar el código
+    
+    // Por ahora, aceptamos cualquier código (esto debe cambiarse por verificación real)
+    if (code && code.length > 0) {
+      if (onLoginSuccess && userData) {
+        onLoginSuccess(userData.nombre || username, userData);
+      }
+    }
   };
 
   const handleBackToMethod = () => setVerificationStep("selectMethod");
@@ -112,20 +215,78 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
 
   // Reset contraseña
   const handleResetPassword = () => setVerificationStep("resetPassword");
-  const handleAcceptResetPassword = () => {
-    if (!resetUsername || !newPassword || !confirmPassword) return setResetError("Por favor, complete todos los campos");
-    if (newPassword !== confirmPassword) return setResetError("Las contraseñas no coinciden");
-    if (newPassword.length < 6) return setResetError("La contraseña debe tener al menos 6 caracteres");
-    setResetError(""); setVerificationStep("resetSelectMethod");
+  const handleAcceptResetPassword = async () => {
+    if (!resetEmail || !newPassword || !confirmPassword) {
+      setResetError("Por favor, complete todos los campos");
+      return;
+    }
+    
+    // Validar formato de correo
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resetEmail)) {
+      setResetError("Por favor, ingrese un correo electrónico válido");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setResetError("Las contraseñas no coinciden");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setResetError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    setResetError("");
+    setIsSubmitting(true);
+
+    try {
+      // Configurar token CSRF
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      // Enviar petición al backend para restablecer contraseña
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/password/reset', {
+        email: resetEmail,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+      });
+
+      if (response.status === 200) {
+        // Contraseña restablecida exitosamente, mostrar modal de éxito
+        setVerificationStep("resetSuccess");
+      }
+    } catch (error) {
+      console.error('Error al restablecer contraseña:', error);
+      
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.email 
+            ? (Array.isArray(backendErrors.email) ? backendErrors.email[0] : backendErrors.email)
+            : backendErrors.general
+            ? (Array.isArray(backendErrors.general) ? backendErrors.general[0] : backendErrors.general)
+            : responseData.message || "Error al restablecer la contraseña";
+          setResetError(errorMessage);
+        } else {
+          setResetError(responseData.message || "Error al restablecer la contraseña. Verifica los datos e intenta nuevamente.");
+        }
+      } else {
+        setResetError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   const handleCancelResetPassword = () => {
-    setResetUsername(""); setNewPassword(""); setConfirmPassword(""); setResetError(""); setVerificationStep("login");
+    setResetEmail(""); setNewPassword(""); setConfirmPassword(""); setResetError(""); setVerificationStep("login");
   };
-  const handleSelectEmailForReset = () => { setVerificationMethod("email"); setVerificationStep("resetEnterCode"); };
-  const handleSelectPhoneForReset = () => { setVerificationMethod("phone"); setVerificationStep("resetEnterCode"); };
-  const handleVerifyResetCode = () => setVerificationStep("resetSuccess");
   const handleResetSuccessContinue = () => { handleCancelResetPassword(); };
-  const handleBackToResetMethod = () => setVerificationStep("resetSelectMethod");
 
   return (
     <div className="page">
@@ -195,8 +356,12 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
 
               {/* Acción */}
               <div className="actions">
-                <Button className="btn-primary btn-pill" onClick={handleAccept}>
-                  Iniciar Sesión
+                <Button 
+                  className="btn-primary btn-pill" 
+                  onClick={handleAccept}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Iniciando sesión..." : "Iniciar Sesión"}
                 </Button>
               </div>
 
@@ -227,7 +392,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Restablecer Contraseña</DialogTitle>
-              <DialogDescription>Ingresa tu usuario y nueva contraseña</DialogDescription>
+              <DialogDescription>Ingresa tu correo electrónico y nueva contraseña</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
@@ -239,13 +404,13 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
               )}
 
               <div className="field">
-                <Label htmlFor="reset-username">Usuario</Label>
+                <Label htmlFor="reset-email">Correo Electrónico</Label>
                 <Input
-                  id="reset-username"
-                  type="text"
-                  placeholder="Ingresa tu usuario"
-                  value={resetUsername}
-                  onChange={(e) => setResetUsername(e.target.value)}
+                  id="reset-email"
+                  type="email"
+                  placeholder="Ingresa tu correo electrónico"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
                 />
               </div>
 
@@ -272,10 +437,20 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
               </div>
 
               <div style={{ display:"flex", gap:10, marginTop:6 }}>
-                <Button className="btn-primary btn-pill" style={{ flex:1 }} onClick={handleAcceptResetPassword}>
-                  Aceptar
+                <Button 
+                  className="btn-primary btn-pill" 
+                  style={{ flex:1 }} 
+                  onClick={handleAcceptResetPassword}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Procesando..." : "Aceptar"}
                 </Button>
-                <Button className="btn-pill" style={{ flex:1 }} onClick={handleCancelResetPassword}>
+                <Button 
+                  className="btn-pill" 
+                  style={{ flex:1 }} 
+                  onClick={handleCancelResetPassword}
+                  disabled={isSubmitting}
+                >
                   Cancelar
                 </Button>
               </div>
@@ -296,22 +471,6 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
             method={verificationMethod}
             onVerify={handleVerify}
             onBack={handleBackToMethod}
-          />
-        )}
-
-        {/* Verificación para reset */}
-        {verificationStep === "resetSelectMethod" && (
-          <VerificationMethodModal
-            onSelectEmail={handleSelectEmailForReset}
-            onSelectPhone={handleSelectPhoneForReset}
-            onClose={handleCancelResetPassword}
-          />
-        )}
-        {verificationStep === "resetEnterCode" && (
-          <CodeVerificationModal
-            method={verificationMethod}
-            onVerify={handleVerifyResetCode}
-            onBack={handleBackToResetMethod}
           />
         )}
 
