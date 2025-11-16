@@ -8,7 +8,7 @@ import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { UploadPhotoModal } from "./UploadPhotoModal";
+import { ChangePhotoModal } from "./ChangePhotoModal";
 import { PasswordResetSuccessModal } from "./PasswordResetSuccessModal";
 
 import {
@@ -165,6 +165,14 @@ export function UserManagementPage({ onBack }) {
   useEffect(() => {
     loadUsers();
   }, []);
+
+  // Cerrar modal de foto cuando cambia el tab
+  useEffect(() => {
+    if (activeTab !== "usuarios") {
+      setShowUploadPhotoModal(false);
+      setSelectedUserId(null);
+    }
+  }, [activeTab]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -1023,22 +1031,53 @@ export function UserManagementPage({ onBack }) {
         <PasswordResetSuccessModal onContinue={handleContinueAfterPasswordReset} />
       )}
 
-      {/* ===== Modal: Subir Foto de Perfil ===== */}
-      <UploadPhotoModal
-        open={showUploadPhotoModal}
-        onOpenChange={setShowUploadPhotoModal}
-        userId={selectedUserId}
-        onSuccess={(fotoUrl) => {
-          // Actualizar la foto en la lista local
-          setUsers(users.map(u => 
-            u.id === selectedUserId 
-              ? { ...u, fotoPerfil: fotoUrl }
-              : u
-          ));
-          setShowUploadPhotoModal(false);
-          setSelectedUserId(null);
-        }}
-      />
+      {/* ===== Modal: Cambiar Foto de Perfil ===== */}
+      {showUploadPhotoModal && selectedUserId && (
+        <ChangePhotoModal
+          onClose={() => {
+            setShowUploadPhotoModal(false);
+            setSelectedUserId(null);
+          }}
+          onSave={async (file) => {
+            try {
+              const token = document.head?.querySelector('meta[name="csrf-token"]');
+              if (token) {
+                axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+              }
+
+              const formData = new FormData();
+              formData.append('foto', file);
+
+              const axiosClient = window.axios || axios;
+              const response = await axiosClient.post(`/admin/users/${selectedUserId}/upload-photo`, formData, {
+                headers: {
+                  'Content-Type': 'multipart/form-data',
+                },
+              });
+
+              if (response.status === 200) {
+                // Actualizar la foto en la lista local
+                setUsers(users.map(u => 
+                  u.id === selectedUserId 
+                    ? { ...u, fotoPerfil: response.data.foto }
+                    : u
+                ));
+                setShowUploadPhotoModal(false);
+                setSelectedUserId(null);
+              }
+            } catch (error) {
+              console.error('Error al subir foto:', error);
+              if (error.response && error.response.data) {
+                const responseData = error.response.data;
+                const errorMessage = responseData.message || "Error al subir la foto";
+                setError(errorMessage);
+              } else {
+                setError("Error de conexión. Verifica tu conexión a internet.");
+              }
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
