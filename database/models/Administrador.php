@@ -118,8 +118,21 @@ class Administrador implements UsuarioInterface
 
     public function toArray(): array
     {
+        // Asegurar que el ID siempre esté presente
+        $id = $this->id;
+        
+        // Si el ID es null, intentar obtenerlo de otra manera
+        if ($id === null) {
+            // Esto no debería pasar si el usuario fue creado correctamente desde la BD
+            // pero lo manejamos por si acaso
+            Log::warning('Administrador::toArray() llamado con ID null', [
+                'nombre' => $this->nombre,
+                'correo' => $this->correo
+            ]);
+        }
+        
         return [
-            'id' => $this->id,
+            'id' => $id,
             'nombre' => $this->nombre,
             'correo' => $this->correo,
             'rol' => $this->rol,

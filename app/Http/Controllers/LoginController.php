@@ -50,10 +50,25 @@ class LoginController extends Controller
 
             // Obtener datos del usuario usando el método toArray() de la interfaz
             $userData = $usuario->toArray();
+            
+            // Asegurar que el ID esté presente (puede ser null en algunos casos)
+            if (!isset($userData['id']) || $userData['id'] === null) {
+                // Si no hay ID en toArray(), obtenerlo directamente de la BD
+                $usuarioBD = $this->usuarioRepository->obtenerPorCorreo($userData['correo']);
+                if ($usuarioBD) {
+                    $userData['id'] = $usuarioBD->Id ?? $usuarioBD->id ?? null;
+                }
+            }
 
             // Guardar el usuario en la sesión
             $request->session()->put('user', $userData);
             $request->session()->save();
+            
+            Log::info('Usuario guardado en sesión', [
+                'user_id' => $userData['id'] ?? 'NO_ID',
+                'correo' => $userData['correo'] ?? 'NO_CORREO',
+                'userData_keys' => array_keys($userData)
+            ]);
 
             // Retornar respuesta exitosa
             return response()->json([

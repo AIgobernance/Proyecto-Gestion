@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import imgLogo from "../assets/logo-principal.jpg";
 import logoSuccess from "../assets/check-solid.svg";
 
@@ -6,6 +7,7 @@ import { Switch } from "../ui/switch";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "../ui/dialog";
+import { UploadPhotoModal } from "./UploadPhotoModal";
 
 import {
   Users,
@@ -14,6 +16,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   BadgeCheck,
+  Camera,
 } from "lucide-react";
 
 /* ===== Estilos coherentes con el resto del proyecto ===== */
@@ -99,20 +102,22 @@ label{color:#0b1324;font-weight:700;margin-bottom:6px;display:block}
 /* ======================== Componente ======================== */
 export function UserManagementPage({ onBack }) {
   const [activeTab, setActiveTab] = useState("usuarios"); // 'usuarios' | 'crear' | 'restablecer'
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const [users, setUsers] = useState([
-    { id: 1, usuario: "Angel", rol: "Usuario", estado: "Activo", activado: true },
-    { id: 2, usuario: "Mauricio", rol: "Usuario", estado: "Inactivo", activado: false },
-  ]);
+  const [users, setUsers] = useState([]);
 
   // Modales
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showPasswordResetSuccessModal, setShowPasswordResetSuccessModal] = useState(false);
+  const [showUploadPhotoModal, setShowUploadPhotoModal] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
   // Form crear usuario
   const [newUser, setNewUser] = useState({
     usuario: "",
     empresa: "",
+    nit: "",
     tipoDocumento: "",
     numeroDocumento: "",
     sector: "",
@@ -132,34 +137,174 @@ export function UserManagementPage({ onBack }) {
     confirmarContrasena: "",
   });
 
-  const handleToggleUser = (userId) => {
-    setUsers(users.map(u => u.id === userId
-      ? { ...u, activado: !u.activado, estado: !u.activado ? "Activo" : "Inactivo" }
-      : u
-    ));
+  // Cargar usuarios al montar el componente
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.get('/admin/users/list');
+
+      if (response.data && response.data.users) {
+        setUsers(response.data.users);
+      }
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
+      setError("Error al cargar la lista de usuarios");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCreateUser = (e) => { e.preventDefault(); setShowSuccessModal(true); };
+  const handleToggleUser = async (userId) => {
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.put(`/admin/users/${userId}/toggle-status`);
+
+      if (response.status === 200) {
+        // Actualizar el estado local
+        setUsers(users.map(u => u.id === userId
+          ? { 
+              ...u, 
+              activado: response.data.activate === 1 || response.data.activate === true,
+              estado: (response.data.activate == 1 || response.data.activate === true) ? "Activo" : "Inactivo"
+            }
+          : u
+        ));
+      }
+    } catch (error) {
+      console.error('Error al cambiar estado del usuario:', error);
+      setError("Error al cambiar el estado del usuario");
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    // Validar que las contraseñas coincidan
+    if (newUser.crearContrasena !== newUser.confirmarContrasena) {
+      setError("Las contraseñas no coinciden");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/admin/users', {
+        usuario: newUser.usuario,
+        empresa: newUser.empresa,
+        nit: newUser.nit || 'N/A',
+        tipoDocumento: newUser.tipoDocumento,
+        numeroDocumento: newUser.numeroDocumento,
+        sector: newUser.sector,
+        pais: newUser.pais,
+        tamanoOrganizacional: newUser.tamanoOrganizacional,
+        correo: newUser.correo,
+        telefono: newUser.telefono,
+        crearContrasena: newUser.crearContrasena,
+        confirmarContrasena: newUser.confirmarContrasena,
+      });
+
+      if (response.status === 201) {
+        setShowSuccessModal(true);
+        // Recargar la lista de usuarios
+        await loadUsers();
+      }
+    } catch (error) {
+      console.error('Error al crear usuario:', error);
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const errorMessages = Object.values(responseData.errors).flat();
+          setError(errorMessages.join(', ') || responseData.message || "Error al crear el usuario");
+        } else {
+          setError(responseData.message || "Error al crear el usuario");
+        }
+      } else {
+        setError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleContinueAfterSuccess = () => {
-    const data = {
-      id: users.length + 1,
-      usuario: newUser.usuario || `usuario_${users.length + 1}`,
-      rol: "Usuario",
-      estado: "Activo",
-      activado: true,
-    };
-    setUsers(prev => [...prev, data]);
     setNewUser({
-      usuario: "", empresa: "", tipoDocumento: "", numeroDocumento: "",
+      usuario: "", empresa: "", nit: "", tipoDocumento: "", numeroDocumento: "",
       sector: "", pais: "", tamanoOrganizacional: "", correo: "",
       telefono: "", crearContrasena: "", confirmarContrasena: "", aceptaPoliticas: false,
     });
     setShowSuccessModal(false);
     setActiveTab("usuarios");
+    setError("");
   };
 
-  const handleResetPassword = (e) => { e.preventDefault(); setShowPasswordResetSuccessModal(true); };
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    // Validar que las contraseñas coincidan
+    if (resetPassword.nuevaContrasena !== resetPassword.confirmarContrasena) {
+      setError("Las contraseñas no coinciden");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/admin/users/reset-password', {
+        usuario: resetPassword.usuario,
+        nuevaContrasena: resetPassword.nuevaContrasena,
+        confirmarContrasena: resetPassword.confirmarContrasena,
+      });
+
+      if (response.status === 200) {
+        setShowPasswordResetSuccessModal(true);
+      }
+    } catch (error) {
+      console.error('Error al restablecer contraseña:', error);
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const errorMessages = Object.values(responseData.errors).flat();
+          setError(errorMessages.join(', ') || responseData.message || "Error al restablecer la contraseña");
+        } else {
+          setError(responseData.message || "Error al restablecer la contraseña");
+        }
+      } else {
+        setError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleContinueAfterPasswordReset = () => {
     setResetPassword({ usuario: "", nuevaContrasena: "", confirmarContrasena: "" });
@@ -223,6 +368,7 @@ export function UserManagementPage({ onBack }) {
                 <thead>
                   <tr>
                     <th className="th">Usuario</th>
+                    <th className="th">Correo</th>
                     <th className="th">Rol</th>
                     <th className="th">Estado</th>
                     <th className="th">Activar / Desactivar</th>
@@ -231,9 +377,50 @@ export function UserManagementPage({ onBack }) {
                 <tbody>
                   {users.map((u) => (
                     <tr key={u.id} className="tr">
-                      <td className="td" style={{fontWeight:800,color:"#0b1324"}}>{u.usuario}</td>
+                      <td className="td" style={{fontWeight:800,color:"#0b1324",display:"flex",alignItems:"center",gap:10}}>
+                        <div style={{position:"relative"}}>
+                          {u.fotoPerfil ? (
+                            <img 
+                              src={u.fotoPerfil.startsWith('http') ? u.fotoPerfil : `/storage/${u.fotoPerfil}`} 
+                              alt={u.usuario}
+                              style={{width:32,height:32,borderRadius:"50%",objectFit:"cover"}}
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div style={{width:32,height:32,borderRadius:"50%",background:"#4d82bc",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:14}}>
+                              {u.usuario.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              setSelectedUserId(u.id);
+                              setShowUploadPhotoModal(true);
+                            }}
+                            style={{
+                              position:"absolute",
+                              bottom:-2,
+                              right:-2,
+                              width:20,
+                              height:20,
+                              borderRadius:"50%",
+                              background:"#4d82bc",
+                              border:"2px solid #fff",
+                              display:"flex",
+                              alignItems:"center",
+                              justifyContent:"center",
+                              cursor:"pointer",
+                              padding:0
+                            }}
+                            title="Cambiar foto"
+                          >
+                            <Camera className="w-3 h-3" style={{color:"#fff"}} />
+                          </button>
+                        </div>
+                        {u.usuario}
+                      </td>
+                      <td className="td" style={{color:"#334155"}}>{u.correo}</td>
                       <td className="td">
-                        <span className="badge badge--role">{u.rol}</span>
+                        <span className="badge badge--role">{u.rol === 'admin' ? 'Administrador' : 'Usuario'}</span>
                       </td>
                       <td className="td">
                         {u.estado === "Activo" ? (
@@ -245,7 +432,11 @@ export function UserManagementPage({ onBack }) {
                       <td className="td">
                         <div style={{display:"inline-flex",alignItems:"center",gap:10}}>
                           <span style={{fontWeight:800}}>{u.activado ? "Activo" : "Desactivado"}</span>
-                          <Switch checked={u.activado} onCheckedChange={()=>handleToggleUser(u.id)} />
+                          <Switch 
+                            checked={u.activado} 
+                            onCheckedChange={()=>handleToggleUser(u.id)}
+                            disabled={loading}
+                          />
                         </div>
                       </td>
                     </tr>
@@ -279,50 +470,45 @@ export function UserManagementPage({ onBack }) {
 
                 <div className="row">
                   <div>
-                    <label>Tipo de documento</label>
-                    <Input value={newUser.tipoDocumento} onChange={(e)=>setNewUser({...newUser,tipoDocumento:e.target.value})} className="input" />
+                    <label>Número de documento *</label>
+                    <Input value={newUser.numeroDocumento} onChange={(e)=>setNewUser({...newUser,numeroDocumento:e.target.value})} className="input" required />
                   </div>
                   <div>
-                    <label>Número de documento</label>
-                    <Input value={newUser.numeroDocumento} onChange={(e)=>setNewUser({...newUser,numeroDocumento:e.target.value})} className="input" />
-                  </div>
-                </div>
-
-                <div className="row">
-                  <div>
-                    <label>Sector</label>
-                    <Input value={newUser.sector} onChange={(e)=>setNewUser({...newUser,sector:e.target.value})} className="input" />
-                  </div>
-                  <div>
-                    <label>País</label>
-                    <Input value={newUser.pais} onChange={(e)=>setNewUser({...newUser,pais:e.target.value})} className="input" />
-                  </div>
-                </div>
-
-                <div>
-                  <label>Tamaño organizacional</label>
-                  <Input value={newUser.tamanoOrganizacional} onChange={(e)=>setNewUser({...newUser,tamanoOrganizacional:e.target.value})} className="input" />
-                </div>
-
-                <div className="row">
-                  <div>
-                    <label>Correo</label>
-                    <Input type="email" value={newUser.correo} onChange={(e)=>setNewUser({...newUser,correo:e.target.value})} className="input" />
-                  </div>
-                  <div>
-                    <label>Teléfono</label>
-                    <Input type="tel" value={newUser.telefono} onChange={(e)=>setNewUser({...newUser,telefono:e.target.value})} className="input" />
+                    <label>Sector *</label>
+                    <Input value={newUser.sector} onChange={(e)=>setNewUser({...newUser,sector:e.target.value})} className="input" required />
                   </div>
                 </div>
 
                 <div className="row">
                   <div>
-                    <label>Crear contraseña</label>
-                    <Input type="password" value={newUser.crearContrasena} onChange={(e)=>setNewUser({...newUser,crearContrasena:e.target.value})} className="input" />
+                    <label>País *</label>
+                    <Input value={newUser.pais} onChange={(e)=>setNewUser({...newUser,pais:e.target.value})} className="input" required />
                   </div>
                   <div>
-                    <label>Confirmar contraseña</label>
-                    <Input type="password" value={newUser.confirmarContrasena} onChange={(e)=>setNewUser({...newUser,confirmarContrasena:e.target.value})} className="input" />
+                    <label>Tamaño organizacional *</label>
+                    <Input value={newUser.tamanoOrganizacional} onChange={(e)=>setNewUser({...newUser,tamanoOrganizacional:e.target.value})} className="input" required />
+                  </div>
+                </div>
+
+                <div className="row">
+                  <div>
+                    <label>Correo *</label>
+                    <Input type="email" value={newUser.correo} onChange={(e)=>setNewUser({...newUser,correo:e.target.value})} className="input" required />
+                  </div>
+                  <div>
+                    <label>Teléfono *</label>
+                    <Input type="tel" value={newUser.telefono} onChange={(e)=>setNewUser({...newUser,telefono:e.target.value})} className="input" required />
+                  </div>
+                </div>
+
+                <div className="row">
+                  <div>
+                    <label>Crear contraseña *</label>
+                    <Input type="password" value={newUser.crearContrasena} onChange={(e)=>setNewUser({...newUser,crearContrasena:e.target.value})} className="input" required />
+                  </div>
+                  <div>
+                    <label>Confirmar contraseña *</label>
+                    <Input type="password" value={newUser.confirmarContrasena} onChange={(e)=>setNewUser({...newUser,confirmarContrasena:e.target.value})} className="input" required />
                   </div>
                 </div>
 
@@ -370,11 +556,27 @@ export function UserManagementPage({ onBack }) {
                   <Input type="password" value={resetPassword.confirmarContrasena} onChange={(e)=>setResetPassword({...resetPassword,confirmarContrasena:e.target.value})} className="input" />
                 </div>
 
+                {error && (
+                  <div style={{padding:12,marginTop:12,background:"#ffefef",border:"1px solid #a11a1a",borderRadius:8,color:"#a11a1a"}}>
+                    {error}
+                  </div>
+                )}
+
                 <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:14}}>
-                  <button type="submit" className="btn-primary">
-                    <BadgeCheck className="w-4 h-4" /> Aceptar
+                  <button 
+                    type="submit" 
+                    className="btn-primary"
+                    disabled={loading}
+                  >
+                    <BadgeCheck className="w-4 h-4" /> 
+                    {loading ? "Procesando..." : "Aceptar"}
                   </button>
-                  <button type="button" onClick={handleCancelResetPassword} className="btn-secondary">
+                  <button 
+                    type="button" 
+                    onClick={handleCancelResetPassword} 
+                    className="btn-secondary"
+                    disabled={loading}
+                  >
                     Cancelar
                   </button>
                 </div>
@@ -431,6 +633,23 @@ export function UserManagementPage({ onBack }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ===== Modal: Subir Foto de Perfil ===== */}
+      <UploadPhotoModal
+        open={showUploadPhotoModal}
+        onOpenChange={setShowUploadPhotoModal}
+        userId={selectedUserId}
+        onSuccess={(fotoUrl) => {
+          // Actualizar la foto en la lista local
+          setUsers(users.map(u => 
+            u.id === selectedUserId 
+              ? { ...u, fotoPerfil: fotoUrl }
+              : u
+          ));
+          setShowUploadPhotoModal(false);
+          setSelectedUserId(null);
+        }}
+      />
     </div>
   );
 }

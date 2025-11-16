@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import imgLogo from "../assets/logo-principal.jpg";
-import { User, Camera, Mail, Phone, Lock, Pencil } from "lucide-react";
+import { User, Camera, Mail, Phone, Pencil } from "lucide-react";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { ChangePhotoModal } from "./ChangePhotoModal";
@@ -70,19 +71,81 @@ export function UserProfilePage({
 }) {
   // Perfil original (para cancelar)
   const [original, setOriginal] = useState({
-    username,
-    email: "juan@empresa.com",
-    phone: "+57 300 000 0000",
+    username: "",
+    email: "",
+    phone: "",
   });
 
   // Campos editables (se sincronizan con original al entrar/salir de edición)
-  const [form, setForm] = useState({ ...original, password: "" });
+  const [form, setForm] = useState({ ...original });
 
   // Estados UI
   const [isEditing, setIsEditing] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
   const [showChangePhotoModal, setShowChangePhotoModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [error, setError] = useState("");
+  const [fotoPerfil, setFotoPerfil] = useState(null);
+
+  // Cargar datos del perfil al montar el componente
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.get('/profile/data');
+
+      if (response.data && response.data.profile) {
+        const profile = response.data.profile;
+        setOriginal({
+          username: profile.username || "",
+          email: profile.email || "",
+          phone: profile.phone || "",
+        });
+        setForm({
+          username: profile.username || "",
+          email: profile.email || "",
+          phone: profile.phone || "",
+        });
+        if (profile.fotoPerfil) {
+          setFotoPerfil(profile.fotoPerfil);
+        }
+      } else {
+        setError("No se recibieron datos del perfil");
+      }
+    } catch (error) {
+      console.error('Error al cargar perfil:', error);
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message || "Error al cargar los datos del perfil";
+        
+        if (status === 401) {
+          setError("No estás autenticado. Por favor, inicia sesión nuevamente.");
+        } else if (status === 404) {
+          setError("Usuario no encontrado en la base de datos.");
+        } else if (status === 400) {
+          setError(message || "Error al identificar al usuario.");
+        } else {
+          setError(message);
+        }
+      } else {
+        setError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelectFile = (file) => {
     const reader = new FileReader();
@@ -90,22 +153,112 @@ export function UserProfilePage({
     reader.readAsDataURL(file);
   };
 
+  const handleSavePhoto = async (file) => {
+    setUploadingPhoto(true);
+    setError("");
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const formData = new FormData();
+      formData.append('foto', file);
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/profile/upload-photo', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.status === 200) {
+        // Actualizar la foto en el estado
+        if (response.data.foto) {
+          setFotoPerfil(response.data.foto);
+        }
+        // También actualizar el preview local
+        const reader = new FileReader();
+        reader.onloadend = () => setProfileImage(reader.result);
+        reader.readAsDataURL(file);
+        
+        setShowChangePhotoModal(false);
+        // Recargar el perfil para obtener la URL actualizada
+        await loadProfile();
+      }
+    } catch (error) {
+      console.error('Error al subir foto:', error);
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const errorMessages = Object.values(responseData.errors).flat();
+          setError(errorMessages.join(', ') || responseData.message || "Error al subir la foto");
+        } else {
+          setError(responseData.message || "Error al subir la foto");
+        }
+      } else {
+        setError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const startEdit = () => {
-    setForm({ ...original, password: "" });
+    setForm({ ...original });
     setIsEditing(true);
   };
 
   const cancelEdit = () => {
-    setForm({ ...original, password: "" });
+    setForm({ ...original });
     setIsEditing(false);
+    setError("");
   };
 
-  const handleSave = () => {
-    // Guardar (simulado)
-    const { username: u, email, phone } = form;
-    setOriginal({ username: u, email, phone });
-    setIsEditing(false);        // vuelve a lectura
-    setShowSuccessModal(true);  // abre modal de éxito
+  const handleSave = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.put('/profile/update', {
+        username: form.username,
+        email: form.email,
+        phone: form.phone,
+      });
+
+      if (response.status === 200 && response.data.profile) {
+        const profile = response.data.profile;
+        setOriginal({
+          username: profile.username || "",
+          email: profile.email || "",
+          phone: profile.phone || "",
+        });
+        setIsEditing(false);
+        setShowSuccessModal(true);
+      }
+    } catch (error) {
+      console.error('Error al actualizar perfil:', error);
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const errorMessages = Object.values(responseData.errors).flat();
+          setError(errorMessages.join(', ') || responseData.message || "Error al actualizar el perfil");
+        } else {
+          setError(responseData.message || "Error al actualizar el perfil");
+        }
+      } else {
+        setError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   // >>> Cambiado: cerrar modal sin salir de la página y dejando modo lectura
@@ -136,13 +289,17 @@ export function UserProfilePage({
               <CardTitle className="card-title">Mi Perfil</CardTitle>
 
               {!isEditing ? (
-                <button className="btn-primary" onClick={startEdit}>
+                <button className="btn-primary" onClick={startEdit} disabled={loading}>
                   <Pencil className="w-4 h-4 me-2" /> Modificar
                 </button>
               ) : (
                 <div className="actions" style={{margin:0}}>
-                  <button className="btn-primary" onClick={handleSave}>Guardar cambios</button>
-                  <button className="btn-secondary" onClick={cancelEdit}>Cancelar</button>
+                  <button className="btn-primary" onClick={handleSave} disabled={loading}>
+                    {loading ? "Guardando..." : "Guardar cambios"}
+                  </button>
+                  <button className="btn-secondary" onClick={cancelEdit} disabled={loading}>
+                    Cancelar
+                  </button>
                 </div>
               )}
             </CardHeader>
@@ -155,6 +312,16 @@ export function UserProfilePage({
                     <div className="avatar-inner">
                       {profileImage ? (
                         <img src={profileImage} alt="Foto de perfil" className="w-full h-full object-cover" />
+                      ) : fotoPerfil ? (
+                        <img 
+                          src={fotoPerfil.startsWith('http') ? fotoPerfil : `/storage/${fotoPerfil}`} 
+                          alt="Foto de perfil" 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
                       ) : (
                         <User className="w-[72px] h-[72px] text-[#173b8f]" />
                       )}
@@ -162,9 +329,30 @@ export function UserProfilePage({
                   </div>
                   <div className="block" style={{width:"100%", textAlign:"center"}}>
                     <div className="hint">Foto de perfil</div>
+                    {error && !isEditing && (
+                      <div style={{
+                        padding:8,
+                        marginBottom:8,
+                        background:"#ffefef",
+                        border:"1px solid #a11a1a",
+                        borderRadius:8,
+                        color:"#a11a1a",
+                        fontSize:12
+                      }}>
+                        {error}
+                      </div>
+                    )}
                     <div className="actions" style={{justifyContent:"center"}}>
-                      <button className="btn-primary" onClick={()=>setShowChangePhotoModal(true)}>
-                        <Camera className="w-4 h-4 me-2" /> Cambiar foto
+                      <button 
+                        className="btn-primary" 
+                        onClick={()=>{
+                          setShowChangePhotoModal(true);
+                          setError("");
+                        }}
+                        disabled={uploadingPhoto}
+                      >
+                        <Camera className="w-4 h-4 me-2" /> 
+                        {uploadingPhoto ? "Subiendo..." : "Cambiar foto"}
                       </button>
                     </div>
                   </div>
@@ -172,7 +360,13 @@ export function UserProfilePage({
 
                 {/* Columna Datos */}
                 <section>
-                  {!isEditing ? (
+                  {loading && !isEditing ? (
+                    <div style={{textAlign:"center",padding:40,color:"#173b8f"}}>Cargando datos del perfil...</div>
+                  ) : error && !isEditing ? (
+                    <div style={{padding:12,marginBottom:12,background:"#ffefef",border:"1px solid #a11a1a",borderRadius:8,color:"#a11a1a"}}>
+                      {error}
+                    </div>
+                  ) : !isEditing ? (
                     /* ====== MODO LECTURA ====== */
                     <div className="view">
                       <div className="view-row">
@@ -187,14 +381,15 @@ export function UserProfilePage({
                         <div className="k">Teléfono</div>
                         <div className="v">{original.phone}</div>
                       </div>
-                      <div className="view-row">
-                        <div className="k">Contraseña</div>
-                        <div className="v">••••••••</div>
-                      </div>
                     </div>
                   ) : (
                     /* ====== MODO EDICIÓN ====== */
                     <div>
+                      {error && (
+                        <div style={{padding:12,marginBottom:12,background:"#ffefef",border:"1px solid #a11a1a",borderRadius:8,color:"#a11a1a"}}>
+                          {error}
+                        </div>
+                      )}
                       {/* Usuario */}
                       <div className="field">
                         <Label htmlFor="user">Usuario</Label>
@@ -238,24 +433,6 @@ export function UserProfilePage({
                           />
                         </div>
                       </div>
-
-                      {/* Contraseña */}
-                      <div className="field">
-                        <Label htmlFor="pass">Nueva contraseña</Label>
-                        <div className="input-like">
-                          <Lock className="w-4 h-4 text-[#173b8f]" />
-                          <input
-                            id="pass"
-                            type="password"
-                            value={form.password}
-                            onChange={(e)=>setForm((p)=>({...p, password: e.target.value}))}
-                            placeholder="Mínimo 8 caracteres"
-                          />
-                        </div>
-                        <div className="hint" style={{marginTop:6}}>
-                          * Para actualizar, ingresa una nueva contraseña (mínimo 8 caracteres). Si la dejas vacía, no se modifica.
-                        </div>
-                      </div>
                     </div>
                   )}
                 </section>
@@ -268,8 +445,12 @@ export function UserProfilePage({
       {/* Modales */}
       {showChangePhotoModal && (
         <ChangePhotoModal
-          onClose={() => setShowChangePhotoModal(false)}
+          onClose={() => {
+            setShowChangePhotoModal(false);
+            setError("");
+          }}
           onSelectFile={handleSelectFile}
+          onSave={handleSavePhoto}
         />
       )}
 

@@ -226,8 +226,18 @@ class UsuarioRepository
         $rol = $usuarioBD->Rol ?? 'usuario';
         
         // Convertir el objeto de BD a array para crear el usuario con Factory
+        // Asegurar que el ID esté presente (puede estar en Id o id)
+        $userId = $usuarioBD->Id ?? $usuarioBD->id ?? null;
+        
+        if ($userId === null) {
+            Log::error('Usuario encontrado en BD pero sin ID', [
+                'correo' => $usuarioBD->Correo ?? 'NO_CORREO',
+                'nombre' => $usuarioBD->Nombre_Usuario ?? 'NO_NOMBRE'
+            ]);
+        }
+        
         $datosUsuario = [
-            'id' => $usuarioBD->Id,
+            'id' => $userId,
             'usuario' => $usuarioBD->Nombre_Usuario,
             'nombre' => $usuarioBD->Nombre_Usuario,
             'correo' => $usuarioBD->Correo,
@@ -242,6 +252,12 @@ class UsuarioRepository
             'rol' => $rol,
             'activate' => is_string($usuarioBD->Activate ?? 1) ? (int)$usuarioBD->Activate : (int)($usuarioBD->Activate ?? 1),
         ];
+        
+        Log::info('Datos del usuario preparados para Factory', [
+            'id' => $userId,
+            'correo' => $datosUsuario['correo'],
+            'rol' => $rol
+        ]);
         
         // Crear instancia del usuario usando Factory Method
         $usuario = UsuarioFactoryManager::crearUsuario($datosUsuario, $rol);
@@ -275,7 +291,8 @@ class UsuarioRepository
             'Correo',
             'Telefono',
             'Rol',
-            'Activate'
+            'Activate',
+            'Foto_Perfil' // Agregar soporte para foto de perfil
         ];
 
         $datosActualizar = [];
