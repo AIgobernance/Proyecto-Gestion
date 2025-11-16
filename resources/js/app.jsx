@@ -156,14 +156,14 @@ function ProtectedRoute({ children, allowRoles = ["user", "admin"] }) {
     // Verificar si el rol normalizado está permitido
     if (!allowRoles.includes(normalizedRole)) {
       console.log('ProtectedRoute - Rol no permitido, redirigiendo');
-      // Usuario logueado pero con rol inválido para la vista
-      return (
-        <Navigate
-          to={user.role === "admin" ? "/admin/dashboard" : "/dashboard"}
-          replace
-        />
-      );
-    }
+    // Usuario logueado pero con rol inválido para la vista
+    return (
+      <Navigate
+        to={user.role === "admin" ? "/admin/dashboard" : "/dashboard"}
+        replace
+      />
+    );
+  }
     console.log('ProtectedRoute - Permitiendo acceso, renderizando children/Outlet');
     // Permitir acceso inmediatamente
     return children ?? <Outlet />;
@@ -269,7 +269,7 @@ export default function App() {
                     } else {
                       auth.loginAsUser(username, userData);
                       console.log('Navegando a /dashboard');
-                      navigate("/dashboard");
+                    navigate("/dashboard");
                     }
                   }}
                 />

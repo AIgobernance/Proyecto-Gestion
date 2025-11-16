@@ -8,6 +8,7 @@ use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\CsrfController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DashboardController;
 
 /*
 |---------------------------------------------------------------------------
@@ -33,6 +34,11 @@ Route::middleware(['web'])->group(function () {
     Route::get('/profile/data', [ProfileController::class, 'getProfile']);
     Route::put('/profile/update', [ProfileController::class, 'updateProfile']);
     Route::post('/profile/upload-photo', [ProfileController::class, 'uploadProfilePhoto']);
+});
+
+// Rutas de dashboard
+Route::middleware(['web'])->group(function () {
+    Route::get('/api/dashboard/stats', [DashboardController::class, 'getStats']);
 });
 
 // Rutas de administración de usuarios (requieren autenticación admin)

@@ -130,7 +130,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
       if (response.status === 200 && response.data.user) {
         // Login exitoso - Guardar datos del usuario y mostrar modal de selección de método de verificación
         setUserData(response.data.user);
-        setVerificationStep("selectMethod");
+    setVerificationStep("selectMethod");
         return;
       }
     } catch (error) {

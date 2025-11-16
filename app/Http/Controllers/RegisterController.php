@@ -64,14 +64,14 @@ class RegisterController extends Controller
             // Usar 1 por defecto (activo) ya que el constraint no acepta 0
             $datosUsuario = [
                 'usuario' => $request->usuario,
-                'empresa' => $request->empresa,
-                'nit' => $request->nit,
+            'empresa' => $request->empresa,
+            'nit' => $request->nit,
                 'tipoDocumento' => $request->tipoDocumento,
                 'numeroDocumento' => $request->numeroDocumento,
-                'sector' => $request->sector,
-                'pais' => $request->pais,
+            'sector' => $request->sector,
+            'pais' => $request->pais,
                 'correo' => $request->correo,
-                'telefono' => $request->telefono,
+            'telefono' => $request->telefono,
                 'contrasena' => $request->contrasena,
                 'rol' => 'usuario', // Por defecto es usuario
                 'activate' => 1, // Usar 1 ya que el constraint no acepta 0
@@ -86,10 +86,10 @@ class RegisterController extends Controller
             // Ocultar la contraseña en la respuesta
             unset($usuario->Contrasena);
 
-            return response()->json([
-                'message' => 'Usuario registrado correctamente',
+        return response()->json([
+            'message' => 'Usuario registrado correctamente',
                 'user' => $usuario
-            ], 201);
+        ], 201);
 
         } catch (\Exception $e) {
             // Log del error completo para debugging
