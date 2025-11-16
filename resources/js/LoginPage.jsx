@@ -103,6 +103,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
   const [resetError, setResetError] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userData, setUserData] = useState(null); // Guardar datos del usuario después del login
 
   const handleAccept = async () => {
     if (!username || !password) {
@@ -127,16 +128,10 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
       });
 
       if (response.status === 200 && response.data.user) {
-        // Login exitoso
-        // Por ahora, saltamos el 2FA y vamos directo al dashboard
-        // Si necesitas 2FA, puedes descomentar estas líneas:
-        // setVerificationStep("selectMethod");
-        // return;
-        
-        // Llamar al callback de éxito con la información del usuario
-        if (onLoginSuccess) {
-          onLoginSuccess(response.data.user.nombre || username, response.data.user);
-        }
+        // Login exitoso - Guardar datos del usuario y mostrar modal de selección de método de verificación
+        setUserData(response.data.user);
+        setVerificationStep("selectMethod");
+        return;
       }
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
@@ -186,8 +181,18 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
   const handleSelectEmail = () => { setVerificationMethod("email"); setVerificationStep("enterCode"); };
   const handleSelectPhone = () => { setVerificationMethod("phone"); setVerificationStep("enterCode"); };
 
-  const handleVerify = (code) => {
-    if (onLoginSuccess) onLoginSuccess(username);
+  const handleVerify = async (code) => {
+    // Verificar el código de verificación aquí
+    // TODO: Implementar verificación real del código con el backend
+    // Por ahora, si el código es válido, llamar al callback de éxito
+    // En una implementación real, aquí harías una petición al backend para verificar el código
+    
+    // Por ahora, aceptamos cualquier código (esto debe cambiarse por verificación real)
+    if (code && code.length > 0) {
+      if (onLoginSuccess && userData) {
+        onLoginSuccess(userData.nombre || username, userData);
+      }
+    }
   };
 
   const handleBackToMethod = () => setVerificationStep("selectMethod");

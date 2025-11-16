@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Database\Models\UsuarioRepository;
+use Database\Factories\UsuarioFactoryManager;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
@@ -34,7 +35,7 @@ class LoginController extends Controller
         }
 
         try {
-            // Intentar autenticar al usuario
+            // Intentar autenticar al usuario usando Factory Method
             $usuario = $this->usuarioRepository->autenticar(
                 $request->username,
                 $request->password
@@ -47,22 +48,8 @@ class LoginController extends Controller
                 ], 401);
             }
 
-            // Verificar si el usuario está activo
-            if (isset($usuario->Activate) && $usuario->Activate == 0) {
-                return response()->json([
-                    'message' => 'Cuenta inactiva',
-                    'errors' => ['username' => ['Tu cuenta no está activa. Por favor, verifica tu correo electrónico.']]
-                ], 403);
-            }
-
-            // Preparar datos del usuario
-            $userData = [
-                'id' => $usuario->Id,
-                'nombre' => $usuario->Nombre_Usuario,
-                'correo' => $usuario->Correo,
-                'rol' => $usuario->Rol ?? 'usuario',
-                'empresa' => $usuario->Empresa ?? null,
-            ];
+            // Obtener datos del usuario usando el método toArray() de la interfaz
+            $userData = $usuario->toArray();
 
             // Guardar el usuario en la sesión
             $request->session()->put('user', $userData);
@@ -91,6 +78,24 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
+        // Obtener datos del usuario de la sesión para usar el método cerrarSesion()
+        $userData = $request->session()->get('user');
+        
+        if ($userData) {
+            // Usar Factory Method para crear la instancia y llamar a cerrarSesion()
+            try {
+                $usuario = UsuarioFactoryManager::crearUsuario(
+                    $userData,
+                    $userData['rol'] ?? 'usuario'
+                );
+                $usuario->cerrarSesion();
+            } catch (\Exception $e) {
+                Log::warning('Error al cerrar sesión usando Factory Method', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+        
         $request->session()->forget('user');
         $request->session()->flush();
 

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import imgRectangle13 from "../assets/logo-principal.jpg";
 
 import { ActivationLinkModal } from "./ActivationLinkModal";
@@ -301,9 +302,14 @@ export function AdminRegisterPage({ onBack, onLoginRedirect }) {
   const [notice, setNotice] = useState("");
 
   const [formData, setFormData] = useState({
-    nombre: "",
+    usuario: "",
+    empresa: "",
+    nit: "",
     tipoDocumento: "",
     numeroDocumento: "",
+    sector: "",
+    pais: "",
+    tamanoOrganizacional: "",
     correo: "",
     telefono: "",
     contrasena: "",
@@ -354,12 +360,60 @@ export function AdminRegisterPage({ onBack, onLoginRedirect }) {
     }
 
     setIsSubmitting(true);
+    setNotice("");
 
-    // Simula llamada a API
-    await new Promise((r) => setTimeout(r, 500));
+    try {
+      // Configurar token CSRF
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
 
-    setIsSubmitting(false);
-    setShowActivation(true); // PRIMERO sale modal de activación
+      // Enviar petición al endpoint de registro de administradores
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/admin/register', {
+        usuario: formData.usuario || formData.nombre,
+        empresa: formData.empresa,
+        nit: formData.nit,
+        tipoDocumento: formData.tipoDocumento,
+        numeroDocumento: formData.numeroDocumento,
+        sector: formData.sector,
+        pais: formData.pais,
+        tamanoOrganizacional: formData.tamanoOrganizacional,
+        correo: formData.correo,
+        telefono: formData.telefono,
+        contrasena: formData.contrasena,
+      });
+
+      if (response.status === 201) {
+        setShowActivation(true);
+      }
+    } catch (error) {
+      console.error('Error al registrar administrador:', error);
+      
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const newErrors = {};
+          Object.keys(backendErrors).forEach(key => {
+            newErrors[key] = Array.isArray(backendErrors[key]) 
+              ? backendErrors[key][0] 
+              : backendErrors[key];
+          });
+          setErrors(newErrors);
+          setNotice(responseData.message || "Por favor corrija los errores en el formulario.");
+        } else {
+          const errorMessage = responseData.error || responseData.message || "Error al crear la cuenta. Intente nuevamente.";
+          setNotice(errorMessage);
+        }
+      } else {
+        setNotice("Error de conexión. Verifique su conexión a internet e intente nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAcceptActivation = () => {

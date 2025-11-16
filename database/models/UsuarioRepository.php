@@ -5,6 +5,7 @@ namespace Database\Models;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Database\Factories\UsuarioFactoryManager;
 
 class UsuarioRepository
 {
@@ -46,7 +47,7 @@ class UsuarioRepository
     }
 
     /**
-     * Crea un nuevo usuario en la base de datos
+     * Crea un nuevo usuario en la base de datos usando el Factory Method
      *
      * @param array $datos
      * @return int ID del usuario creado
@@ -55,28 +56,18 @@ class UsuarioRepository
     public function crear(array $datos): int
     {
         try {
-            // Hashear la contraseña
-            $contrasenaHash = Hash::make($datos['contrasena']);
+            // Determinar el tipo de usuario (usuario o admin)
+            $tipoUsuario = $datos['rol'] ?? 'usuario';
             
-            // Mapear los datos del formulario a los campos de la BD
-            // Nota: El constraint CK_usuario_Activate_TrueFalse puede requerir valores específicos
-            // El constraint podría aceptar: 'True'/'False' (strings), 1/0 (bit), o valores específicos
-            // Intentar primero con el valor que viene en los datos, o usar 'True' por defecto
+            // Usar Factory Method para crear la instancia del usuario
+            $usuario = UsuarioFactoryManager::crearUsuario($datos, $tipoUsuario);
+            
+            // Obtener los datos preparados para la BD desde el objeto usuario
+            $datosInsert = $usuario->getDatosParaBD();
+            
+            // El constraint CK_usuario_Activate_TrueFalse puede requerir valores específicos
+            // Intentar diferentes formatos: 'True'/'False' (strings), 1/0 (bit), etc.
             $activateValue = isset($datos['activate']) ? $datos['activate'] : 'True';
-            
-            $datosInsert = [
-                'Nombre_Usuario' => $datos['usuario'],
-                'Empresa' => $datos['empresa'],
-                'NIT' => $datos['nit'],
-                'Tipo_Documento' => $datos['tipoDocumento'],
-                'Numero_Documento' => $datos['numeroDocumento'],
-                'Sector' => $datos['sector'],
-                'Pais' => $datos['pais'],
-                'Correo' => $datos['correo'],
-                'Telefono' => $datos['telefono'],
-                'Rol' => $datos['rol'] ?? 'usuario', // Por defecto 'usuario', puede ser 'admin'
-                // Activate se manejará en el SQL directo debido al constraint
-            ];
 
             // Para SQL Server, usar SQL directo para manejar constraints y tipos de dato correctamente
             // El constraint CK_usuario_Activate_TrueFalse puede requerir valores específicos
@@ -110,7 +101,7 @@ class UsuarioRepository
                         $datosInsert['Pais'],
                         $datosInsert['Correo'],
                         $datosInsert['Telefono'],
-                        $contrasenaHash,
+                        $datosInsert['Contrasena'], // La contraseña ya viene hasheada del objeto usuario
                         $datosInsert['Rol'],
                         $activateAttempt
                     ];
@@ -210,31 +201,53 @@ class UsuarioRepository
     }
 
     /**
-     * Autentica un usuario por correo o nombre de usuario y contraseña
+     * Autentica un usuario por correo o nombre de usuario y contraseña usando Factory Method
      *
      * @param string $identificador Correo o nombre de usuario
      * @param string $contrasena Contraseña sin hashear
-     * @return object|null Usuario si las credenciales son correctas, null si no
+     * @return UsuarioInterface|null Usuario si las credenciales son correctas, null si no
      */
-    public function autenticar(string $identificador, string $contrasena): ?object
+    public function autenticar(string $identificador, string $contrasena): ?UsuarioInterface
     {
         // Intentar buscar por correo primero
-        $usuario = $this->obtenerPorCorreo($identificador);
+        $usuarioBD = $this->obtenerPorCorreo($identificador);
         
         // Si no se encuentra por correo, intentar por nombre de usuario
-        if (!$usuario) {
-            $usuario = $this->obtenerPorNombreUsuario($identificador);
+        if (!$usuarioBD) {
+            $usuarioBD = $this->obtenerPorNombreUsuario($identificador);
         }
         
         // Si no se encuentra el usuario, retornar null
-        if (!$usuario) {
+        if (!$usuarioBD) {
             return null;
         }
         
-        // Verificar la contraseña
-        if (Hash::check($contrasena, $usuario->Contrasena)) {
-            // Ocultar la contraseña antes de retornar
-            unset($usuario->Contrasena);
+        // Determinar el tipo de usuario según el rol en la BD
+        $rol = $usuarioBD->Rol ?? 'usuario';
+        
+        // Convertir el objeto de BD a array para crear el usuario con Factory
+        $datosUsuario = [
+            'id' => $usuarioBD->Id,
+            'usuario' => $usuarioBD->Nombre_Usuario,
+            'nombre' => $usuarioBD->Nombre_Usuario,
+            'correo' => $usuarioBD->Correo,
+            'empresa' => $usuarioBD->Empresa ?? '',
+            'nit' => $usuarioBD->NIT ?? '',
+            'tipoDocumento' => $usuarioBD->Tipo_Documento ?? '',
+            'numeroDocumento' => $usuarioBD->Numero_Documento ?? '',
+            'sector' => $usuarioBD->Sector ?? '',
+            'pais' => $usuarioBD->Pais ?? '',
+            'telefono' => $usuarioBD->Telefono ?? '',
+            'contrasenaHash' => $usuarioBD->Contrasena,
+            'rol' => $rol,
+            'activate' => is_string($usuarioBD->Activate ?? 1) ? (int)$usuarioBD->Activate : (int)($usuarioBD->Activate ?? 1),
+        ];
+        
+        // Crear instancia del usuario usando Factory Method
+        $usuario = UsuarioFactoryManager::crearUsuario($datosUsuario, $rol);
+        
+        // Verificar la contraseña usando el método autenticar del objeto usuario
+        if ($usuario->autenticar($contrasena)) {
             return $usuario;
         }
         
