@@ -1,14 +1,20 @@
 <?php
 
-namespace app\Http\Controllers;
+namespace App\Http\Controllers;
 
-use app\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use app\Models\User;
+use App\Repositories\UserRepository;
 use Illuminate\Support\Facades\Hash;
 
 class RegisterController extends Controller
 {
+    protected $users;
+
+    public function __construct(UserRepository $users)
+    {
+        $this->users = $users;
+    }
+
     public function register(Request $request)
     {
         $request->validate([
@@ -25,7 +31,7 @@ class RegisterController extends Controller
             'contrasena' => 'required|min:8',
         ]);
 
-        $user = User::create([
+        $userData = [
             'name' => $request->usuario,
             'email' => $request->correo,
             'password' => Hash::make($request->contrasena),
@@ -37,7 +43,9 @@ class RegisterController extends Controller
             'pais' => $request->pais,
             'tamano' => $request->tamanoOrganizacional,
             'telefono' => $request->telefono,
-        ]);
+        ];
+
+        $user = $this->users->createUser($userData);
 
         return response()->json([
             'message' => 'Usuario registrado correctamente',

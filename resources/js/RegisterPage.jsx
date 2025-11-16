@@ -458,14 +458,24 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
             </section>
 
             {/* Acciones */}
-            <div className="actions" style={{ marginTop: 18 }}>
-              <button className="btn-pill btn-primary full" onClick={handleCreateAccount} disabled={isSubmitting} aria-busy={isSubmitting}>
+            <div className="actions" style={{ marginTop: 18, display: "flex", gap: 10 }}>
+              <button
+                className="btn-pill btn-primary"
+                onClick={handleCreateAccount}
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+              >
                 {isSubmitting ? "Creando cuenta..." : "Crear Cuenta"}
               </button>
-              <button className="btn-pill btn-secondary full" onClick={onLoginRedirect}>
+
+              <button
+                className="btn-pill btn-secondary"
+                onClick={onLoginRedirect}
+              >
                 Inicia sesión
               </button>
             </div>
+
           </CardContent>
         </Card>
       </main>
