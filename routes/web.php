@@ -2,10 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RegisterController;
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
 /*
 |---------------------------------------------------------------------------
 | Rutas para SPA (React)
@@ -46,7 +43,3 @@ Route::view('/admin/users', 'app');
 */
 Route::get('/{any}', fn () => view('app'))
     ->where('any', '^(?!api).*$');
-
-
-// Registro
-Route::post('/register', [RegisterController::class, 'register']);

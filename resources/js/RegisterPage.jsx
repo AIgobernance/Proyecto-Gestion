@@ -185,36 +185,6 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
   };
 
   const handleCreateAccount = async () => {
-<<<<<<< Updated upstream
-  if (!validateForm()) {
-    setNotice("Por favor corrija los errores en el formulario.");
-    return;
-  }
-
-  setIsSubmitting(true);
-  setNotice("");
-
-  try {
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-
-    if (!res.ok) throw new Error("Error en el registro");
-
-    const data = await res.json();
-    console.log("Registrado:", data);
-
-    setShowActivation(true);
-  } catch (error) {
-    setNotice("Error al crear la cuenta. Intente nuevamente.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
-
-=======
     if (!validateForm()) { setNotice("Por favor corrija los errores en el formulario."); return; }
     setIsSubmitting(true); setNotice("");
     try {
@@ -271,7 +241,6 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
       setIsSubmitting(false);
     }
   };
->>>>>>> Stashed changes
 
   const handleAcceptActivation = () => { setShowActivation(false); setShowSuccess(true); };
 
