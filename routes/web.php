@@ -10,6 +10,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EvaluationController;
+use App\Http\Controllers\EmailVerificationController;
 
 /*
 |---------------------------------------------------------------------------
@@ -31,6 +32,9 @@ Route::middleware(['web'])->group(function () {
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/auth/check', [LoginController::class, 'check']);
     Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
+    
+    // Ruta para verificar email de activación (puede ser GET para link en email)
+    Route::get('/verify-email', [EmailVerificationController::class, 'verify']);
 });
 
 // Rutas de perfil de usuario
@@ -70,6 +74,8 @@ Route::view('/login', 'app');
 Route::view('/register', 'app');
 Route::view('/admin/login', 'app');
 Route::view('/admin/register', 'app');
+// NOTA: /verify-email NO debe ser una ruta de vista porque el controlador maneja la respuesta JSON
+// El frontend React Router manejará la navegación a /verify-email para mostrar el modal
 
 // Usuario autenticado (user/admin)
 Route::view('/dashboard', 'app');
@@ -89,6 +95,7 @@ Route::view('/admin/users', 'app');
 | Catch-all para refrescos profundos / enlaces directos
 |---------------------------------------------------------------------------
 | Enviar todo lo que no sea /api/* a la vista 'app' (evita 404 al refrescar).
+| EXCEPTO /verify-email que debe ser manejado por el controlador.
 */
 Route::get('/{any}', fn () => view('app'))
-    ->where('any', '^(?!api).*$');
+    ->where('any', '^(?!api|verify-email).*$');

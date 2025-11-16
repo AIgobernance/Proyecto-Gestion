@@ -10,6 +10,7 @@ import { LoginPage } from "./LoginPage.jsx";
 import { RegisterPage } from "./RegisterPage.jsx";
 import { AdminLoginPage } from "./AdminLoginPage.jsx";
 import { AdminRegisterPage } from "./AdminRegisterPage.jsx";
+import EmailVerificationPage from "./EmailVerificationPage.jsx";
 
 // Usuario autenticado
 import DashboardPage from "./DashboardPage.jsx";
@@ -313,6 +314,15 @@ export default function App() {
                   onBack={() => navigate("/")}
                   onLoginRedirect={() => navigate("/admin/login")}
                 />
+              </PublicOnlyRoute>
+            }
+          />
+
+          <Route
+            path="/verify-email"
+            element={
+              <PublicOnlyRoute>
+                <EmailVerificationPage />
               </PublicOnlyRoute>
             }
           />

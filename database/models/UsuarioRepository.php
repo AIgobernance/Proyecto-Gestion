@@ -74,15 +74,34 @@ class UsuarioRepository
 
             // Para SQL Server, usar SQL directo para manejar constraints y tipos de dato correctamente
             // El constraint CK_usuario_Activate_TrueFalse puede requerir valores específicos
-            // Intentar diferentes formatos: 'True'/'False' (strings), 1/0 (bit), etc.
-            $activateAttempts = [
-                'True',   // String 'True'
-                'False',  // String 'False'
-                1,        // Bit 1
-                0,        // Bit 0
-                true,     // Booleano true
-                false     // Booleano false
-            ];
+            // Si el valor deseado es 0 (inactivo), intentar primero con 'False'
+            // Si el valor deseado es 1 (activo), intentar primero con 'True'
+            $targetValue = ($activateValue == 1 || $activateValue === 'True' || $activateValue === true || $activateValue === '1');
+            
+            // Ordenar los intentos según el valor deseado
+            if ($targetValue) {
+                // Si queremos activo, intentar primero con valores de activación
+                $activateAttempts = [
+                    'True',   // String 'True'
+                    1,        // Bit 1
+                    true,     // Booleano true
+                    '1',      // String '1'
+                    'False',  // String 'False'
+                    0,        // Bit 0
+                    false     // Booleano false
+                ];
+            } else {
+                // Si queremos inactivo, intentar primero con valores de desactivación
+                $activateAttempts = [
+                    'False',  // String 'False'
+                    0,        // Bit 0
+                    false,    // Booleano false
+                    '0',      // String '0'
+                    'True',   // String 'True'
+                    1,        // Bit 1
+                    true      // Booleano true
+                ];
+            }
             
             $lastError = null;
             

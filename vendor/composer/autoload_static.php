@@ -150,6 +150,7 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'F' => 
         array (
             'Fruitcake\\Cors\\' => 15,
+            'Firebase\\JWT\\' => 13,
             'Faker\\' => 6,
         ),
         'E' => 
@@ -469,6 +470,10 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         array (
             0 => __DIR__ . '/..' . '/fruitcake/php-cors/src',
         ),
+        'Firebase\\JWT\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/firebase/php-jwt/src',
+        ),
         'Faker\\' => 
         array (
             0 => __DIR__ . '/..' . '/fakerphp/faker/src/Faker',
@@ -547,6 +552,19 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'App\\Http\\Controllers\\RegisterController' => __DIR__ . '/../..' . '/app/Http/Controllers/RegisterController.php',
         'App\\Http\\Controllers\\UserManagementController' => __DIR__ . '/../..' . '/app/Http/Controllers/UserManagementController.php',
         'App\\Models\\User' => __DIR__ . '/../..' . '/app/Models/User.php',
+        'App\\Observer\\INotificador' => __DIR__ . '/../..' . '/app/Observer/INotificador.php',
+        'App\\Observer\\ISuscriptor' => __DIR__ . '/../..' . '/app/Observer/ISuscriptor.php',
+        'App\\Observer\\NotificadorBase' => __DIR__ . '/../..' . '/app/Observer/NotificadorBase.php',
+        'App\\Observer\\Notificadores\\NotificadorCierreSesion' => __DIR__ . '/../..' . '/app/Observer/Notificadores/NotificadorCierreSesion.php',
+        'App\\Observer\\Notificadores\\NotificadorEvaluacionCompletada' => __DIR__ . '/../..' . '/app/Observer/Notificadores/NotificadorEvaluacionCompletada.php',
+        'App\\Observer\\Notificadores\\NotificadorHojaRuta' => __DIR__ . '/../..' . '/app/Observer/Notificadores/NotificadorHojaRuta.php',
+        'App\\Observer\\Notificadores\\NotificadorResultadosGenerados' => __DIR__ . '/../..' . '/app/Observer/Notificadores/NotificadorResultadosGenerados.php',
+        'App\\Observer\\Notificadores\\NotificadorUsuarioRegistrado' => __DIR__ . '/../..' . '/app/Observer/Notificadores/NotificadorUsuarioRegistrado.php',
+        'App\\Observer\\ObserverManager' => __DIR__ . '/../..' . '/app/Observer/ObserverManager.php',
+        'App\\Observer\\Suscriptores\\SuscriptorActualizarDashboard' => __DIR__ . '/../..' . '/app/Observer/Suscriptores/SuscriptorActualizarDashboard.php',
+        'App\\Observer\\Suscriptores\\SuscriptorGenerarPDF' => __DIR__ . '/../..' . '/app/Observer/Suscriptores/SuscriptorGenerarPDF.php',
+        'App\\Observer\\Suscriptores\\SuscriptorInvalidarCache' => __DIR__ . '/../..' . '/app/Observer/Suscriptores/SuscriptorInvalidarCache.php',
+        'App\\Observer\\Suscriptores\\SuscriptorNotificarCompletado' => __DIR__ . '/../..' . '/app/Observer/Suscriptores/SuscriptorNotificarCompletado.php',
         'App\\Providers\\AppServiceProvider' => __DIR__ . '/../..' . '/app/Providers/AppServiceProvider.php',
         'App\\Services\\N8nService' => __DIR__ . '/../..' . '/app/Services/N8nService.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
@@ -1408,6 +1426,14 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'Faker\\Provider\\zh_TW\\Text' => __DIR__ . '/..' . '/fakerphp/faker/src/Faker/Provider/zh_TW/Text.php',
         'Faker\\UniqueGenerator' => __DIR__ . '/..' . '/fakerphp/faker/src/Faker/UniqueGenerator.php',
         'Faker\\ValidGenerator' => __DIR__ . '/..' . '/fakerphp/faker/src/Faker/ValidGenerator.php',
+        'Firebase\\JWT\\BeforeValidException' => __DIR__ . '/..' . '/firebase/php-jwt/src/BeforeValidException.php',
+        'Firebase\\JWT\\CachedKeySet' => __DIR__ . '/..' . '/firebase/php-jwt/src/CachedKeySet.php',
+        'Firebase\\JWT\\ExpiredException' => __DIR__ . '/..' . '/firebase/php-jwt/src/ExpiredException.php',
+        'Firebase\\JWT\\JWK' => __DIR__ . '/..' . '/firebase/php-jwt/src/JWK.php',
+        'Firebase\\JWT\\JWT' => __DIR__ . '/..' . '/firebase/php-jwt/src/JWT.php',
+        'Firebase\\JWT\\JWTExceptionWithPayloadInterface' => __DIR__ . '/..' . '/firebase/php-jwt/src/JWTExceptionWithPayloadInterface.php',
+        'Firebase\\JWT\\Key' => __DIR__ . '/..' . '/firebase/php-jwt/src/Key.php',
+        'Firebase\\JWT\\SignatureInvalidException' => __DIR__ . '/..' . '/firebase/php-jwt/src/SignatureInvalidException.php',
         'Fruitcake\\Cors\\CorsService' => __DIR__ . '/..' . '/fruitcake/php-cors/src/CorsService.php',
         'Fruitcake\\Cors\\Exceptions\\InvalidOptionException' => __DIR__ . '/..' . '/fruitcake/php-cors/src/Exceptions/InvalidOptionException.php',
         'GrahamCampbell\\ResultType\\Error' => __DIR__ . '/..' . '/graham-campbell/result-type/src/Error.php',
