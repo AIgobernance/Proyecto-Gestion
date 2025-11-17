@@ -143,7 +143,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
         // Si no requiere 2FA, login directo (por compatibilidad)
         if (response.data.user) {
           setUserData(response.data.user);
-          setVerificationStep("selectMethod");
+    setVerificationStep("selectMethod");
           return;
         }
       }
@@ -307,6 +307,8 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
         });
 
         if (response.status === 200 && response.data.user) {
+          // Verificación exitosa - limpiar errores
+          setError("");
           if (onLoginSuccess) {
             onLoginSuccess(response.data.user.nombre || username, response.data.user);
           }
@@ -337,7 +339,8 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
       });
 
       if (response.status === 200 && response.data.user) {
-        // Verificación exitosa - completar login
+        // Verificación exitosa - limpiar errores y completar login
+        setError("");
         if (onLoginSuccess) {
           onLoginSuccess(response.data.user.nombre || username, response.data.user);
         }
@@ -347,13 +350,29 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
       
       if (error.response?.status === 400) {
         const errorData = error.response.data;
+        let errorMessage = '';
+        
         if (errorData.errors?.code) {
-          setError(Array.isArray(errorData.errors.code) 
+          errorMessage = Array.isArray(errorData.errors.code) 
             ? errorData.errors.code[0] 
-            : errorData.errors.code);
+            : errorData.errors.code;
         } else {
-          setError(errorData.message || "Código incorrecto. Por favor, verifica e intenta nuevamente.");
+          errorMessage = errorData.message || "Código incorrecto. Por favor, verifica e intenta nuevamente.";
         }
+        
+        setError(errorMessage);
+        
+        // Si la cuenta fue bloqueada, redirigir al login
+        if (errorData.blocked) {
+          setTimeout(() => {
+            setVerificationStep("login");
+            setUserData(null);
+            setError("Tu cuenta ha sido bloqueada. Por favor, contacte con soporte.");
+          }, 2000);
+          return;
+        }
+        
+        // El código se limpiará automáticamente en el modal cuando detecte el error
       } else if (error.response?.status === 419) {
         setError("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
         const token = document.head?.querySelector('meta[name="csrf-token"]');
@@ -666,6 +685,11 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
             onVerify={handleVerify}
             onBack={handleBackToMethod}
             onResendCode={handleResendCode}
+            error={error}
+            onCodeCleared={() => {
+              // Callback para limpiar el código cuando hay error
+              // El modal ya maneja esto internamente
+            }}
           />
         )}
 

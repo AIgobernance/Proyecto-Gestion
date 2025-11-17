@@ -284,16 +284,65 @@ class LoginController extends Controller
             // Obtener el método de verificación del request o de la sesión
             $verificationMethod = $request->input('method', $request->session()->get('2fa_method', 'email'));
             
+            // Rastrear intentos fallidos de 2FA
+            $attemptsCacheKey = "2fa_attempts_{$userId}";
+            $attempts = Cache::get($attemptsCacheKey, 0);
+            
             // Verificar el código 2FA solo si el método es email
             if ($verificationMethod === 'email') {
                 $isValid = TwoFactorService::verifyCode($userId, $inputCode);
 
                 if (!$isValid) {
+                    // Incrementar contador de intentos fallidos
+                    $attempts++;
+                    Cache::put($attemptsCacheKey, $attempts, now()->addMinutes(15)); // TTL de 15 minutos
+                    
+                    // Determinar mensaje según el número de intentos
+                    $errorMessage = '';
+                    $shouldBlock = false;
+                    
+                    if ($attempts == 1) {
+                        $errorMessage = 'Código incorrecto. Te quedan 2 intentos.';
+                    } elseif ($attempts == 2) {
+                        $errorMessage = 'Código incorrecto. Te queda 1 intento. Al tercer intento fallido, tu cuenta será bloqueada.';
+                    } elseif ($attempts >= 3) {
+                        $errorMessage = 'Tu cuenta ha sido bloqueada debido a múltiples intentos fallidos de verificación. Por favor, contacte con soporte para más información.';
+                        $shouldBlock = true;
+                        
+                        // Bloquear la cuenta
+                        try {
+                            $this->usuarioRepository->actualizar($userId, [
+                                'Activate' => 0 // Bloquear cuenta
+                            ]);
+                            
+                            // Limpiar sesión de 2FA pendiente
+                            $request->session()->forget('pending_2fa_user');
+                            $request->session()->forget('2fa_method');
+                            
+                            Log::warning('Cuenta bloqueada por intentos fallidos de 2FA', [
+                                'user_id' => $userId,
+                                'attempts' => $attempts
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error('Error al bloquear cuenta después de intentos fallidos de 2FA', [
+                                'user_id' => $userId,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
+                    
                     return response()->json([
-                        'message' => 'Código de verificación incorrecto o expirado',
-                        'errors' => ['code' => ['El código ingresado no es válido. Por favor, verifica e intenta nuevamente.']]
+                        'message' => 'Código de verificación incorrecto',
+                        'errors' => ['code' => [$errorMessage]],
+                        'attempts' => $attempts,
+                        'blocked' => $shouldBlock,
+                        'clear_code' => true // Indicar al frontend que debe limpiar el código
                     ], 400);
                 }
+                
+                // Si el código es válido, limpiar los intentos fallidos y el código usado
+                Cache::forget($attemptsCacheKey);
+                TwoFactorService::clearCode($userId);
             } else if ($verificationMethod === 'sms') {
                 // Para SMS, aceptar cualquier código (sin validación real)
                 Log::info('Código SMS verificado (sin validación real)', [
