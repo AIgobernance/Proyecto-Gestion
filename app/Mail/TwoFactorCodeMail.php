@@ -60,3 +60,4 @@ class TwoFactorCodeMail extends Mailable
     }
 }
 
+
