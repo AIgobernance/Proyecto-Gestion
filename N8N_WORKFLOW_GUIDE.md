@@ -15,8 +15,7 @@ El sistema Laravel envía un JSON con la siguiente estructura:
   "respuestas": {
     "pregunta1": "Respuesta del usuario a la pregunta 1",
     "pregunta2": "Respuesta del usuario a la pregunta 2",
-    "pregunta3": "Respuesta del usuario a la pregunta 3",
-    // ... hasta preguntaN
+    "pregunta3": "Respuesta del usuario a la pregunta 3"
   },
   "documentos": [
     {
@@ -27,7 +26,6 @@ El sistema Laravel envía un JSON con la siguiente estructura:
       "ruta": "/storage/app/public/documentos/...",
       "url": "http://..."
     }
-    // Puede haber hasta 3 documentos
   ],
   "id_evaluacion": 123,
   "timestamp": "2025-11-16T23:00:00.000000Z",
@@ -35,19 +33,24 @@ El sistema Laravel envía un JSON con la siguiente estructura:
 }
 ```
 
+**Nota**: Puede haber múltiples preguntas (pregunta1, pregunta2, ..., preguntaN) y hasta 3 documentos en el array.
+
 ## 📤 Estructura de Datos que N8N Debe Retornar
 
 N8N debe retornar un JSON con la siguiente estructura:
 
 ```json
 {
-  "puntuacion": 85.5,  // o "score": 85.5
-  "pdf_path": "/ruta/al/archivo.pdf",  // o "PDF_Path": "/ruta/al/archivo.pdf"
-  // Otros campos opcionales que quieras incluir
+  "puntuacion": 85.5,
+  "score": 85.5,
+  "pdf_path": "/ruta/al/archivo.pdf",
+  "PDF_Path": "/ruta/al/archivo.pdf",
   "analisis": "...",
-  "recomendaciones": [...]
+  "recomendaciones": []
 }
 ```
+
+**Nota**: Se aceptan tanto `puntuacion` como `score`, y tanto `pdf_path` como `PDF_Path` para compatibilidad.
 
 ---
 
@@ -117,7 +120,7 @@ N8N debe retornar un JSON con la siguiente estructura:
      "context": {
        "usuario": "{{ $json.metadatos.nombre_usuario }}",
        "empresa": "{{ $json.metadatos.empresa }}",
-       "respuestas": {{ JSON.stringify($json.respuestas) }},
+       "respuestas": "{{ JSON.stringify($json.respuestas) }}",
        "documentos_texto": "{{ documentos_texto_extraido }}"
      }
    }
@@ -201,7 +204,7 @@ N8N debe retornar un JSON con la siguiente estructura:
       "puntuacion": "{{ $json.puntuacion }}",
       "pdf_path": "{{ $json.pdf_path }}",
       "analisis": "{{ $json.analisis }}",
-      "recomendaciones": {{ JSON.stringify($json.recomendaciones) }},
+      "recomendaciones": "{{ JSON.stringify($json.recomendaciones) }}",
       "timestamp": "{{ $now }}"
     }
     ```
@@ -268,13 +271,13 @@ N8N debe retornar un JSON con la siguiente estructura:
 - **Keep Only Set Fields**: Desactivado
 - **Values to Set**:
 
-| Name | Value |
-|------|-------|
-| `metadatos` | `={{ $json.metadatos }}` |
-| `respuestas` | `={{ $json.respuestas }}` |
-| `documentos` | `={{ $json.documentos }}` |
-| `id_evaluacion` | `={{ $json.id_evaluacion }}` |
-| `prompt_personalizado` | `={{ $json.metadatos.prompt_ia || '' }}` |
+```
+metadatos = {{ $json.metadatos }}
+respuestas = {{ $json.respuestas }}
+documentos = {{ $json.documentos }}
+id_evaluacion = {{ $json.id_evaluacion }}
+prompt_personalizado = {{ $json.metadatos.prompt_ia || '' }}
+```
 
 ---
 
@@ -378,14 +381,24 @@ return {
 
 **Configuración**:
 
-| Name | Value |
-|------|-------|
-| `system_prompt` | `Eres un experto en gobernanza de IA. Analiza las respuestas de la evaluación y proporciona:\n1. Una puntuación del 0 al 100\n2. Un análisis detallado\n3. Recomendaciones específicas\n\nResponde en formato JSON con las claves: puntuacion, analisis, recomendaciones.` |
-| `user_context` | `={{ 'Usuario: ' + $json.metadatos.nombre_usuario + '\nEmpresa: ' + $json.metadatos.empresa + '\nCorreo: ' + $json.metadatos.correo }}` |
-| `respuestas_texto` | `={{ JSON.stringify($json.respuestas, null, 2) }}` |
-| `documentos_texto` | `={{ $('Merge').item.json.documentos_texto_combinado || 'No se proporcionaron documentos' }}` |
-| `prompt_personalizado` | `={{ $json.metadatos.prompt_ia || 'Analiza esta evaluación de gobernanza de IA' }}` |
-| `full_prompt` | `={{ $json.user_context + '\n\nRespuestas de la evaluación:\n' + $json.respuestas_texto + '\n\nDocumentos adjuntos:\n' + $json.documentos_texto + '\n\nPrompt personalizado: ' + $json.prompt_personalizado }}` |
+```
+system_prompt = Eres un experto en gobernanza de IA. Analiza las respuestas de la evaluación y proporciona:
+  1. Una puntuación del 0 al 100
+  2. Un análisis detallado
+  3. Recomendaciones específicas
+
+  Responde en formato JSON con las claves: puntuacion, analisis, recomendaciones.
+
+user_context = {{ 'Usuario: ' + $json.metadatos.nombre_usuario + '\nEmpresa: ' + $json.metadatos.empresa + '\nCorreo: ' + $json.metadatos.correo }}
+
+respuestas_texto = {{ JSON.stringify($json.respuestas, null, 2) }}
+
+documentos_texto = {{ $('Merge').item.json.documentos_texto_combinado || 'No se proporcionaron documentos' }}
+
+prompt_personalizado = {{ $json.metadatos.prompt_ia || 'Analiza esta evaluación de gobernanza de IA' }}
+
+full_prompt = {{ $json.user_context + '\n\nRespuestas de la evaluación:\n' + $json.respuestas_texto + '\n\nDocumentos adjuntos:\n' + $json.documentos_texto + '\n\nPrompt personalizado: ' + $json.prompt_personalizado }}
+```
 
 ---
 
@@ -535,14 +548,14 @@ return {
 
 **Configuración**:
 
-| Name | Value |
-|------|-------|
-| `puntuacion` | `={{ $json.puntuacion }}` |
-| `score` | `={{ $json.puntuacion }}` (alias para compatibilidad) |
-| `analisis` | `={{ $json.analisis }}` |
-| `recomendaciones` | `={{ JSON.stringify($json.recomendaciones) }}` |
-| `pdf_path` | `={{ $json.pdf_path || '/ruta/local/evaluacion_' + $json.id_evaluacion + '.pdf' }}` |
-| `PDF_Path` | `={{ $json.pdf_path || '/ruta/local/evaluacion_' + $json.id_evaluacion + '.pdf' }}` (alias) |
+```
+puntuacion = {{ $json.puntuacion }}
+score = {{ $json.puntuacion }} (alias para compatibilidad)
+analisis = {{ $json.analisis }}
+recomendaciones = {{ JSON.stringify($json.recomendaciones) }}
+pdf_path = {{ $json.pdf_path || '/ruta/local/evaluacion_' + $json.id_evaluacion + '.pdf' }}
+PDF_Path = {{ $json.pdf_path || '/ruta/local/evaluacion_' + $json.id_evaluacion + '.pdf' }} (alias)
+```
 
 ---
 
