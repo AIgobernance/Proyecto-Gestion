@@ -36,7 +36,7 @@ return [
     ],
 
     'n8n' => [
-        'webhook_url' => env('N8N_WEBHOOK_URL', 'http://localhost:5678/webhook-test/5f5befb5-9d0b-4729-9d2f-3b8a1c04b572'),
+        'webhook_url' => env('N8N_WEBHOOK_URL', 'http://localhost:5678/webhook-test/Evaluacion'),
     ],
 
 ];

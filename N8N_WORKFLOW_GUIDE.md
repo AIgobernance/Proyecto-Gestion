@@ -2,7 +2,9 @@
 
 ## 📋 Estructura de Datos que Recibe N8N
 
-El sistema Laravel envía un JSON con la siguiente estructura:
+El sistema Laravel envía un JSON con la siguiente estructura. **⚠️ IMPORTANTE**: Dependiendo de la configuración del webhook de N8N, los datos pueden venir directamente o dentro de un campo `body`.
+
+### Estructura Directa (Recomendada):
 
 ```json
 {
@@ -33,7 +35,45 @@ El sistema Laravel envía un JSON con la siguiente estructura:
 }
 ```
 
-**Nota**: Puede haber múltiples preguntas (pregunta1, pregunta2, ..., preguntaN) y hasta 3 documentos en el array.
+### Estructura con Body (Alternativa):
+
+Algunos webhooks de N8N pueden envolver los datos en un campo `body`:
+
+```json
+{
+  "body": {
+    "metadatos": {
+      "nombre_usuario": "Juan Pérez",
+      "empresa": "Mi Empresa S.A.",
+      "correo": "juan@empresa.com",
+      "prompt_ia": "Prompt personalizado para la IA (opcional)"
+    },
+    "respuestas": {
+      "pregunta1": "Respuesta del usuario a la pregunta 1",
+      "pregunta2": "Respuesta del usuario a la pregunta 2",
+      "pregunta3": "Respuesta del usuario a la pregunta 3"
+    },
+    "documentos": [
+      {
+        "nombre": "documento1.pdf",
+        "indice": 1,
+        "mime_type": "application/pdf",
+        "contenido_base64": "JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoK...",
+        "ruta": "/storage/app/public/documentos/...",
+        "url": "http://..."
+      }
+    ],
+    "id_evaluacion": 123,
+    "timestamp": "2025-11-16T23:00:00.000000Z",
+    "version": "1.0"
+  }
+}
+```
+
+**Nota**: 
+- Puede haber múltiples preguntas (pregunta1, pregunta2, ..., preguntaN) hasta pregunta30
+- Puede haber hasta 3 documentos en el array
+- El workflow de N8N debe manejar ambos casos automáticamente usando el código proporcionado en el **Nodo 2**
 
 ## 📤 Estructura de Datos que N8N Debe Retornar
 
@@ -67,11 +107,39 @@ N8N debe retornar un JSON con la siguiente estructura:
 ### Paso 2: Extraer Datos del Body
 
 2. **Nodo: Set** (opcional, para organizar)
-   - Extrae los campos principales del body:
-     - `$json.metadatos`
-     - `$json.respuestas`
-     - `$json.documentos`
-     - `$json.id_evaluacion`
+   
+   **⚠️ IMPORTANTE**: N8N puede recibir los datos directamente o dentro de un campo `body`. Este nodo maneja ambos casos:
+   
+   - Extrae los campos principales del body o directamente del JSON:
+     - Si los datos vienen en `body`: `$json.body.metadatos`, `$json.body.respuestas`, etc.
+     - Si los datos vienen directamente: `$json.metadatos`, `$json.respuestas`, etc.
+   
+   **Valores a establecer** (maneja ambos casos automáticamente):
+   ```
+   metadatos = {{ $json.body?.metadatos || $json.metadatos }}
+   respuestas = {{ $json.body?.respuestas || $json.respuestas }}
+   documentos = {{ $json.body?.documentos || $json.documentos }}
+   id_evaluacion = {{ $json.body?.id_evaluacion || $json.id_evaluacion }}
+   timestamp = {{ $json.body?.timestamp || $json.timestamp }}
+   version = {{ $json.body?.version || $json.version }}
+   ```
+
+   **Alternativa usando Function Node** (más robusto):
+   ```javascript
+   // Extraer datos del body si existe, sino usar directamente
+   const data = $input.item.json.body || $input.item.json;
+   
+   return {
+     json: {
+       metadatos: data.metadatos || {},
+       respuestas: data.respuestas || {},
+       documentos: data.documentos || [],
+       id_evaluacion: data.id_evaluacion || null,
+       timestamp: data.timestamp || new Date().toISOString(),
+       version: data.version || '1.0'
+     }
+   };
+   ```
 
 ### Paso 3: Procesar Documentos (si existen)
 
@@ -271,13 +339,52 @@ N8N debe retornar un JSON con la siguiente estructura:
 - **Keep Only Set Fields**: Desactivado
 - **Values to Set**:
 
+**⚠️ IMPORTANTE**: Este nodo maneja ambos casos: cuando los datos vienen en `body` y cuando vienen directamente.
+
 ```
-metadatos = {{ $json.metadatos }}
-respuestas = {{ $json.respuestas }}
-documentos = {{ $json.documentos }}
-id_evaluacion = {{ $json.id_evaluacion }}
-prompt_personalizado = {{ $json.metadatos.prompt_ia || '' }}
+metadatos = {{ $json.body?.metadatos || $json.metadatos }}
+respuestas = {{ $json.body?.respuestas || $json.respuestas }}
+documentos = {{ $json.body?.documentos || $json.documentos }}
+id_evaluacion = {{ $json.body?.id_evaluacion || $json.id_evaluacion }}
+timestamp = {{ $json.body?.timestamp || $json.timestamp }}
+version = {{ $json.body?.version || $json.version }}
+prompt_personalizado = {{ ($json.body?.metadatos || $json.metadatos)?.prompt_ia || '' }}
 ```
+
+**Alternativa usando Function Node** (recomendado para mayor robustez):
+1. Agrega un nodo **"Code"** o **"Function"** después del Webhook
+2. Configura el lenguaje como **JavaScript**
+3. Usa este código:
+
+```javascript
+// Extraer datos del body si existe, sino usar directamente del JSON
+const inputData = $input.item.json;
+const data = inputData.body || inputData;
+
+// Validar que tenemos los datos necesarios
+if (!data.metadatos || !data.respuestas) {
+  throw new Error('Faltan datos requeridos: metadatos o respuestas');
+}
+
+// Retornar datos normalizados
+return {
+  json: {
+    metadatos: data.metadatos || {},
+    respuestas: data.respuestas || {},
+    documentos: Array.isArray(data.documentos) ? data.documentos : [],
+    id_evaluacion: data.id_evaluacion || null,
+    timestamp: data.timestamp || new Date().toISOString(),
+    version: data.version || '1.0',
+    prompt_personalizado: data.metadatos?.prompt_ia || ''
+  }
+};
+```
+
+Esta alternativa es más robusta porque:
+- ✅ Maneja ambos casos (con y sin `body`)
+- ✅ Valida que los datos necesarios estén presentes
+- ✅ Normaliza el formato de documentos (siempre array)
+- ✅ Proporciona valores por defecto seguros
 
 ---
 
@@ -293,62 +400,408 @@ prompt_personalizado = {{ $json.metadatos.prompt_ia || '' }}
 
 ---
 
-### Nodo 4: Split In Batches (Solo si hay documentos)
+### Nodo 4: Split In Batches / Loop Over Items (Solo si hay documentos)
 
-**Configuración**:
-- **Batch Size**: 1 (procesar un documento a la vez)
-- **Options**: 
-  - **Reset**: false
+**Nota**: En versiones más recientes de N8N, este nodo puede llamarse "Loop Over Items". Ambos funcionan de manera similar.
 
-**Input**: Array de documentos desde el nodo 2
+**Configuración Paso a Paso**:
+
+1. **Agregar el nodo**:
+   - Busca "Split In Batches" o "Loop Over Items" en el panel de nodos
+   - Agrégalo después del nodo IF
+
+2. **Conectar el nodo**:
+   - Conecta la salida "True" del nodo IF al nodo Split In Batches
+   - El nodo recibirá el array `documentos` desde el nodo anterior
+
+3. **Configurar el nodo "Split In Batches"**:
+   - **Field To Split Out**: `documentos` o `={{ $json.documentos }}`
+   - **Batch Size**: `1` (procesar un documento a la vez)
+   - **Options**:
+     - **Reset**: `false` (no resetear entre ejecuciones)
+     - **Reset On Error**: `false` (opcional)
+
+4. **Configurar el nodo "Loop Over Items"** (si usas esta versión):
+   - **Mode**: "Run Once for Each Item"
+   - **Items**: `={{ $json.documentos }}` o `documentos`
+   - **Options**:
+     - **Reset**: `false`
+
+**Explicación**:
+- Este nodo toma el array de documentos (`documentos`) que viene del webhook
+- Divide el array en batches (lotes) de tamaño 1, procesando un documento a la vez
+- Cada documento se enviará individualmente al siguiente nodo
+- Después de procesar todos los documentos, enviará una señal de "done" (completado)
+
+**Ejemplo de Input**:
+```json
+{
+  "documentos": [
+    {
+      "nombre": "documento1.pdf",
+      "contenido_base64": "...",
+      ...
+    },
+    {
+      "nombre": "documento2.pdf",
+      "contenido_base64": "...",
+      ...
+    }
+  ]
+}
+```
+
+**Ejemplo de Output (por cada iteración)**:
+```json
+{
+  "nombre": "documento1.pdf",
+  "contenido_base64": "...",
+  ...
+}
+```
+
+**Salidas del nodo**:
+- **"output"** o **"loop"**: Cada documento individual (conectar al Nodo 5: Function)
+- **"done"**: Señal cuando todos los documentos han sido procesados (conectar al Nodo 7: Merge)
+
+---
+
+## 📍 Diagrama de Conexión de los Nodos 4, 5 y 6
+
+```
+[3. IF - ¿Hay documentos?]
+    │
+    ├─→ TRUE → [4. Split In Batches / Loop Over Items]
+    │              │
+    │              ├─→ [output/loop] → [5. Function - Decodificar Base64]
+    │              │                      │
+    │              │                      ↓
+    │              │                  [6. Extract from File]
+    │              │                      │
+    │              │                      ↓
+    │              │                  (vuelve al loop para siguiente documento)
+    │              │
+    │              └─→ [done] → [7. Merge - Combinar Textos]
+    │                              │
+    │                              ↓
+    └─→ FALSE → [8. Set - Preparar Prompt para IA]
+                    │
+                    ↓
+                [9. OpenAI - Procesar con IA]
+```
+
+**Flujo detallado**:
+
+1. **Split In Batches** recibe: `[{doc1}, {doc2}, {doc3}]`
+2. **Split In Batches** envía a Function: `{doc1}` (primera iteración)
+3. **Function** decodifica base64 → `{doc1 con buffer}`
+4. **Extract from File** extrae texto → `{doc1 con text: "..."}`
+5. El loop continúa con `{doc2}`, luego `{doc3}`
+6. Cuando termina, **Split In Batches** emite señal "done"
+7. **Merge** recibe todos los textos extraídos y los combina
 
 ---
 
 ### Nodo 5: Function - Decodificar Base64 a Buffer
 
-**Código JavaScript**:
+**Ubicación en el workflow**:
+- Va **DESPUÉS** del nodo "Split In Batches" / "Loop Over Items"
+- Conecta la salida **"output"** o **"loop"** del nodo Split In Batches a este nodo Function
+- Este nodo procesa **cada documento individualmente** (uno por iteración)
+
+**Paso 1: Agregar el nodo Function**
+1. Agrega un nodo **"Code"** o **"Function"** desde el panel de nodos
+2. Conéctalo después del nodo Split In Batches
+
+**Paso 2: Configurar el nodo**
+- **Mode**: "Run Once for Each Item" (si está disponible)
+- **Language**: JavaScript
+
+**Paso 3: Código JavaScript** (ACTUALIZADO Y CORREGIDO):
+
+**Versión Principal** (Recomendada):
 ```javascript
+// Decodificar contenido base64 a buffer para procesamiento
 const documento = $input.item.json;
+
+// Validar que el documento tiene contenido_base64
+if (!documento.contenido_base64) {
+  throw new Error('No se encontró contenido_base64 en el documento. Nombre: ' + (documento.nombre || 'desconocido'));
+}
+
+// Validar que contenido_base64 es una cadena válida
+if (typeof documento.contenido_base64 !== 'string') {
+  throw new Error('contenido_base64 debe ser una cadena de texto. Tipo recibido: ' + typeof documento.contenido_base64);
+}
 
 // Decodificar base64 a buffer
 let buffer = null;
-if (documento.contenido_base64) {
-  try {
-    buffer = Buffer.from(documento.contenido_base64, 'base64');
-  } catch (e) {
-    console.error('Error decodificando base64:', e);
+try {
+  // El contenido ya viene en base64, solo necesitamos convertirlo a Buffer
+  buffer = Buffer.from(documento.contenido_base64, 'base64');
+  
+  // Validar que el buffer se creó correctamente
+  if (!buffer || buffer.length === 0) {
+    throw new Error('El buffer resultante está vacío');
   }
+  
+  console.log('Buffer creado exitosamente:', {
+    tamaño_bytes: buffer.length,
+    nombre_documento: documento.nombre
+  });
+} catch (e) {
+  console.error('Error decodificando base64:', e);
+  throw new Error('No se pudo decodificar el contenido base64 del documento: ' + e.message);
 }
 
-return {
+// En N8N, los datos binarios deben ir en 'binary', no en 'json'
+// El formato correcto para N8N es: { data: base64String, mimeType: string, fileName: string }
+const result = {
   json: {
-    ...documento,
-    buffer: buffer,
-    tiene_contenido: buffer !== null
+    nombre: documento.nombre || 'documento.pdf',
+    indice: documento.indice || 0,
+    mime_type: documento.mime_type || 'application/pdf',
+    documento_nombre: documento.nombre || 'documento.pdf',
+    tiene_contenido: true,
+    // Mantener otros campos del documento original
+    ruta: documento.ruta || null,
+    url: documento.url || null
+  },
+  binary: {
+    documento_buffer: {
+      data: buffer.toString('base64'), // Convertir buffer a base64 string para N8N
+      mimeType: documento.mime_type || 'application/pdf',
+      fileName: documento.nombre || 'documento.pdf'
+    }
   }
 };
+
+return result;
+```
+
+**⚠️ IMPORTANTE - Verificación**:
+
+Después de ejecutar este nodo, verifica en el OUTPUT que veas:
+- ✅ Un objeto `binary` con la propiedad `documento_buffer`
+- ✅ Dentro de `documento_buffer` debe haber: `data`, `mimeType`, `fileName`
+- ✅ El campo `data` debe ser una cadena base64 (muy larga)
+- ✅ El campo `json` debe contener los metadatos del documento
+
+**Si NO ves el objeto `binary` en el output**, el problema está en el código. Prueba esta versión alternativa simplificada:
+
+```javascript
+// Versión alternativa simplificada
+const documento = $input.item.json;
+
+if (!documento.contenido_base64) {
+  throw new Error('No se encontró contenido_base64 en el documento');
+}
+
+// Decodificar base64 directamente
+const buffer = Buffer.from(documento.contenido_base64, 'base64');
+
+// Crear el objeto de retorno con binary
+const result = {
+  json: {
+    nombre: documento.nombre,
+    indice: documento.indice,
+    mime_type: documento.mime_type,
+    documento_nombre: documento.nombre,
+    tiene_contenido: true
+  },
+  binary: {}
+};
+
+// Agregar el buffer como binary data
+result.binary.documento_buffer = {
+  data: buffer.toString('base64'),
+  mimeType: documento.mime_type || 'application/pdf',
+  fileName: documento.nombre || 'documento.pdf'
+};
+
+return result;
+```
+
+**Explicación del código**:
+- `$input.item.json` obtiene el documento individual que viene del Split In Batches
+- `documento.contenido_base64` es el contenido del PDF codificado en base64
+- `Buffer.from()` convierte el base64 a un buffer binario
+- Se agrega `documento_buffer` al objeto para usarlo en el siguiente nodo
+
+**Input esperado** (por cada iteración):
+```json
+{
+  "nombre": "documento1.pdf",
+  "indice": 1,
+  "mime_type": "application/pdf",
+  "contenido_base64": "JVBERi0xLjQKJeLjz9MK...",
+  "ruta": "/storage/...",
+  "url": "http://..."
+}
+```
+
+**Output generado**:
+```json
+{
+  "nombre": "documento1.pdf",
+  "indice": 1,
+  "mime_type": "application/pdf",
+  "contenido_base64": "JVBERi0xLjQKJeLjz9MK...",
+  "ruta": "/storage/...",
+  "url": "http://...",
+  "documento_buffer": <Buffer object>,
+  "documento_nombre": "documento1.pdf",
+  "tiene_contenido": true
+}
 ```
 
 ---
 
 ### Nodo 6: Extract from File (Extraer Texto de PDF)
 
-**Configuración**:
-- **File Property**: `buffer`
-- **Options**:
-  - **Extract**: Text
-  - **PDF Options**: 
-    - Extract text
-    - Extract metadata
+**Ubicación en el workflow**:
+- Va **DESPUÉS** del nodo Function (Decodificar Base64)
+- Conecta la salida del nodo Function a este nodo Extract from File
+- Este nodo extrae el texto de cada PDF procesado
 
-**Output**: 
+**Paso 1: Agregar el nodo**
+1. Busca **"Extract from File"** en el panel de nodos
+2. Conéctalo después del nodo Function
+
+**Paso 2: Seleccionar la Acción**
+En la pantalla que muestra las acciones disponibles, selecciona:
+```
+✅ Extract from PDF
+```
+
+**No selecciones** las otras opciones como CSV, HTML, JSON, etc. Solo necesitas "Extract from PDF" para este proyecto.
+
+**Paso 3: Configurar el nodo Extract from PDF**
+
+**⚠️ IMPORTANTE - Configuración correcta**:
+
+En N8N, los datos binarios están en `binary`, NO en `json`. 
+
+**Opción 1 - Simple (RECOMENDADO - Prueba primero)**:
+- **Input Binary Field**: 
+  ```
+  documento_buffer
+  ```
+  (Solo el nombre, SIN llaves, SIN expresión, SIN `$`)
+
+**Opción 2 - Con expresión**:
+- **Input Binary Field**: 
+  ```
+  ={{ $binary.documento_buffer }}
+  ```
+
+**Opción 3 - Referencia al nodo anterior**:
+- **Input Binary Field**: 
+  ```
+  ={{ $('Code').item.binary.documento_buffer }}
+  ```
+  (Reemplaza `'Code'` con el nombre exacto de tu nodo Function)
+
+**❌ NO uses**: 
+- `{{ $json.documento_buffer }}` ❌ (esto causa el error)
+- `$json.documento_buffer` ❌ (sin llaves también falla)
+- `documento_buffer` dentro de `json` ❌ (debe estar en `binary`)
+
+**Verificación**:
+1. Primero ejecuta el nodo Function y verifica que en el OUTPUT aparezca:
+   ```
+   binary:
+     documento_buffer:
+       data: "JVBERi0xLjQK..."
+       mimeType: "application/pdf"
+       fileName: "documento.pdf"
+   ```
+
+2. Si ves `binary.documento_buffer`, entonces en Extract from File usa solo: `documento_buffer`
+  
+**Options (Opciones)**:
+1. **Extract Data From**:
+   - Selecciona **"Text"** (o "Texto") para extraer texto del PDF
+
+2. **PDF Options** (Opciones de PDF):
+   - ✓ **Extract text**: Marcar esta opción (principal)
+   - ✓ **Extract metadata**: Opcional, si necesitas metadatos del PDF (páginas, título, autor, etc.)
+   - **Language**: Dejar en blanco o seleccionar el idioma si es necesario
+   
+3. **Additional Options** (Opciones adicionales):
+   - **Encoding**: UTF-8 (por defecto, mantener así)
+   - **Remove Empty Lines**: Opcional (puedes marcarla para limpiar líneas vacías)
+
+**Configuración detallada paso a paso**:
+
+1. **Input Binary Field / Property Name**:
+   ```
+   documento_buffer
+   ```
+   
+   **O mejor, usa expresión explícita**:
+   ```
+   ={{ $binary.documento_buffer }}
+   ```
+   
+   **O referencia el nodo anterior directamente**:
+   ```
+   ={{ $('Code').item.binary.documento_buffer }}
+   ```
+   
+   ⚠️ **NOTA**: Reemplaza `'Code'` con el nombre real de tu nodo Function. Por ejemplo, si tu nodo se llama "Decodificar Base64", usa:
+   ```
+   ={{ $('Decodificar Base64').item.binary.documento_buffer }}
+   ```
+
+2. **Extract Data From**:
+   - Selecciona **"Text"** para extraer texto del PDF
+
+3. **Additional Options** (si están disponibles):
+   - **Encoding**: UTF-8 (por defecto)
+   - **Remove Empty Lines**: Opcional (marcar si quieres limpiar líneas vacías)
+
+**Output esperado**:
 ```json
 {
-  "text": "Texto extraído del PDF...",
-  "metadata": {...},
-  "nombre": "documento1.pdf"
+  "json": {
+    "text": "Texto extraído del PDF...\nContenido del documento...",
+    "metadata": {
+      "pages": 3,
+      "title": "Título del PDF",
+      "author": "Autor"
+    },
+    "nombre": "documento1.pdf",
+    "documento_nombre": "documento1.pdf",
+    "tiene_contenido": true
+  },
+  "binary": {
+    "documento_buffer": {
+      "data": "...",
+      "mimeType": "application/pdf",
+      "fileName": "documento1.pdf"
+    }
+  }
 }
 ```
+
+**Cómo solucionar el error "Provided parameter is not a string or binary data object"**:
+
+Si ves este error, significa que:
+1. ❌ Estás usando `{{ $json.documento_buffer }}` (incorrecto)
+2. ✅ Debes usar `documento_buffer` directamente (sin expresión)
+3. ✅ O usar `={{ $binary.documento_buffer }}`
+4. ✅ O usar `={{ $('NombreNodo').item.binary.documento_buffer }}`
+
+**Prueba en este orden**:
+1. Primero intenta solo: `documento_buffer` (sin llaves, sin expresión)
+2. Si no funciona, usa: `={{ $binary.documento_buffer }}`
+3. Si aún no funciona, usa: `={{ $('Code').item.binary.documento_buffer }}` (reemplaza 'Code' con el nombre de tu nodo)
+
+**Nota importante**: 
+- Este nodo es **opcional**. Solo úsalo si necesitas extraer el texto de los PDFs para enviarlo a la IA
+- Si los PDFs son imágenes escaneadas sin texto seleccionable, este nodo no funcionará correctamente
+- En ese caso, podrías necesitar OCR (Reconocimiento Óptico de Caracteres) con un nodo adicional
 
 ---
 
