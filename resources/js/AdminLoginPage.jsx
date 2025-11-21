@@ -20,6 +20,16 @@ import { ArrowLeft, Lock, User, AlertCircle, Shield } from "lucide-react";
 // Logo
 import imgLogo from "../assets/logo-principal.jpg";
 
+// Configuración global de Axios (igual que el login general)
+const token = document.head?.querySelector('meta[name="csrf-token"]');
+if (token) {
+  axios.defaults.headers.common["X-CSRF-TOKEN"] = token.content;
+}
+axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
+axios.defaults.headers.common["Content-Type"] = "application/json";
+axios.defaults.headers.common["Accept"] = "application/json";
+axios.defaults.withCredentials = true;
+
 /* ===== Estilos coherentes y overlay/centrado de Dialog ===== */
 const styles = `
 :root{
@@ -94,83 +104,87 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
       setError("Por favor, complete todos los campos");
       return;
     }
-    
+
     setError("");
     setIsSubmitting(true);
-    
+
     try {
-      // Asegurar que el token CSRF esté configurado antes de enviar
-      const token = document.head?.querySelector('meta[name="csrf-token"]');
-      if (token) {
-        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
       }
-      
-      // Enviar petición de login al backend
-      const response = await axios.post('/login', {
+
+      const response = await axios.post("/login", {
         username: username,
         password: password,
       });
 
-      if (response.status === 200 && response.data.user) {
-        // Verificar que el usuario sea administrador
-        const role = response.data.user.rol || 'usuario';
-        if (role !== 'admin') {
-          setError("Este usuario no tiene permisos de administrador");
-          setIsSubmitting(false);
+      if (response.status === 200) {
+        // Flujo actualizado del backend: primero selecciona método 2FA
+        if (response.data.requires_2fa && response.data.user_id) {
+          setUserData({
+            id: response.data.user_id,
+            nombre: username,
+          });
+          setVerificationStep("selectMethod");
           return;
         }
 
-        // Login exitoso - Guardar datos del usuario y mostrar modal de selección de método de verificación
-        setUserData(response.data.user);
-    setVerificationStep("selectMethod");
-        return;
+        // Compatibilidad si el backend devuelve los datos completos
+        if (response.data.user) {
+          const role = response.data.user.rol || response.data.user.role || "usuario";
+          if (role !== "admin") {
+            setError("Este usuario no tiene permisos de administrador");
+            return;
+          }
+          setUserData({
+            id: response.data.user.id,
+            nombre: response.data.user.nombre || response.data.user.username || username,
+          });
+          setVerificationStep("selectMethod");
+          return;
+        }
+
+        setError("No fue posible iniciar sesión. Intente nuevamente.");
       }
     } catch (error) {
-      console.error('Error al iniciar sesión:', error);
-      
-      // Manejar error 403 (Forbidden) - usuario desactivado
+      console.error("Error al iniciar sesión:", error);
+
       if (error.response && error.response.status === 403) {
         const responseData = error.response.data;
         if (responseData.deactivated) {
           setError("Su cuenta ha sido desactivada. Por favor, contacte con soporte para más información.");
         } else if (responseData.errors) {
           const backendErrors = responseData.errors;
-          const errorMessage = backendErrors.username 
+          const errorMessage = backendErrors.username
             ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
             : responseData.message || "Su cuenta ha sido desactivada. Por favor, contacte con soporte.";
           setError(errorMessage);
         } else {
           setError(responseData.message || "Su cuenta ha sido desactivada. Por favor, contacte con soporte.");
         }
-      }
-      // Manejar error 401 (Unauthorized) - credenciales incorrectas
-      else if (error.response && error.response.status === 401) {
+      } else if (error.response && error.response.status === 401) {
         const responseData = error.response.data;
         if (responseData.errors) {
           const backendErrors = responseData.errors;
-          const errorMessage = backendErrors.username 
+          const errorMessage = backendErrors.username
             ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
             : responseData.message || "Usuario o contraseña incorrectos";
           setError(errorMessage);
         } else {
           setError(responseData.message || "Usuario o contraseña incorrectos");
         }
-      } 
-      // Manejar error 419 (CSRF token mismatch)
-      else if (error.response && error.response.status === 419) {
+      } else if (error.response && error.response.status === 419) {
         setError("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
-        // Intentar refrescar el token CSRF
-        const token = document.head?.querySelector('meta[name="csrf-token"]');
-        if (token) {
-          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+        if (tokenMeta) {
+          axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
         }
-      }
-      // Otros errores
-      else if (error.response && error.response.data) {
+      } else if (error.response && error.response.data) {
         const responseData = error.response.data;
         if (responseData.errors) {
           const backendErrors = responseData.errors;
-          const errorMessage = backendErrors.username 
+          const errorMessage = backendErrors.username
             ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
             : responseData.message || "Error al iniciar sesión";
           setError(errorMessage);
@@ -186,18 +200,185 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
   };
 
   // Selección método 2FA
-  const handleSelectEmail = () => { setVerificationMethod("email"); setVerificationStep("enterCode"); };
-  const handleSelectPhone = () => { setVerificationMethod("phone"); setVerificationStep("enterCode"); };
+  const handleSelectEmail = async () => {
+    setVerificationMethod("email");
+
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+      }
+
+      const response = await axios.post("/login/send-2fa", {
+        user_id: userData.id,
+        method: "email",
+      });
+
+      if (response.status === 200) {
+        setVerificationStep("enterCode");
+      }
+    } catch (error) {
+      console.error("Error al enviar código 2FA:", error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Error al enviar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  const handleSelectPhone = async () => {
+    setVerificationMethod("phone");
+
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+      }
+
+      const response = await axios.post("/login/send-2fa", {
+        user_id: userData.id,
+        method: "sms",
+      });
+
+      if (response.status === 200) {
+        setVerificationStep("enterCode");
+      }
+    } catch (error) {
+      console.error("Error al seleccionar método SMS:", error);
+      setVerificationStep("enterCode");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Verificación OK
   const handleVerify = async (code) => {
-    // Verificar el código de verificación aquí
-    // TODO: Implementar verificación real del código con el backend
-    // Por ahora, si el código es válido, llamar al callback de éxito
-    if (code && code.length > 0) {
-      if (onLoginSuccess && userData) {
-        onLoginSuccess(userData.nombre || username, userData);
+    if (!code || code.length !== 6) {
+      setError("Por favor, ingresa un código de 6 dígitos");
+      return;
+    }
+
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario. Por favor, inicia sesión nuevamente.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
       }
+
+      const response = await axios.post("/login/verify-2fa", {
+        user_id: userData.id,
+        code: code.trim(),
+        method: verificationMethod === "phone" ? "sms" : "email",
+      });
+
+      if (response.status === 200 && response.data.user) {
+        const role = response.data.user.rol || response.data.user.role || "usuario";
+        if (role !== "admin") {
+          setError("Este usuario no tiene permisos de administrador.");
+          await axios.post("/logout").catch(() => {});
+          setVerificationStep("login");
+          setUserData(null);
+          return;
+        }
+
+        setError("");
+        if (onLoginSuccess) {
+          onLoginSuccess(response.data.user.nombre || username, response.data.user);
+        }
+      }
+    } catch (error) {
+      console.error("Error al verificar código 2FA:", error);
+
+      if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        let errorMessage = "";
+
+        if (errorData.errors?.code) {
+          errorMessage = Array.isArray(errorData.errors.code)
+            ? errorData.errors.code[0]
+            : errorData.errors.code;
+        } else {
+          errorMessage = errorData.message || "Código incorrecto. Por favor, verifica e intenta nuevamente.";
+        }
+
+        setError(errorMessage);
+
+        if (errorData.blocked) {
+          setTimeout(() => {
+            setVerificationStep("login");
+            setUserData(null);
+            setError("Tu cuenta ha sido bloqueada. Por favor, contacte con soporte.");
+          }, 2000);
+        }
+      } else if (error.response?.status === 419) {
+        setError("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
+        const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+        if (tokenMeta) {
+          axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+        }
+      } else {
+        setError("Error al verificar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  const handleResendCode = async () => {
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+      }
+
+      const response = await axios.post("/login/resend-2fa", {
+        user_id: userData.id,
+      });
+
+      if (response.status === 200) {
+        alert("Código reenviado exitosamente. Por favor, revisa tu correo.");
+      }
+    } catch (error) {
+      console.error("Error al reenviar código:", error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Error al reenviar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
   const handleBackToMethod = () => setVerificationStep("selectMethod");
@@ -326,6 +507,8 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
             method={verificationMethod}
             onVerify={handleVerify}
             onBack={handleBackToMethod}
+            onResendCode={handleResendCode}
+            error={error}
           />
         )}
 
