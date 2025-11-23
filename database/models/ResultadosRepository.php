@@ -57,14 +57,37 @@ class ResultadosRepository
                     : json_encode($resultados['Resultado']);
             }
 
-            if (in_array('Recomendaciones', $columnasDisponibles) && isset($resultados['Recomendaciones'])) {
-                $datosInsert['Recomendaciones'] = is_string($resultados['Recomendaciones']) 
-                    ? $resultados['Recomendaciones'] 
-                    : json_encode($resultados['Recomendaciones']);
+            // HTML y Recomendaciones ya no se guardan (solo se genera PDF)
+            // Se eliminaron estas columnas de la base de datos
+
+            // Guardar puntuación si existe la columna
+            $puntuacion = $resultados['puntuacion'] ?? $resultados['score'] ?? null;
+            if ($puntuacion !== null) {
+                if (in_array('Puntuacion', $columnasDisponibles)) {
+                    $datosInsert['Puntuacion'] = is_numeric($puntuacion) ? (float)$puntuacion : null;
+                }
+                // También guardar en Resultado si existe y está vacío
+                if (in_array('Resultado', $columnasDisponibles) && empty($datosInsert['Resultado'])) {
+                    $datosInsert['Resultado'] = is_numeric($puntuacion) ? (string)$puntuacion : null;
+                }
             }
 
+            // Guardar PDF_Path si existe la columna
             if (in_array('PDF_Path', $columnasDisponibles) && isset($resultados['PDF_Path'])) {
                 $datosInsert['PDF_Path'] = $resultados['PDF_Path'];
+                Log::info('PDF_Path agregado a datos para guardar', [
+                    'id_evaluacion' => $idEvaluacion,
+                    'pdf_path' => $resultados['PDF_Path'],
+                    'columna_existe' => true
+                ]);
+            } else {
+                if (isset($resultados['PDF_Path'])) {
+                    Log::warning('PDF_Path no se puede guardar - columna no existe', [
+                        'id_evaluacion' => $idEvaluacion,
+                        'pdf_path_recibido' => $resultados['PDF_Path'],
+                        'columna_existe' => in_array('PDF_Path', $columnasDisponibles),
+                    ]);
+                }
             }
 
             // Verificar si ya existe un resultado para esta evaluación

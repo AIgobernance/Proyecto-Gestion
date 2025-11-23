@@ -325,7 +325,7 @@ export function DashboardPage({
 
                   {/* Lista con iconos alineados */}
                   <ul className="list">
-                    <li><CheckCircle2 className="w-5 h-5" /> <span>50 preguntas en 5 dimensiones</span></li>
+                    <li><CheckCircle2 className="w-5 h-5" /> <span>30 preguntas en 5 dimensiones</span></li>
                     <li><CheckCircle2 className="w-5 h-5" /> <span>Basado en ISO 27090 DIS - 27091, ISO 23894, NIS2 / AI Act, ISO 42001 - 42005, CONPES 4144</span></li>
                     <li><CheckCircle2 className="w-5 h-5" /> <span>Resultados con gráficos y recomendaciones</span></li>
                     <li><CheckCircle2 className="w-5 h-5" /> <span>Tiempo estimado: 15–20 minutos</span></li>

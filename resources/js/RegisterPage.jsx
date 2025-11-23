@@ -410,13 +410,9 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
                       <SelectValue placeholder="Seleccione sector" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Tecnología">Tecnología</SelectItem>
-                      <SelectItem value="Financiero">Financiero</SelectItem>
-                      <SelectItem value="Salud">Salud</SelectItem>
-                      <SelectItem value="Educación">Educación</SelectItem>
-                      <SelectItem value="Retail">Retail</SelectItem>
-                      <SelectItem value="Manufactura">Manufactura</SelectItem>
-                      <SelectItem value="Otro">Otro</SelectItem>
+                      <SelectItem value="Industrial">Industrial</SelectItem>
+                      <SelectItem value="Servicios">Servicios</SelectItem>
+                      <SelectItem value="Comercial">Comercial</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.sector && <p className="text-error">{errors.sector}</p>}

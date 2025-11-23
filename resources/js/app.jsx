@@ -351,10 +351,7 @@ export default function App() {
               path="/evaluations"
               element={
                 <ViewEvaluationsPage
-                  onExit={() => {
-                    auth.logout();
-                    navigate("/");
-                  }}
+                  onExit={() => navigate("/dashboard")}
                   onViewResults={(evaluationId) => navigate(`/evaluation/${evaluationId}/completed`)}
                 />
               }

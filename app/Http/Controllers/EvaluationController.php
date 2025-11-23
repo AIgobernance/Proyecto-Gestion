@@ -7,12 +7,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use App\Helpers\SessionHelper;
+use App\Helpers\EvaluationHelper;
 use Database\Models\EvaluacionRepository;
 use Database\Models\RespuestasRepository;
 use Database\Models\ResultadosRepository;
 use Database\Models\DocumentosAdjuntosRepository;
 use App\Services\N8nService;
 use App\Observer\ObserverManager;
+use Spatie\Browsershot\Browsershot;
 
 class EvaluationController extends Controller
 {
@@ -44,6 +46,9 @@ class EvaluationController extends Controller
      */
     public function submitEvaluation(Request $request)
     {
+        // Aumentar tiempo de ejecución para procesar documentos grandes
+        set_time_limit(180); // 3 minutos
+        
         try {
             // Validar datos de entrada
             $request->validate([
@@ -62,9 +67,9 @@ class EvaluationController extends Controller
                 ], 401);
             }
 
-            // Obtener datos completos del usuario para metadatos
+            // Obtener datos completos del usuario para metadatos (incluyendo Sector)
             $usuarioCompleto = DB::table('usuario')
-                ->select('Nombre_Usuario', 'Empresa', 'Correo')
+                ->select('Nombre_Usuario', 'Empresa', 'Correo', 'Sector')
                 ->where('Id', $userId)
                 ->first();
 
@@ -74,14 +79,9 @@ class EvaluationController extends Controller
                 ], 404);
             }
 
-            // Formatear respuestas en formato {pregunta1: "respuesta", pregunta2: "respuesta", ...}
-            $respuestasFormateadas = [];
-            foreach ($request->respuestas as $index => $respuesta) {
-                // Convertir índice (0-based) a pregunta (1-based)
-                $preguntaKey = 'pregunta' . ($index + 1);
-                // La respuesta ya viene como texto de la opción seleccionada
-                $respuestasFormateadas[$preguntaKey] = $respuesta;
-            }
+            // Formatear respuestas usando el helper: texto literal de pregunta => valor numérico
+            // Formato: ["¿Pregunta 1?" => 0.5, "¿Pregunta 2?" => 1.0, ...]
+            $respuestasFormateadas = EvaluationHelper::formatearRespuestasParaN8N($request->respuestas);
 
             // Verificar si se proporciona un ID de evaluación existente
             $idEvaluacion = $request->input('id_evaluacion');
@@ -174,11 +174,19 @@ class EvaluationController extends Controller
                 }
             }
 
+            // Obtener sector del usuario
+            $sector = $usuarioCompleto->Sector ?? 'N/A';
+            
+            // Obtener ponderaciones por sector
+            $ponderaciones = EvaluationHelper::getPonderacionesPorSector($sector);
+            
             // Preparar metadatos para N8N
             $metadatos = [
                 'nombre' => $usuarioCompleto->Nombre_Usuario ?? 'N/A',
                 'empresa' => $usuarioCompleto->Empresa ?? 'N/A',
                 'correo' => $usuarioCompleto->Correo ?? 'N/A',
+                'sector' => $sector,
+                'ponderaciones' => $ponderaciones,
                 'prompt' => $request->prompt ?? '',
             ];
 
@@ -238,71 +246,27 @@ class EvaluationController extends Controller
             // Agregar ID de evaluación a los datos
             $datosN8N['id_evaluacion'] = $idEvaluacion;
 
-            // Enviar a N8N de forma asíncrona (en segundo plano)
-            // Por ahora lo hacemos síncrono, pero puedes usar queues después
-            try {
-                $respuestaN8N = $this->n8nService->enviarEvaluacion($datosN8N);
+            // Enviar a N8N de forma asíncrona (sin esperar respuesta)
+            // N8N procesará en segundo plano y enviará resultados a /api/evaluation/n8n-results
+            // Este método no lanza excepciones, así que siempre continuamos
+            $this->n8nService->enviarEvaluacionAsync($datosN8N);
 
-                // Si N8N retorna resultados, guardarlos
-                if ($respuestaN8N['success'] && isset($respuestaN8N['data'])) {
-                    $resultadosN8N = $respuestaN8N['data'];
-                    
-                    // Guardar resultados en la tabla Resultados
-                    $this->resultadosRepository->guardarResultado($idEvaluacion, $resultadosN8N);
+            Log::info('Evaluación enviada a N8N para procesamiento asíncrono', [
+                'id_evaluacion' => $idEvaluacion,
+                'mensaje' => 'N8N procesará en segundo plano y enviará resultados cuando termine'
+            ]);
 
-                    // Actualizar estado de la evaluación (ya está marcada como Completada arriba, solo actualizar puntuación y PDF)
-                    $puntuacion = $resultadosN8N['puntuacion'] ?? $resultadosN8N['score'] ?? null;
-                    $pdfPath = $resultadosN8N['pdf_path'] ?? $resultadosN8N['PDF_Path'] ?? null;
-                    
-                    $this->evaluacionRepository->actualizar($idEvaluacion, [
-                        'Puntuacion' => $puntuacion,
-                        'PDF_Path' => $pdfPath,
-                    ]);
-
-                    // Disparar notificación de resultados generados (Patrón Observer - RF 10)
-                    $notificador = ObserverManager::obtenerNotificador('resultados_generados');
-                    if ($notificador instanceof \App\Observer\Notificadores\NotificadorResultadosGenerados) {
-                        $notificador->generarResultados(
-                            $idEvaluacion,
-                            $userId,
-                            $resultadosN8N,
-                            $pdfPath,
-                            $puntuacion
-                        );
-                    }
-                }
-
-                Log::info('Evaluación procesada exitosamente por N8N', [
-                    'id_evaluacion' => $idEvaluacion
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Evaluación enviada exitosamente',
-                    'data' => [
-                        'id_evaluacion' => $idEvaluacion,
-                        'procesada' => true
-                    ]
-                ], 200);
-
-            } catch (\Exception $e) {
-                // Si falla N8N, mantener la evaluación como "En proceso"
-                Log::error('Error al enviar evaluación a N8N', [
+            // Responder inmediatamente al frontend (sin esperar a N8N)
+            // El método enviarEvaluacionAsync no lanza excepciones, así que siempre respondemos éxito
+            return response()->json([
+                'success' => true,
+                'message' => 'Evaluación enviada exitosamente. El procesamiento con IA puede tardar unos minutos.',
+                'data' => [
                     'id_evaluacion' => $idEvaluacion,
-                    'error' => $e->getMessage()
-                ]);
-
-                // Retornar éxito parcial (evaluación guardada pero no procesada)
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Evaluación guardada. El procesamiento puede tardar unos minutos.',
-                    'data' => [
-                        'id_evaluacion' => $idEvaluacion,
-                        'procesada' => false,
-                        'warning' => 'El procesamiento con IA está en curso'
-                    ]
-                ], 202); // 202 Accepted - procesamiento asíncrono
-            }
+                    'procesada' => false, // Se procesará en segundo plano
+                    'mensaje' => 'Los resultados se generarán automáticamente y estarán disponibles en breve'
+                ]
+            ], 200); // 200 OK - proceso iniciado exitosamente
 
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -521,6 +485,123 @@ class EvaluationController extends Controller
     }
 
     /**
+     * Verifica si el PDF está listo para una evaluación
+     *
+     * @param Request $request
+     * @param int $idEvaluacion
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function checkPdfStatus(Request $request, int $idEvaluacion)
+    {
+        try {
+            $userId = SessionHelper::getUserId($request);
+            
+            if (!$userId) {
+                return response()->json([
+                    'error' => 'Usuario no autenticado'
+                ], 401);
+            }
+
+            // Verificar que la evaluación pertenece al usuario
+            $evaluacion = $this->evaluacionRepository->obtenerPorId($idEvaluacion);
+            
+            if (!$evaluacion) {
+                return response()->json([
+                    'error' => 'Evaluación no encontrada'
+                ], 404);
+            }
+
+            if ($evaluacion['Id_Usuario'] != $userId) {
+                return response()->json([
+                    'error' => 'No tienes permiso para acceder a esta evaluación'
+                ], 403);
+            }
+
+            // Obtener resultados de la evaluación
+            $resultados = $this->resultadosRepository->obtenerPorEvaluacion($idEvaluacion);
+            
+            $pdfPath = $resultados['PDF_Path'] ?? null;
+            $puntuacion = $resultados['Puntuacion'] ?? $evaluacion['Puntuacion'] ?? null;
+            
+            // Verificar si el archivo PDF existe físicamente
+            $pdfExists = false;
+            $pdfUrl = null;
+            
+            if ($pdfPath) {
+                $fullPath = storage_path('app/public/' . $pdfPath);
+                $pdfExists = file_exists($fullPath);
+                
+                if ($pdfExists) {
+                    // Generar URL pública del PDF
+                    $pdfUrl = asset('storage/' . $pdfPath);
+                }
+            }
+
+            // Obtener tiempo de la evaluación (en minutos)
+            $tiempo = $evaluacion['Tiempo'] ?? null;
+            
+            // Obtener fecha de completación (usar Fecha_Completado si existe, sino Fecha)
+            $fechaCompletado = null;
+            $fechaParaUsar = $evaluacion['Fecha_Completado'] ?? $evaluacion['Fecha'] ?? null;
+            
+            if ($fechaParaUsar) {
+                try {
+                    // SQL Server puede devolver la fecha como string o como objeto DateTime
+                    if (is_string($fechaParaUsar)) {
+                        $fechaObj = new \DateTime($fechaParaUsar);
+                    } elseif ($fechaParaUsar instanceof \DateTime) {
+                        $fechaObj = $fechaParaUsar;
+                    } else {
+                        // Intentar convertir desde formato SQL Server
+                        $fechaObj = \DateTime::createFromFormat('Y-m-d H:i:s', $fechaParaUsar);
+                        if (!$fechaObj) {
+                            $fechaObj = new \DateTime($fechaParaUsar);
+                        }
+                    }
+                    
+                    if ($fechaObj instanceof \DateTime) {
+                        $fechaCompletado = $fechaObj->format('Y-m-d\TH:i:s');
+                    }
+                } catch (\Exception $e) {
+                    // Mantener null si hay error
+                    Log::warning('Error al formatear fecha de evaluación', [
+                        'id_evaluacion' => $idEvaluacion,
+                        'fecha_raw' => $fechaParaUsar,
+                        'tipo_fecha' => gettype($fechaParaUsar),
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id_evaluacion' => $idEvaluacion,
+                    'pdf_ready' => $pdfExists,
+                    'pdf_path' => $pdfPath,
+                    'pdf_url' => $pdfUrl,
+                    'puntuacion' => $puntuacion,
+                    'estado' => $evaluacion['Estado'] ?? 'En proceso',
+                    'tiempo' => $tiempo, // Tiempo en minutos
+                    'fecha_completado' => $fechaCompletado,
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error al verificar estado del PDF', [
+                'id_evaluacion' => $idEvaluacion,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Error al verificar estado del PDF',
+                'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
+        }
+    }
+
+    /**
      * Sube un documento PDF para una evaluación en curso
      *
      * @param Request $request
@@ -632,6 +713,288 @@ class EvaluationController extends Controller
             return response()->json([
                 'error' => 'Error al subir el documento',
                 'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
+        }
+    }
+
+    /**
+     * Recibe el HTML y resultados generados por N8N
+     * Este endpoint es llamado por N8N después de procesar la evaluación
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function receiveN8NResults(Request $request)
+    {
+        // Aumentar tiempo de ejecución para procesar HTML grande
+        set_time_limit(120); // 2 minutos
+        
+        try {
+            // Log de lo que llega (para debugging)
+            Log::info('Recibiendo petición de N8N', [
+                'all_input' => $request->all(),
+                'headers' => $request->headers->all(),
+                'content_type' => $request->header('Content-Type'),
+            ]);
+
+            // Extraer datos (pueden venir directamente o envueltos en 'body')
+            $body = $request->input('body');
+            if ($body && is_array($body)) {
+                // Si vienen envueltos en 'body', usar esos datos
+                $idEvaluacion = $body['id_evaluacion'] ?? null;
+                $html = $body['html'] ?? null;
+                $puntuacion = $body['puntuacion'] ?? null;
+            } else {
+                // Si vienen directamente
+                $idEvaluacion = $request->input('id_evaluacion');
+                $html = $request->input('html');
+                $puntuacion = $request->input('puntuacion');
+            }
+
+            // Validar datos extraídos
+            $validator = \Validator::make([
+                'id_evaluacion' => $idEvaluacion,
+                'html' => $html,
+                'puntuacion' => $puntuacion,
+            ], [
+                'id_evaluacion' => 'required|integer',
+                'html' => 'required|string',
+                'puntuacion' => 'nullable|numeric|min:0|max:100',
+            ]);
+
+            if ($validator->fails()) {
+                Log::error('Error de validación en datos de N8N', [
+                    'errors' => $validator->errors(),
+                    'datos_recibidos' => $request->all()
+                ]);
+                return response()->json([
+                    'error' => 'Datos inválidos',
+                    'errors' => $validator->errors(),
+                ], 422);
+            }
+
+            // Convertir tipos
+            $idEvaluacion = (int) $idEvaluacion;
+            $puntuacion = $puntuacion !== null ? (float) $puntuacion : null;
+
+            Log::info('Recibiendo resultados de N8N', [
+                'id_evaluacion' => $idEvaluacion,
+                'tiene_html' => !empty($html),
+                'longitud_html' => strlen($html ?? ''),
+                'puntuacion' => $puntuacion,
+                'tipo_html' => gettype($html),
+                'primeros_100_caracteres_html' => substr($html ?? '', 0, 100)
+            ]);
+
+            // Validar que al menos tengamos HTML o puntuacion
+            if (empty($html) && $puntuacion === null) {
+                Log::warning('N8N envió datos sin HTML ni puntuación', [
+                    'id_evaluacion' => $idEvaluacion,
+                    'datos_recibidos' => $request->all()
+                ]);
+                return response()->json([
+                    'error' => 'Se requiere al menos HTML o puntuación',
+                    'datos_recibidos' => $request->all()
+                ], 422);
+            }
+
+            // Verificar que la evaluación existe
+            $evaluacion = $this->evaluacionRepository->obtenerPorId($idEvaluacion);
+            if (!$evaluacion) {
+                Log::error('Evaluación no encontrada al recibir resultados de N8N', [
+                    'id_evaluacion' => $idEvaluacion
+                ]);
+                return response()->json([
+                    'error' => 'Evaluación no encontrada'
+                ], 404);
+            }
+
+            // Convertir HTML a PDF con Browsershot (renderiza JavaScript/Chart.js)
+            $pdfPath = null;
+            $htmlPath = null; // Mantener HTML como backup opcional
+            
+            if ($html) {
+                try {
+                    Log::info('Iniciando conversión de HTML a PDF con Browsershot', [
+                        'id_evaluacion' => $idEvaluacion,
+                        'tamaño_html' => strlen($html)
+                    ]);
+
+                    // Generar nombre único para el PDF
+                    $timestamp = time();
+                    $pdfPath = 'evaluations/pdf/' . $idEvaluacion . '_' . $timestamp . '.pdf';
+                    $fullPdfPath = storage_path('app/public/' . $pdfPath);
+                    
+                    // Crear directorio si no existe
+                    $pdfDirectory = dirname($fullPdfPath);
+                    if (!file_exists($pdfDirectory)) {
+                        mkdir($pdfDirectory, 0755, true);
+                    }
+
+                    // Usar Browsershot para renderizar HTML con JavaScript ejecutado
+                    // Esto permite que Chart.js renderice las gráficas antes de convertir a PDF
+                    Browsershot::html($html)
+                        ->setOption('args', [
+                            '--no-sandbox',
+                            '--disable-setuid-sandbox',
+                            '--disable-dev-shm-usage',
+                            '--disable-gpu'
+                        ])
+                        ->waitUntilNetworkIdle(false) // Esperar a que todas las peticiones de red terminen (false = no esperar indefinidamente)
+                        ->timeout(120) // Timeout de 120 segundos
+                        ->delay(3000) // Esperar 3 segundos adicionales para que Chart.js renderice completamente
+                        ->format('A4')
+                        ->margins(20, 20, 20, 20, 'mm')
+                        ->showBackground() // Mostrar fondo (importante para gráficas)
+                        ->save($fullPdfPath);
+                    
+                    Log::info('PDF generado exitosamente con gráficas renderizadas', [
+                        'id_evaluacion' => $idEvaluacion,
+                        'pdf_path' => $pdfPath,
+                        'tamaño_archivo' => filesize($fullPdfPath) . ' bytes'
+                    ]);
+
+                    // Opcional: Guardar HTML como backup (comentado por defecto)
+                    // Descomentar si quieres mantener también el HTML
+                    /*
+                    $htmlPath = 'evaluations/html/' . $idEvaluacion . '_' . $timestamp . '.html';
+                    $fullHtmlPath = storage_path('app/public/' . $htmlPath);
+                    
+                    $htmlDirectory = dirname($fullHtmlPath);
+                    if (!file_exists($htmlDirectory)) {
+                        mkdir($htmlDirectory, 0755, true);
+                    }
+                    
+                    file_put_contents($fullHtmlPath, $html);
+                    Log::info('HTML guardado como backup', [
+                        'id_evaluacion' => $idEvaluacion,
+                        'html_path' => $htmlPath
+                    ]);
+                    */
+
+                } catch (\Exception $e) {
+                    Log::error('Error al convertir HTML a PDF', [
+                        'id_evaluacion' => $idEvaluacion,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    
+                    // Si falla la conversión a PDF, guardar HTML como fallback
+                    try {
+                        $htmlPath = 'evaluations/html/' . $idEvaluacion . '_' . time() . '.html';
+                        $fullHtmlPath = storage_path('app/public/' . $htmlPath);
+                        
+                        $htmlDirectory = dirname($fullHtmlPath);
+                        if (!file_exists($htmlDirectory)) {
+                            mkdir($htmlDirectory, 0755, true);
+                        }
+                        
+                        file_put_contents($fullHtmlPath, $html);
+                        
+                        Log::warning('Fallback: HTML guardado en lugar de PDF debido a error', [
+                            'id_evaluacion' => $idEvaluacion,
+                            'html_path' => $htmlPath
+                        ]);
+                    } catch (\Exception $fallbackError) {
+                        Log::error('Error crítico: No se pudo guardar ni PDF ni HTML', [
+                            'id_evaluacion' => $idEvaluacion,
+                            'error_pdf' => $e->getMessage(),
+                            'error_html' => $fallbackError->getMessage()
+                        ]);
+                    }
+                }
+            }
+
+            // Preparar datos para guardar (solo PDF_Path y puntuación)
+            $resultados = [
+                'puntuacion' => $puntuacion,
+                'score' => $puntuacion,
+                'PDF_Path' => $pdfPath, // Guardar ruta del PDF
+            ];
+
+            // Nota: HTML y Recomendaciones ya no se guardan en la BD
+            // Solo se genera y guarda el PDF
+
+            // Guardar resultados en la tabla Resultados
+            $guardado = $this->resultadosRepository->guardarResultado($idEvaluacion, $resultados);
+
+            if (!$guardado) {
+                Log::error('Error al guardar resultados en base de datos', [
+                    'id_evaluacion' => $idEvaluacion
+                ]);
+            }
+
+            // Actualizar evaluación con puntuación
+            if ($puntuacion !== null) {
+                $this->evaluacionRepository->actualizar($idEvaluacion, [
+                    'Puntuacion' => $puntuacion,
+                ]);
+            }
+
+            // Disparar notificación de resultados generados
+            $userId = $evaluacion['Id_Usuario'] ?? null;
+            if ($userId) {
+                $notificador = ObserverManager::obtenerNotificador('resultados_generados');
+                if ($notificador instanceof \App\Observer\Notificadores\NotificadorResultadosGenerados) {
+                    $notificador->generarResultados(
+                        $idEvaluacion,
+                        $userId,
+                        $resultados,
+                        $pdfPath ?? $htmlPath, // Usar PDF si existe, sino HTML como fallback
+                        $puntuacion
+                    );
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Resultados recibidos y guardados exitosamente',
+                'data' => [
+                    'id_evaluacion' => $idEvaluacion,
+                    'html_recibido' => !empty($html),
+                    'pdf_generado' => !empty($pdfPath),
+                    'html_guardado_fallback' => !empty($htmlPath),
+                    'puntuacion' => $puntuacion,
+                    'pdf_path' => $pdfPath,
+                    'html_path' => $htmlPath ?? null
+                ]
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Error de validación al recibir resultados de N8N', [
+                'errors' => $e->errors(),
+                'datos_recibidos' => $request->all(),
+                'id_evaluacion_recibido' => $request->input('id_evaluacion'),
+                'tiene_html' => $request->has('html'),
+                'html_vacio' => empty($request->input('html'))
+            ]);
+            
+            return response()->json([
+                'error' => 'Datos inválidos',
+                'errors' => $e->errors(),
+                'datos_recibidos' => [
+                    'id_evaluacion' => $request->input('id_evaluacion'),
+                    'tiene_html' => $request->has('html'),
+                    'html_no_vacio' => !empty($request->input('html')),
+                    'longitud_html' => strlen($request->input('html') ?? ''),
+                    'puntuacion' => $request->input('puntuacion'),
+                    'score' => $request->input('score'),
+                ]
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error al recibir resultados de N8N', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'datos_recibidos' => $request->all()
+            ]);
+
+            return response()->json([
+                'error' => 'Error al procesar resultados',
+                'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor',
+                'file' => config('app.debug') ? $e->getFile() : null,
+                'line' => config('app.debug') ? $e->getLine() : null,
             ], 500);
         }
     }

@@ -99,37 +99,192 @@ class EvaluacionRepository
             if ($hasFramework) $selectColumns[] = 'Framework';
             if ($hasEstado) $selectColumns[] = 'Estado';
 
-            $evaluaciones = DB::table($this->table)
-                ->select($selectColumns)
-                ->where('Id_Usuario', $idUsuario)
-                ->orderBy('Fecha', 'desc')
-                ->get();
-
-            return array_map(function ($evaluacion) use ($hasTiempo, $hasPuntuacion, $hasNombre, $hasMarco, $hasFramework) {
-                $eval = (array) $evaluacion;
+            // Hacer LEFT JOIN con la tabla Resultados para obtener la puntuación real
+            try {
+                // Construir SELECT con prefijo de tabla Evaluacion
+                $selectEvaluacion = array_map(function($col) {
+                    return "e.[{$col}]";
+                }, $selectColumns);
                 
-                // Formatear fecha
-                $fecha = null;
-                if (isset($eval['Fecha'])) {
-                    try {
-                        $fechaObj = is_string($eval['Fecha']) 
-                            ? new \DateTime($eval['Fecha']) 
-                            : $eval['Fecha'];
-                        
-                        if ($fechaObj instanceof \DateTime) {
-                            $fecha = $fechaObj->format('d/m/Y');
-                            $hora = $fechaObj->format('H:i');
-                        } else {
-                            $fecha = 'N/A';
-                            $hora = 'N/A';
+                // Agregar puntuación de Resultados si existe la tabla
+                $tablaResultadosExiste = DB::selectOne("
+                    SELECT COUNT(*) as existe 
+                    FROM INFORMATION_SCHEMA.TABLES 
+                    WHERE TABLE_NAME = 'Resultados'
+                ");
+                
+                $tienePuntuacionResultados = false;
+                if ($tablaResultadosExiste && $tablaResultadosExiste->existe > 0) {
+                    // Verificar si la tabla Resultados tiene la columna Puntuacion
+                    $columnaPuntuacionExiste = DB::selectOne("
+                        SELECT COUNT(*) as existe 
+                        FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_NAME = 'Resultados' 
+                        AND COLUMN_NAME = 'Puntuacion'
+                    ");
+                    
+                    if ($columnaPuntuacionExiste && $columnaPuntuacionExiste->existe > 0) {
+                        $tienePuntuacionResultados = true;
+                        $selectEvaluacion[] = 'r.[Puntuacion] as Puntuacion_Resultados';
+                    }
+                }
+                
+                $selectSQL = implode(', ', $selectEvaluacion);
+                
+                // Construir SQL con LEFT JOIN a Resultados
+                $sql = "SELECT {$selectSQL} 
+                        FROM [{$this->table}] e
+                        LEFT JOIN [Resultados] r ON e.[Id_Evaluacion] = r.[Id_Evaluacion]
+                        WHERE e.[Id_Usuario] = ? 
+                        ORDER BY e.[Fecha] DESC";
+                
+                $resultados = DB::select($sql, [$idUsuario]);
+                
+                // Convertir resultados a colección
+                $evaluaciones = collect($resultados);
+                
+            } catch (\Exception $e) {
+                // Inicializar variable para el fallback
+                $tienePuntuacionResultados = false;
+                // Si falla el JOIN, intentar sin JOIN (fallback)
+                Log::warning('Query con JOIN falló, intentando sin JOIN', [
+                    'error' => $e->getMessage()
+                ]);
+                
+                try {
+                    $selectColumnsSQL = implode(', ', array_map(function($col) {
+                        return "e.[{$col}]";
+                    }, $selectColumns));
+                    
+                    $sql = "SELECT {$selectColumnsSQL} FROM [{$this->table}] e WHERE e.[Id_Usuario] = ? ORDER BY e.[Fecha] DESC";
+                    $resultados = DB::select($sql, [$idUsuario]);
+                    $evaluaciones = collect($resultados);
+                    $tienePuntuacionResultados = false;
+                } catch (\Exception $e2) {
+                    Log::error('Error al obtener evaluaciones', [
+                        'error' => $e2->getMessage()
+                    ]);
+                    return [];
+                }
+            }
+
+            // Asegurar que la variable esté definida antes del array_map
+            if (!isset($tienePuntuacionResultados)) {
+                $tienePuntuacionResultados = false;
+            }
+            
+            // Verificar también con SQL directo cuántas evaluaciones hay
+            $totalDirecto = DB::selectOne("
+                SELECT COUNT(*) as total 
+                FROM [{$this->table}] 
+                WHERE [Id_Usuario] = ?
+            ", [$idUsuario]);
+            
+            $totalEnBD = $totalDirecto ? (int)$totalDirecto->total : 0;
+            
+            Log::info('Evaluaciones obtenidas de la BD', [
+                'id_usuario' => $idUsuario,
+                'total_en_bd_directo' => $totalEnBD,
+                'total_encontradas_query_builder' => $evaluaciones->count(),
+                'tiene_puntuacion_resultados' => $tienePuntuacionResultados,
+                'columnas_seleccionadas' => $selectColumns,
+                'primera_evaluacion_raw' => $evaluaciones->first() ? json_encode($evaluaciones->first()) : null,
+                'todas_las_evaluaciones_raw' => json_encode($evaluaciones->toArray())
+            ]);
+
+            if ($evaluaciones->isEmpty()) {
+                if ($totalEnBD > 0) {
+                    Log::error('PROBLEMA: Hay evaluaciones en BD pero Query Builder no las encuentra', [
+                        'id_usuario' => $idUsuario,
+                        'total_en_bd' => $totalEnBD,
+                        'tabla' => $this->table,
+                        'columnas_buscadas' => $selectColumns
+                    ]);
+                } else {
+                    Log::info('No hay evaluaciones en la BD para este usuario', [
+                        'id_usuario' => $idUsuario,
+                        'tabla' => $this->table
+                    ]);
+                }
+                return [];
+            }
+
+            return array_map(function ($evaluacion) use ($hasTiempo, $hasPuntuacion, $hasNombre, $hasMarco, $hasFramework, $hasEstado, $tienePuntuacionResultados) {
+                // Convertir objeto a array - manejar diferentes formatos de respuesta
+                $eval = [];
+                
+                if (is_object($evaluacion)) {
+                    // Si es un stdClass de SQL Server, acceder directamente a propiedades
+                    $eval['Id_Evaluacion'] = $evaluacion->Id_Evaluacion ?? $evaluacion->id_evaluacion ?? null;
+                    $eval['Fecha'] = $evaluacion->Fecha ?? $evaluacion->fecha ?? null;
+                    $eval['Id_Usuario'] = $evaluacion->Id_Usuario ?? $evaluacion->id_usuario ?? null;
+                    
+                    if ($hasTiempo) {
+                        $eval['Tiempo'] = $evaluacion->Tiempo ?? $evaluacion->tiempo ?? null;
+                    }
+                    // PRIORIZAR puntuación de Resultados sobre Evaluacion
+                    if ($tienePuntuacionResultados) {
+                        // Primero intentar desde Resultados (Puntuacion_Resultados)
+                        $eval['Puntuacion_Resultados'] = $evaluacion->Puntuacion_Resultados ?? null;
+                        // También mantener Puntuacion de Evaluacion por si acaso
+                        if ($hasPuntuacion) {
+                            $eval['Puntuacion'] = $evaluacion->Puntuacion ?? $evaluacion->puntuacion ?? null;
                         }
+                    } else {
+                        // Si no hay JOIN, obtener solo de Evaluacion
+                        if ($hasPuntuacion) {
+                            $eval['Puntuacion'] = $evaluacion->Puntuacion ?? $evaluacion->puntuacion ?? null;
+                        }
+                    }
+                    if ($hasNombre) {
+                        $eval['Nombre'] = $evaluacion->Nombre ?? $evaluacion->nombre ?? null;
+                    }
+                    if ($hasMarco) {
+                        $eval['Marco'] = $evaluacion->Marco ?? $evaluacion->marco ?? null;
+                    }
+                    if ($hasFramework) {
+                        $eval['Framework'] = $evaluacion->Framework ?? $evaluacion->framework ?? null;
+                    }
+                } else {
+                    // Si ya es un array
+                    $eval = $evaluacion;
+                }
+                
+                // Formatear fecha - manejar diferentes formatos de SQL Server
+                $fecha = 'N/A';
+                $hora = 'N/A';
+                
+                if (isset($eval['Fecha']) && $eval['Fecha'] !== null) {
+                    try {
+                        $fechaRaw = $eval['Fecha'];
+                        
+                        // Si es un string, intentar parsearlo
+                        if (is_string($fechaRaw)) {
+                            $fechaObj = new \DateTime($fechaRaw);
+                        } 
+                        // Si es un Carbon instance (Laravel)
+                        elseif (is_object($fechaRaw) && method_exists($fechaRaw, 'format')) {
+                            $fechaObj = $fechaRaw;
+                        }
+                        // Si es un DateTime
+                        elseif ($fechaRaw instanceof \DateTime) {
+                            $fechaObj = $fechaRaw;
+                        }
+                        else {
+                            throw new \Exception('Formato de fecha no reconocido');
+                        }
+                        
+                        $fecha = $fechaObj->format('d/m/Y');
+                        $hora = $fechaObj->format('H:i');
                     } catch (\Exception $e) {
+                        Log::warning('Error al formatear fecha de evaluación', [
+                            'fecha_raw' => $eval['Fecha'] ?? null,
+                            'tipo' => gettype($eval['Fecha'] ?? null),
+                            'error' => $e->getMessage()
+                        ]);
                         $fecha = 'N/A';
                         $hora = 'N/A';
                     }
-                } else {
-                    $fecha = 'N/A';
-                    $hora = 'N/A';
                 }
 
                 // Formatear tiempo
@@ -147,10 +302,24 @@ class EvaluacionRepository
                     $tiempo = 'N/A';
                 }
 
-                // Obtener puntuación
-                $puntuacion = $hasPuntuacion && isset($eval['Puntuacion']) 
-                    ? (int) $eval['Puntuacion'] 
-                    : 0;
+                // Obtener puntuación - PRIORIZAR de Resultados sobre Evaluacion
+                $puntuacion = 0;
+                
+                // Primero intentar desde Resultados (Puntuacion_Resultados)
+                if ($tienePuntuacionResultados && isset($eval['Puntuacion_Resultados']) && $eval['Puntuacion_Resultados'] !== null) {
+                    $puntuacionRaw = $eval['Puntuacion_Resultados'];
+                    $puntuacion = is_numeric($puntuacionRaw) ? (float) $puntuacionRaw : 0;
+                }
+                // Si no hay en Resultados, intentar desde Evaluacion
+                elseif (isset($eval['Puntuacion']) && $eval['Puntuacion'] !== null) {
+                    $puntuacionRaw = $eval['Puntuacion'];
+                    $puntuacion = is_numeric($puntuacionRaw) ? (float) $puntuacionRaw : 0;
+                }
+                
+                // Asegurar que esté en rango 0-100
+                if ($puntuacion > 0) {
+                    $puntuacion = max(0, min(100, $puntuacion));
+                }
 
                 // Obtener nombre
                 $nombre = $hasNombre && isset($eval['Nombre']) 
@@ -166,16 +335,28 @@ class EvaluacionRepository
                         ? $eval['Framework'] 
                         : 'N/A');
 
-                return [
-                    'id' => $eval['Id_Evaluacion'] ?? null,
+                $resultado = [
+                    'id' => (int) ($eval['Id_Evaluacion'] ?? 0),
                     'name' => $nombre,
                     'date' => $fecha,
                     'time' => $hora,
                     'tiempo' => $tiempo,
-                    'score' => $puntuacion,
+                    'score' => round($puntuacion, 2), // Mantener 2 decimales si es necesario
                     'framework' => $marco,
                     'status' => ($hasEstado && isset($eval['Estado'])) ? $eval['Estado'] : 'Completada',
                 ];
+                
+                // Logging para depuración (solo primera evaluación)
+                static $logged = false;
+                if (!$logged && !empty($resultado)) {
+                    Log::info('Primera evaluación formateada', [
+                        'resultado' => $resultado,
+                        'eval_raw' => $eval
+                    ]);
+                    $logged = true;
+                }
+                
+                return $resultado;
             }, $evaluaciones->toArray());
 
         } catch (\Exception $e) {

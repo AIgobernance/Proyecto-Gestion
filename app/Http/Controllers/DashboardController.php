@@ -93,28 +93,66 @@ class DashboardController extends Controller
             // Obtener userId de forma optimizada
             $userId = SessionHelper::getUserId($request);
             
+            // Logging detallado de la sesión
+            $sessionData = $request->session()->all();
+            $userData = $request->session()->get('user');
+            
+            // Verificar también cuántas evaluaciones tiene este usuario
+            $totalEvalsUsuario = DB::table('Evaluacion')
+                ->where('Id_Usuario', $userId)
+                ->count();
+            
+            Log::info('Datos de sesión al obtener evaluaciones', [
+                'session_user_data' => $userData,
+                'userId_obtenido' => $userId,
+                'total_evaluaciones_usuario' => $totalEvalsUsuario,
+                'correo_en_sesion' => $userData['correo'] ?? $userData['Correo'] ?? null
+            ]);
+            
             if (!$userId) {
-                Log::warning('No se encontró usuario en la sesión para obtener evaluaciones');
+                Log::warning('No se encontró usuario en la sesión para obtener evaluaciones', [
+                    'session_keys' => array_keys($sessionData),
+                    'user_session' => $request->session()->get('user')
+                ]);
                 return response()->json([
-                    'error' => 'Usuario no autenticado'
+                    'error' => 'Usuario no autenticado',
+                    'debug' => [
+                        'session_keys' => array_keys($sessionData),
+                        'user_data' => $request->session()->get('user')
+                    ]
                 ], 401);
             }
 
+            // Verificar primero que existan evaluaciones en la BD para este usuario
+            $totalEnBD = DB::table('Evaluacion')
+                ->where('Id_Usuario', $userId)
+                ->count();
+            
+            Log::info('Verificación de evaluaciones en BD', [
+                'user_id' => $userId,
+                'total_en_bd' => $totalEnBD
+            ]);
+            
             // NO cachear evaluaciones para detectar cambios inmediatos (evaluaciones incompletas)
             // El cache causaba que no se detectaran evaluaciones recién guardadas
             $evaluaciones = $this->evaluacionRepository->obtenerFormateadasPorUsuario($userId);
 
-            // Remover logging excesivo en producción
-            if (config('app.debug')) {
-                Log::info('Evaluaciones obtenidas', [
-                    'user_id' => $userId,
-                    'total' => count($evaluaciones)
-                ]);
-            }
+            // Logging detallado para depuración
+            Log::info('Evaluaciones obtenidas del repositorio', [
+                'user_id' => $userId,
+                'total_en_bd' => $totalEnBD,
+                'total_formateadas' => count($evaluaciones),
+                'evaluaciones' => $evaluaciones
+            ]);
 
             return response()->json([
                 'success' => true,
-                'data' => $evaluaciones
+                'data' => $evaluaciones,
+                'debug' => [
+                    'user_id' => $userId,
+                    'total_en_bd' => $totalEnBD,
+                    'total_formateadas' => count($evaluaciones)
+                ]
             ]);
 
         } catch (\Exception $e) {

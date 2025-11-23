@@ -19,12 +19,20 @@ El servicio envía los siguientes datos en formato JSON al webhook de N8N:
     "nombre_usuario": "Juan Pérez",
     "empresa": "Mi Empresa S.A.",
     "correo": "juan@empresa.com",
+    "sector": "Industrial",
+    "ponderaciones": {
+      "ISO_27090_27091": 0.30,
+      "ISO_23894": 0.12,
+      "NIS2_AI_Act": 0.28,
+      "ISO_42001_42005": 0.25,
+      "CONPES_4144": 0.05
+    },
     "prompt_ia": "Prompt personalizado para la IA (opcional)"
   },
   "respuestas": {
-    "pregunta1": "a) No se realiza",
-    "pregunta2": "d) Totalmente implementada y revisada anualmente",
-    "pregunta3": "c) En algunos modelos críticos",
+    "¿La empresa identifica y clasifica los sistemas de IA de alto riesgo según su impacto en usuarios o procesos críticos?": 0.0,
+    "¿Existe una política formal de cumplimiento regulatorio y ético en el uso de IA?": 1.0,
+    "¿Se monitorean los algoritmos de IA para detectar sesgos o errores en las decisiones?": 0.5,
     ...
   },
   "documentos": [

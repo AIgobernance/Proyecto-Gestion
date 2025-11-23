@@ -58,10 +58,14 @@ Route::middleware(['web'])->group(function () {
 Route::middleware(['web'])->group(function () {
     Route::post('/api/evaluation/create', [EvaluationController::class, 'createEvaluation']);
     Route::get('/api/evaluation/{id}/load', [EvaluationController::class, 'loadEvaluation']);
+    Route::get('/api/evaluation/{id}/pdf-status', [EvaluationController::class, 'checkPdfStatus']);
     Route::post('/api/evaluation/save-progress', [EvaluationController::class, 'saveProgress']);
     Route::post('/api/evaluation/submit', [EvaluationController::class, 'submitEvaluation']);
     Route::post('/api/evaluation/upload-document', [EvaluationController::class, 'uploadDocument']);
 });
+
+// Ruta para que N8N envíe resultados (sin autenticación web, solo validación básica)
+Route::post('/api/evaluation/n8n-results', [EvaluationController::class, 'receiveN8NResults']);
 
 // Rutas de administración de usuarios (requieren autenticación admin)
 Route::middleware(['web'])->group(function () {

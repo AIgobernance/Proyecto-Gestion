@@ -30,7 +30,7 @@ class RegisterController extends Controller
             'nit' => 'required|string|max:50',
             'tipoDocumento' => 'required|string|in:CC,CE,Pasaporte',
             'numeroDocumento' => 'required|string|max:50',
-            'sector' => 'required|string|max:255',
+            'sector' => 'required|string|in:Industrial,Servicios,Comercial',
             'pais' => 'required|string|max:255',
             'tamanoOrganizacional' => 'required|string|max:255',
             'correo' => 'required|email|max:255',

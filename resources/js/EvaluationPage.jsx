@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import {
   ArrowLeft,
@@ -698,8 +698,19 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
   const progress = (answeredCount / TOTAL_QUESTIONS) * 100;
 
   // Inicializar: crear evaluación vacía al montar el componente
+  // Usar useRef para evitar crear múltiples evaluaciones en React StrictMode
+  const hasCreatedEvaluation = useRef(false);
+  
   useEffect(() => {
+    // Evitar crear múltiples evaluaciones si ya se creó una
+    if (hasCreatedEvaluation.current || evaluationId) {
+      return;
+    }
+
     const createEvaluation = async () => {
+      // Marcar inmediatamente para evitar llamadas concurrentes
+      hasCreatedEvaluation.current = true;
+      
       try {
         const token = document.head?.querySelector('meta[name="csrf-token"]');
         if (token) {
@@ -709,18 +720,25 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
         const axiosClient = window.axios || axios;
         const response = await axiosClient.post('/api/evaluation/create', {
           tiempo: 0,
+        }, {
+          timeout: 10000, // 10 segundos para crear evaluación
         });
 
         if (response.data && response.data.success && response.data.data?.id_evaluacion) {
           setEvaluationId(response.data.data.id_evaluacion);
+        } else {
+          // Si no se pudo crear, permitir reintentar
+          hasCreatedEvaluation.current = false;
         }
       } catch (error) {
         console.error('Error al crear evaluación:', error);
+        // Si hay error, permitir reintentar
+        hasCreatedEvaluation.current = false;
       }
     };
 
     createEvaluation();
-  }, []);
+  }, []); // Solo ejecutar una vez al montar
 
   // Guardar progreso automáticamente cuando se selecciona una respuesta (asíncrono, no bloquea UI)
   const saveProgress = (preguntaIndex, respuestaTexto) => {
@@ -747,7 +765,12 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
 
   // Guardar una respuesta individual (asíncrono, no bloquea la UI)
   const saveSingleAnswer = async (idEval, preguntaIndex, respuestaTexto) => {
-    // No bloquear si ya hay un guardado en progreso, simplemente hacerlo en background
+    // Validar que tenemos un ID de evaluación válido
+    if (!idEval || preguntaIndex === undefined || preguntaIndex === null) {
+      console.warn('No se puede guardar: falta id_evaluacion o pregunta_index', { idEval, preguntaIndex });
+      return;
+    }
+
     // Usar un debounce simple para evitar múltiples llamadas simultáneas para la misma pregunta
     const saveKey = `${idEval}_${preguntaIndex}`;
     if (window[`saving_${saveKey}`]) {
@@ -770,13 +793,21 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
           pregunta_index: preguntaIndex,
           respuesta: respuestaTexto,
         }, {
-          timeout: 5000, // Timeout de 5 segundos
+          timeout: 15000, // Timeout aumentado a 15 segundos para evitar errores
         });
       } catch (error) {
-        console.error('Error al guardar progreso:', error);
-        // No mostrar error al usuario, solo loguear
+        // Solo loguear errores de timeout o conexión, no mostrar al usuario
+        // Los errores de timeout son normales si el servidor está lento
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          console.warn('Timeout al guardar progreso (no crítico):', preguntaIndex);
+        } else {
+          console.error('Error al guardar progreso:', error);
+        }
       } finally {
-        delete window[`saving_${saveKey}`];
+        // Limpiar el flag después de un delay para evitar spam
+        setTimeout(() => {
+          delete window[`saving_${saveKey}`];
+        }, 1000);
       }
     })();
   };
@@ -878,20 +909,14 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
 
       const axiosClient = window.axios || axios;
       
-      // Crear un timeout de 20 segundos
-      const timeoutId = setTimeout(() => {
-        setIsSubmitting(false);
-        setShowRetry(true);
-        setSubmitError('El servidor está tardando demasiado en responder. Puedes intentar nuevamente.');
-      }, 20000); // 20 segundos
+      // Timeout aumentado a 3 minutos (180 segundos) porque la generación del PDF puede tardar
+      // No mostrar error automático antes de tiempo
+      const TIMEOUT_MS = 180000; // 3 minutos
 
       try {
         const response = await axiosClient.post('/api/evaluation/submit', datosEnvio, {
-          timeout: 20000, // Timeout de 20 segundos
+          timeout: TIMEOUT_MS, // 3 minutos - tiempo suficiente para generar PDF
         });
-
-        // Limpiar el timeout si la respuesta llega a tiempo
-        clearTimeout(timeoutId);
 
         if (response.data && response.data.success) {
           // Éxito - llamar al callback con el ID de evaluación
@@ -900,13 +925,10 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
           throw new Error(response.data?.error || 'Error al enviar la evaluación');
         }
       } catch (requestError) {
-        // Limpiar el timeout si hay un error
-        clearTimeout(timeoutId);
-        
         // Si es un error de timeout, mostrar mensaje de reintentar
         if (requestError.code === 'ECONNABORTED' || requestError.message?.includes('timeout')) {
           setShowRetry(true);
-          setSubmitError('La solicitud tardó demasiado. Por favor, intenta nuevamente.');
+          setSubmitError('La solicitud tardó demasiado (más de 3 minutos). Por favor, verifica tu conexión e intenta nuevamente.');
           setIsSubmitting(false);
           return;
         }
@@ -1238,7 +1260,7 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                   {isSubmitting ? (
                     <>
                       <Loader2 size={16} className="animate-spin" />
-                      Enviando...
+                      Procesando... (puede tardar unos minutos)
                     </>
                   ) : currentIndex === TOTAL_QUESTIONS - 1 ? (
                     <>

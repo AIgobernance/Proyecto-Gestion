@@ -119,14 +119,6 @@ const MOCK_EVALUATIONS = [];
 const parseDMY = (str) => { const [d, m, y] = str.split("/").map(Number); return new Date(y, m - 1, d); };
 const formatDMY = (d) => d ? `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}` : "";
 
-/* Badge score */
-const getScoreBadge = (score) => {
-  if (score >= 90) return { label: "Excelente", cls: "badge--excelente" };
-  if (score >= 75) return { label: "Bueno", cls: "badge--bueno" };
-  if (score >= 60) return { label: "Regular", cls: "badge--regular" };
-  return { label: "Mejora", cls: "badge--mejora" };
-};
-
 export function ViewEvaluationsPage({
   onExit = () => window.location.assign("/dashboard"),
   onViewResults = (id) => window.location.assign(`/evaluation/${id}/completed`),
@@ -159,13 +151,67 @@ export function ViewEvaluationsPage({
         }
       });
 
-      if (response.data && response.data.success && response.data.data) {
-        setEvaluations(response.data.data);
+      console.log('=== DEBUG: Respuesta completa del API ===', response);
+      console.log('=== DEBUG: response.data ===', response.data);
+      console.log('=== DEBUG: response.data.success ===', response.data?.success);
+      console.log('=== DEBUG: response.data.data ===', response.data?.data);
+      console.log('=== DEBUG: response.data.debug ===', response.data?.debug);
+      
+      // Mostrar información del debug si está disponible
+      if (response.data?.debug) {
+        console.log('=== DEBUG INFO ===', {
+          user_id: response.data.debug.user_id,
+          total_en_bd: response.data.debug.total_en_bd,
+          total_formateadas: response.data.debug.total_formateadas
+        });
+      }
+
+      if (response.data && response.data.success !== false) {
+        const data = response.data.data || response.data || [];
+        console.log('=== DEBUG: Evaluaciones recibidas ===', {
+          esArray: Array.isArray(data),
+          longitud: Array.isArray(data) ? data.length : 'NO ES ARRAY',
+          datos: data
+        });
+        
+        // Asegurar que los datos tengan el formato correcto
+        let evaluacionesFormateadas = [];
+        
+        if (Array.isArray(data) && data.length > 0) {
+          evaluacionesFormateadas = data.map((ev, index) => {
+            console.log(`=== DEBUG: Evaluación ${index} ===`, ev);
+            return {
+              id: ev.id || ev.Id_Evaluacion || ev.id_evaluacion || null,
+              name: ev.name || ev.Nombre || ev.nombre || `Evaluación #${ev.id || ev.Id_Evaluacion || ev.id_evaluacion || 'N/A'}`,
+              date: ev.date || ev.Fecha || ev.fecha || 'N/A',
+              time: ev.time || ev.Hora || ev.hora || 'N/A',
+              tiempo: ev.tiempo || ev.Tiempo || ev.tiempo || 'N/A',
+              score: ev.score !== undefined && ev.score !== null ? (parseFloat(ev.score) || 0) : (ev.Puntuacion !== undefined && ev.Puntuacion !== null ? (parseFloat(ev.Puntuacion) || 0) : (ev.puntuacion !== undefined && ev.puntuacion !== null ? (parseFloat(ev.puntuacion) || 0) : 0)),
+              framework: ev.framework || ev.Marco || ev.marco || ev.Framework || ev.framework || 'N/A',
+              status: ev.status || ev.Estado || ev.estado || 'Completada'
+            };
+          });
+        } else if (Array.isArray(data)) {
+          console.warn('=== DEBUG: Array vacío recibido ===');
+          evaluacionesFormateadas = [];
+        } else {
+          console.warn('=== DEBUG: No es un array, tipo:', typeof data, data);
+          evaluacionesFormateadas = [];
+        }
+        
+        console.log('=== DEBUG: Evaluaciones formateadas finales ===', evaluacionesFormateadas);
+        setEvaluations(evaluacionesFormateadas);
       } else {
+        console.warn('La respuesta no tiene el formato esperado:', response.data);
         setEvaluations([]);
       }
     } catch (err) {
       console.error('Error al cargar evaluaciones:', err);
+      console.error('Detalles del error:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       setError('No se pudieron cargar las evaluaciones. Por favor, intenta más tarde.');
       setEvaluations([]);
     } finally {
@@ -215,9 +261,14 @@ export function ViewEvaluationsPage({
     return filteredEvals;
   }, [evaluations, range]);
 
-  const avgScore = filtered.length
-    ? Math.round(filtered.reduce((acc, ev) => acc + ev.score, 0) / filtered.length)
-    : 0;
+  // Calcular promedio de TODAS las evaluaciones (no solo las filtradas) con puntuación válida (> 0)
+  const avgScore = useMemo(() => {
+    if (evaluations.length === 0) return 0;
+    const evaluacionesConPuntuacion = evaluations.filter(ev => ev.score && ev.score > 0);
+    if (evaluacionesConPuntuacion.length === 0) return 0;
+    const suma = evaluacionesConPuntuacion.reduce((acc, ev) => acc + (parseFloat(ev.score) || 0), 0);
+    return Math.round(suma / evaluacionesConPuntuacion.length);
+  }, [evaluations]);
 
   return (
     <div className="page">
@@ -230,9 +281,9 @@ export function ViewEvaluationsPage({
           <FileText className="w-5 h-5" style={{color:"#4d82bc"}} />
           Mis Evaluaciones
         </h1>
-        <button className="btn-ghost" onClick={onExit} aria-label="Salir">
-          <LogOut className="w-4 h-4" style={{marginRight:8,color:"#173b8f"}} />
-          Salir
+        <button className="btn-ghost" onClick={onExit} aria-label="Volver al Dashboard">
+          <FileText className="w-4 h-4" style={{marginRight:8,color:"#173b8f"}} />
+          Volver al Dashboard
         </button>
       </header>
 
@@ -244,7 +295,7 @@ export function ViewEvaluationsPage({
             <div className="metric">
               <div>
                 <div style={{color:"#5b677a",fontSize:14,marginBottom:4}}>Total Evaluaciones</div>
-                <div className="num">{filtered.length}</div>
+                <div className="num">{evaluations.length}</div>
               </div>
               <span className="bubble"><FileText className="w-6 h-6" /></span>
             </div>
@@ -265,7 +316,7 @@ export function ViewEvaluationsPage({
               <div>
                 <div style={{color:"#5b677a",fontSize:14,marginBottom:4}}>Última Evaluación</div>
                 <div style={{fontSize:18,color:"#173b8f",fontWeight:700}}>
-                  {filtered.length ? filtered[0].date : "—"}
+                  {evaluations.length ? evaluations[0].date : "—"}
                 </div>
               </div>
               <span className="bubble" style={{background:"#f3ecff",color:"#7a4fd6"}}><CalIcon className="w-6 h-6" /></span>
@@ -373,7 +424,6 @@ export function ViewEvaluationsPage({
                   </button>
                 </div>
               ) : filtered.map((ev, i) => {
-                const badge = getScoreBadge(ev.score);
                 return (
                   <motion.div key={ev.id || i} initial={{opacity:0, x:-12}} animate={{opacity:1, x:0}} transition={{duration:0.22, delay:0.05*i}}>
                     <div className="item" style={{padding:16,background:"#fff"}}>
@@ -393,7 +443,6 @@ export function ViewEvaluationsPage({
                                 )}
                               </div>
                             </div>
-                            <span className={`badge ${badge.cls}`}>{badge.label}</span>
                           </div>
 
                           {/* Progreso */}
@@ -420,7 +469,15 @@ export function ViewEvaluationsPage({
                 );
               })}
 
-              {filtered.length === 0 && (
+              {!loading && !error && filtered.length === 0 && evaluations.length === 0 && (
+                <div style={{textAlign:"center",padding:"36px 8px",color:"#5b677a"}}>
+                  <FileText className="w-12 h-12" style={{margin:"0 auto 16px",color:"#94a3b8",opacity:0.5}} />
+                  <p style={{fontSize:16,marginBottom:8,fontWeight:600}}>No tienes evaluaciones aún</p>
+                  <p style={{fontSize:14,color:"#64748b"}}>Comienza creando tu primera evaluación desde el dashboard</p>
+                </div>
+              )}
+
+              {!loading && !error && filtered.length === 0 && evaluations.length > 0 && (
                 <div style={{textAlign:"center",padding:"36px 8px",color:"#5b677a"}}>
                   No hay evaluaciones dentro del filtro seleccionado.
                 </div>
