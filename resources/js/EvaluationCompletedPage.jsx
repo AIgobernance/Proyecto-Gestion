@@ -71,6 +71,12 @@ const styles = `
 /* Footer note */
 .note{color:#e2e8f0;text-align:center;font-size:13px;margin-top:16px}
 
+/* Gráficas */
+.charts-section{margin-top:24px;padding-top:24px;border-top:1px solid rgba(255,255,255,.18)}
+.chart-container{background:rgba(255,255,255,.1);backdrop-filter:blur(4px);border-radius:18px;padding:20px;margin-bottom:20px}
+.chart-container h3{color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;text-align:center}
+.chart-wrapper{position:relative;width:100%;height:400px;margin:0 auto}
+
 /* Animación de carga */
 @keyframes spin {
   from { transform: rotate(0deg); }
@@ -85,6 +91,7 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
   const [pdfUrl, setPdfUrl] = useState(null);
   const [puntuacion, setPuntuacion] = useState(null);
   const [error, setError] = useState(null);
+  const [chartData, setChartData] = useState(null);
   
   // Estado para datos de la evaluación
   const [evaluationData, setEvaluationData] = useState({
@@ -126,6 +133,13 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
         if (response.data && response.data.success) {
           const data = response.data.data;
           
+          // Log para debugging
+          console.log('Datos recibidos del endpoint pdf-status:', {
+            puntuacion: data.puntuacion,
+            pdf_ready: data.pdf_ready,
+            tiempo: data.tiempo
+          });
+          
           // Actualizar datos de la evaluación si están disponibles
           if (data.tiempo !== undefined && data.tiempo !== null) {
             const tiempoMinutos = parseFloat(data.tiempo);
@@ -162,10 +176,22 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
             }
           }
           
+          // Actualizar puntuación SIEMPRE que venga en la respuesta, no solo cuando el PDF esté listo
+          if (data.puntuacion !== undefined && data.puntuacion !== null && data.puntuacion !== '') {
+            const puntuacionValue = parseFloat(data.puntuacion);
+            if (!isNaN(puntuacionValue) && puntuacionValue >= 0) {
+              console.log('Actualizando puntuación:', puntuacionValue);
+              setPuntuacion(puntuacionValue);
+            } else {
+              console.warn('Puntuación inválida:', data.puntuacion);
+            }
+          } else {
+            console.warn('No se recibió puntuación en la respuesta:', data.puntuacion);
+          }
+          
           if (data.pdf_ready) {
             setPdfReady(true);
             setPdfUrl(data.pdf_url);
-            setPuntuacion(data.puntuacion);
             setIsChecking(false);
             
             // Limpiar intervalo cuando el PDF esté listo
@@ -218,6 +244,212 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
       }
     };
   }, [id]);
+
+  // Obtener datos para las gráficas
+  useEffect(() => {
+    if (!id || !pdfReady) return;
+
+    const fetchChartData = async () => {
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const axiosClient = window.axios || axios;
+        const response = await axiosClient.get(`/api/evaluation/${id}/chart-data`, {
+          timeout: 10000,
+        });
+
+        if (response.data && response.data.success) {
+          setChartData(response.data.data);
+        }
+      } catch (err) {
+        console.error('Error al obtener datos de gráficas:', err);
+      }
+    };
+
+    fetchChartData();
+  }, [id, pdfReady]);
+
+  // Cargar Chart.js y renderizar gráficas cuando chartData esté disponible
+  useEffect(() => {
+    if (!chartData || !pdfReady) return;
+
+    // Cargar Chart.js desde CDN si no está cargado
+    if (!window.Chart) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.onload = () => renderCharts();
+      document.head.appendChild(script);
+    } else {
+      renderCharts();
+    }
+
+    function renderCharts() {
+      // Limpiar gráficas anteriores
+      const barCanvas = document.getElementById('barChart');
+      const radarCanvas = document.getElementById('radarChart');
+      
+      if (barCanvas && window.Chart) {
+        const existingBarChart = window.Chart.getChart(barCanvas);
+        if (existingBarChart) {
+          existingBarChart.destroy();
+        }
+
+        const barCtx = barCanvas.getContext('2d');
+        new window.Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: chartData.categories,
+            datasets: [{
+              label: 'Porcentaje de Implementación',
+              data: chartData.scores,
+              backgroundColor: [
+                'rgba(0, 77, 153, 0.7)',
+                'rgba(0, 102, 204, 0.7)',
+                'rgba(0, 128, 255, 0.7)',
+                'rgba(51, 153, 255, 0.7)',
+                'rgba(102, 178, 255, 0.7)'
+              ],
+              borderColor: [
+                'rgba(0, 77, 153, 1)',
+                'rgba(0, 102, 204, 1)',
+                'rgba(0, 128, 255, 1)',
+                'rgba(51, 153, 255, 1)',
+                'rgba(102, 178, 255, 1)'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: {
+                display: false
+              },
+              title: {
+                display: true,
+                text: 'Nivel de Implementación por Categoría de Gobernanza de IA',
+                color: '#fff',
+                font: {
+                  size: 16
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  color: '#fff'
+                },
+                title: {
+                  display: true,
+                  text: 'Porcentaje de Implementación',
+                  color: '#fff'
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              },
+              x: {
+                ticks: {
+                  color: '#fff',
+                  maxRotation: 45,
+                  minRotation: 45
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      if (radarCanvas && window.Chart) {
+        const existingRadarChart = window.Chart.getChart(radarCanvas);
+        if (existingRadarChart) {
+          existingRadarChart.destroy();
+        }
+
+        const radarCtx = radarCanvas.getContext('2d');
+        new window.Chart(radarCtx, {
+          type: 'radar',
+          data: {
+            labels: chartData.categories.map(cat => cat.split('(')[0].trim()),
+            datasets: [{
+              label: 'Ponderación (%)',
+              data: chartData.weights,
+              backgroundColor: 'rgba(0, 77, 153, 0.4)',
+              borderColor: 'rgba(0, 77, 153, 1)',
+              pointBackgroundColor: 'rgba(0, 77, 153, 1)',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: 'rgba(0, 77, 153, 1)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: {
+                display: true,
+                labels: {
+                  color: '#fff'
+                }
+              },
+              title: {
+                display: true,
+                text: 'Ponderación de Áreas de Gobernanza de IA',
+                color: '#fff',
+                font: {
+                  size: 16
+                }
+              }
+            },
+            scales: {
+              r: {
+                beginAtZero: true,
+                max: 40,
+                ticks: {
+                  color: '#fff',
+                  stepSize: 5
+                },
+                pointLabels: {
+                  color: '#fff',
+                  font: {
+                    size: 11
+                  }
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.2)'
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    return () => {
+      // Limpiar gráficas al desmontar
+      const barCanvas = document.getElementById('barChart');
+      const radarCanvas = document.getElementById('radarChart');
+      
+      if (barCanvas && window.Chart) {
+        const chart = window.Chart.getChart(barCanvas);
+        if (chart) chart.destroy();
+      }
+      
+      if (radarCanvas && window.Chart) {
+        const chart = window.Chart.getChart(radarCanvas);
+        if (chart) chart.destroy();
+      }
+    };
+  }, [chartData, pdfReady]);
 
   const handleDownloadPdf = () => {
     if (pdfUrl) {
@@ -314,8 +546,14 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
           <Card className="metric-card">
             <CardContent className="metric-body">
               <div className="metric-icon" style={{background:"#e9fbf0", color:"#16a34a"}}><Trophy size={26} /></div>
-              <div className="metric-title" style={{fontSize:20}}>Completada</div>
-              <p className="metric-sub">{evaluationData.completionDate}</p>
+              <div className="metric-title" style={{fontSize:28}}>
+                {puntuacion !== null && typeof puntuacion === 'number' && !isNaN(puntuacion) 
+                  ? `${Number(puntuacion).toFixed(1)}%` 
+                  : isChecking 
+                    ? "Calculando..." 
+                    : "N/A"}
+              </div>
+              <p className="metric-sub">Puntuación obtenida</p>
             </CardContent>
           </Card>
         </section>
@@ -362,6 +600,31 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
               <button className="btn-secondary" onClick={handleDownloadPdf}>
                 <Download size={18} /> Descargar PDF
               </button>
+
+              {/* Gráficas */}
+              {chartData && chartData.categories && (
+                <div className="charts-section">
+                  <div className="chart-container">
+                    <h3>Nivel de Implementación por Categoría</h3>
+                    <div className="chart-wrapper">
+                      <canvas id="barChart"></canvas>
+                    </div>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', marginTop: '12px', textAlign: 'center' }}>
+                      Esta gráfica muestra el nivel de implementación promedio para cada una de las categorías de gobernanza de IA.
+                    </p>
+                  </div>
+
+                  <div className="chart-container">
+                    <h3>Ponderación Relativa de las Áreas de Gobernanza</h3>
+                    <div className="chart-wrapper">
+                      <canvas id="radarChart"></canvas>
+                    </div>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', marginTop: '12px', textAlign: 'center' }}>
+                      Esta gráfica ilustra la importancia relativa que se ha asignado a cada área de gobernanza de IA para tu empresa.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
         ) : (

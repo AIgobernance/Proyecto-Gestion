@@ -209,9 +209,22 @@ class EvaluacionRepository
                 return [];
             }
 
-            return array_map(function ($evaluacion) use ($hasTiempo, $hasPuntuacion, $hasNombre, $hasMarco, $hasFramework, $hasEstado, $tienePuntuacionResultados) {
+            // Obtener total de evaluaciones para calcular número relativo
+            $totalEvaluaciones = $evaluaciones->count();
+            
+            // Convertir a array indexado para poder usar el índice
+            $evaluacionesArray = $evaluaciones->values()->toArray();
+            
+            // Usar array_map con dos arrays: valores e índices
+            return array_map(function ($evaluacion, $index) use ($hasTiempo, $hasPuntuacion, $hasNombre, $hasMarco, $hasFramework, $hasEstado, $tienePuntuacionResultados, $totalEvaluaciones) {
                 // Convertir objeto a array - manejar diferentes formatos de respuesta
                 $eval = [];
+                
+                // Calcular número de evaluación relativo al usuario
+                // Las evaluaciones están ordenadas por fecha DESC, así que la más reciente es la primera (índice 0)
+                // El usuario quiere que la primera en la lista (más reciente) tenga el número más alto
+                // Usar totalEvaluaciones - index para que: índice 0 (más reciente) = #total, índice 1 = #(total-1), ..., última = #1
+                $numeroEvaluacion = $totalEvaluaciones - (int)$index;
                 
                 if (is_object($evaluacion)) {
                     // Si es un stdClass de SQL Server, acceder directamente a propiedades
@@ -321,12 +334,12 @@ class EvaluacionRepository
                     $puntuacion = max(0, min(100, $puntuacion));
                 }
 
-                // Obtener nombre
+                // Obtener nombre - usar número relativo al usuario en lugar del ID global
                 $nombre = $hasNombre && isset($eval['Nombre']) 
                     ? $eval['Nombre'] 
                     : ($hasFramework && isset($eval['Framework']) 
                         ? 'Evaluación ' . $eval['Framework'] 
-                        : 'Evaluación #' . ($eval['Id_Evaluacion'] ?? 'N/A'));
+                        : 'Evaluación #' . $numeroEvaluacion);
 
                 // Obtener marco/framework
                 $marco = ($hasMarco && isset($eval['Marco'])) 
@@ -357,7 +370,7 @@ class EvaluacionRepository
                 }
                 
                 return $resultado;
-            }, $evaluaciones->toArray());
+            }, array_values($evaluacionesArray), array_keys($evaluacionesArray));
 
         } catch (\Exception $e) {
             Log::error('Error al obtener evaluaciones formateadas del usuario', [

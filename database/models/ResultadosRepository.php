@@ -132,15 +132,34 @@ class ResultadosRepository
     public function obtenerPorEvaluacion(int $idEvaluacion): ?array
     {
         try {
-            $resultado = DB::table($this->table)
-                ->where('Id_Evaluacion', $idEvaluacion)
-                ->first();
+            // Usar SQL directo para mejor compatibilidad con SQL Server
+            $resultado = DB::selectOne("
+                SELECT * 
+                FROM [{$this->table}] 
+                WHERE [Id_Evaluacion] = ?
+            ", [$idEvaluacion]);
 
-            return $resultado ? (array) $resultado : null;
+            if (!$resultado) {
+                return null;
+            }
+
+            // Convertir objeto stdClass a array
+            $resultadoArray = json_decode(json_encode($resultado), true);
+            
+            // Log para debugging
+            Log::info('Resultado obtenido de BD', [
+                'id_evaluacion' => $idEvaluacion,
+                'columnas_disponibles' => array_keys($resultadoArray),
+                'puntuacion' => $resultadoArray['Puntuacion'] ?? 'N/A',
+                'resultado_completo' => $resultadoArray
+            ]);
+
+            return $resultadoArray;
         } catch (\Exception $e) {
             Log::error('Error al obtener resultado', [
                 'id_evaluacion' => $idEvaluacion,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             return null;
         }

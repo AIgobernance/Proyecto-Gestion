@@ -521,7 +521,37 @@ class EvaluationController extends Controller
             $resultados = $this->resultadosRepository->obtenerPorEvaluacion($idEvaluacion);
             
             $pdfPath = $resultados['PDF_Path'] ?? null;
-            $puntuacion = $resultados['Puntuacion'] ?? $evaluacion['Puntuacion'] ?? null;
+            
+            // Obtener puntuación de múltiples posibles fuentes con diferentes nombres de columna
+            $puntuacion = null;
+            if ($resultados) {
+                // Intentar diferentes nombres de columna (case-insensitive)
+                $puntuacion = $resultados['Puntuacion'] ?? 
+                             $resultados['puntuacion'] ?? 
+                             $resultados['PUNTUACION'] ?? null;
+            }
+            
+            // Si no hay en Resultados, intentar desde Evaluacion
+            if ($puntuacion === null && $evaluacion) {
+                $puntuacion = $evaluacion['Puntuacion'] ?? 
+                             $evaluacion['puntuacion'] ?? 
+                             $evaluacion['PUNTUACION'] ?? null;
+            }
+            
+            // Asegurar que sea numérico
+            if ($puntuacion !== null) {
+                $puntuacion = is_numeric($puntuacion) ? (float) $puntuacion : null;
+            }
+            
+            // Log para debugging
+            Log::info('Puntuación obtenida en checkPdfStatus', [
+                'id_evaluacion' => $idEvaluacion,
+                'puntuacion_resultados' => $resultados['Puntuacion'] ?? 'N/A',
+                'puntuacion_evaluacion' => $evaluacion['Puntuacion'] ?? 'N/A',
+                'puntuacion_final' => $puntuacion,
+                'resultados_keys' => $resultados ? array_keys($resultados) : null,
+                'evaluacion_keys' => array_keys($evaluacion ?? [])
+            ]);
             
             // Verificar si el archivo PDF existe físicamente
             $pdfExists = false;
@@ -596,6 +626,81 @@ class EvaluationController extends Controller
 
             return response()->json([
                 'error' => 'Error al verificar estado del PDF',
+                'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtiene los datos necesarios para generar las gráficas de la evaluación
+     *
+     * @param Request $request
+     * @param int $idEvaluacion
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getChartData(Request $request, int $idEvaluacion)
+    {
+        try {
+            $userId = SessionHelper::getUserId($request);
+            
+            if (!$userId) {
+                return response()->json([
+                    'error' => 'Usuario no autenticado'
+                ], 401);
+            }
+
+            // Verificar que la evaluación pertenece al usuario
+            $evaluacion = $this->evaluacionRepository->obtenerPorId($idEvaluacion);
+            
+            if (!$evaluacion) {
+                return response()->json([
+                    'error' => 'Evaluación no encontrada'
+                ], 404);
+            }
+
+            if ($evaluacion['Id_Usuario'] != $userId) {
+                return response()->json([
+                    'error' => 'No tienes permiso para acceder a esta evaluación'
+                ], 403);
+            }
+
+            // Obtener las respuestas
+            $respuestas = $this->respuestasRepository->obtenerPorEvaluacion($idEvaluacion);
+            
+            if (empty($respuestas)) {
+                return response()->json([
+                    'error' => 'No se encontraron respuestas para esta evaluación'
+                ], 404);
+            }
+
+            // Formatear respuestas como array indexado [0 => "a) ...", 1 => "b) ..."]
+            $respuestasArray = [];
+            foreach ($respuestas as $respuesta) {
+                $idPregunta = (int) $respuesta['Id_Pregunta'];
+                $indice = $idPregunta - 1; // Convertir a 0-based
+                $respuestasArray[$indice] = $respuesta['Respuesta_Usuario'];
+            }
+
+            // Obtener sector de la evaluación (si existe)
+            $sector = $evaluacion['Sector'] ?? 'Industrial';
+
+            // Calcular datos para las gráficas
+            $chartData = \App\Helpers\EvaluationHelper::calcularDatosParaGraficas($respuestasArray, $sector);
+
+            return response()->json([
+                'success' => true,
+                'data' => $chartData
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener datos de gráficas', [
+                'id_evaluacion' => $idEvaluacion,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Error al obtener datos de gráficas',
                 'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
             ], 500);
         }

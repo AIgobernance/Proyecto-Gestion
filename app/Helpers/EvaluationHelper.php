@@ -499,5 +499,78 @@ class EvaluationHelper
         // Redondear a 2 decimales
         return round($puntuacion, 2);
     }
+
+    /**
+     * Obtiene el mapeo de preguntas a categorías
+     * 
+     * @return array Array con [categoria => [indices_preguntas]]
+     */
+    public static function getPreguntasPorCategoria(): array
+    {
+        // Mapeo basado en los frameworks de las preguntas
+        // Índices son 0-based (pregunta 1 = índice 0)
+        return [
+            'NIS2_AI_Act' => [0, 1, 2, 3, 4, 5, 6, 8], // Regulación UE (preguntas 1-7, 9)
+            'ISO_27090_27091' => [7, 9, 10, 11, 12, 13, 14, 15, 16], // Ciberseguridad (preguntas 8, 10-17)
+            'ISO_42001_42005' => [17, 18, 19, 20, 21, 22], // Gestión IA (preguntas 18-23)
+            'ISO_23894' => [23, 24, 25, 26], // IA Explicable (preguntas 24-27)
+            'CONPES_4144' => [27, 28, 29], // Marco Nacional (preguntas 28-30)
+        ];
+    }
+
+    /**
+     * Calcula las puntuaciones por categoría basándose en las respuestas
+     *
+     * @param array $respuestas Array de respuestas indexadas [0 => "a) No se realiza", ...]
+     * @param string $sector Sector de la empresa para obtener ponderaciones
+     * @return array Array con datos para gráficas
+     */
+    public static function calcularDatosParaGraficas(array $respuestas, string $sector = 'Industrial'): array
+    {
+        $preguntasPorCategoria = self::getPreguntasPorCategoria();
+        $ponderaciones = self::getPonderacionesPorSector($sector);
+        
+        $categorias = [
+            'ISO_27090_27091' => 'Ciberseguridad (ISO 27090/27091)',
+            'ISO_23894' => 'IA Explicable (ISO 23894)',
+            'NIS2_AI_Act' => 'Regulación UE (NIS2/AI Act)',
+            'ISO_42001_42005' => 'Gestión IA (ISO 42001-42005)',
+            'CONPES_4144' => 'Marco Nacional (CONPES 4144)',
+        ];
+        
+        $puntuacionesPorCategoria = [];
+        $scores = [];
+        $weights = [];
+        $labels = [];
+        
+        foreach ($categorias as $key => $label) {
+            $indicesPreguntas = $preguntasPorCategoria[$key] ?? [];
+            $valoresCategoria = [];
+            
+            // Obtener valores de las respuestas para esta categoría
+            foreach ($indicesPreguntas as $indice) {
+                if (isset($respuestas[$indice]) && !empty($respuestas[$indice])) {
+                    $valor = self::respuestaToValor($respuestas[$indice]);
+                    $valoresCategoria[] = $valor;
+                }
+            }
+            
+            // Calcular promedio de la categoría (0-1) y convertir a porcentaje (0-100)
+            $promedio = !empty($valoresCategoria) ? array_sum($valoresCategoria) / count($valoresCategoria) : 0;
+            $puntuacionPorcentaje = round($promedio * 100, 2);
+            
+            $puntuacionesPorCategoria[$key] = $puntuacionPorcentaje;
+            $scores[] = $puntuacionPorcentaje;
+            $weights[] = round(($ponderaciones[$key] ?? 0.20) * 100, 2); // Convertir a porcentaje
+            $labels[] = $label;
+        }
+        
+        return [
+            'categories' => $labels,
+            'scores' => $scores,
+            'weights' => $weights,
+            'puntuaciones_por_categoria' => $puntuacionesPorCategoria,
+        ];
+    }
 }
 

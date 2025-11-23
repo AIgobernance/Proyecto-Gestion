@@ -178,11 +178,19 @@ export function ViewEvaluationsPage({
         let evaluacionesFormateadas = [];
         
         if (Array.isArray(data) && data.length > 0) {
+          // Calcular número de evaluación relativo al usuario
+          // Las evaluaciones están ordenadas por fecha DESC, así que la más reciente es la primera (índice 0)
+          // El usuario quiere que la primera en la lista (más reciente) tenga el número más alto
+          // Usar data.length - index para que: índice 0 (más reciente) = #total, índice 1 = #(total-1), ..., última = #1
+          const totalEvaluaciones = data.length;
           evaluacionesFormateadas = data.map((ev, index) => {
             console.log(`=== DEBUG: Evaluación ${index} ===`, ev);
+            // Número de evaluación relativo al usuario (la más reciente tiene el número más alto)
+            const numeroEvaluacion = totalEvaluaciones - index;
+            
             return {
               id: ev.id || ev.Id_Evaluacion || ev.id_evaluacion || null,
-              name: ev.name || ev.Nombre || ev.nombre || `Evaluación #${ev.id || ev.Id_Evaluacion || ev.id_evaluacion || 'N/A'}`,
+              name: ev.name || ev.Nombre || ev.nombre || `Evaluación #${numeroEvaluacion}`,
               date: ev.date || ev.Fecha || ev.fecha || 'N/A',
               time: ev.time || ev.Hora || ev.hora || 'N/A',
               tiempo: ev.tiempo || ev.Tiempo || ev.tiempo || 'N/A',
