@@ -130,6 +130,7 @@ export default function GeneralDashboardPage({
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [period, setPeriod] = useState("month"); // Estado para el período seleccionado
 
   // Funciones para exportar gráficos
   const exportChartAsPNG = (chartId, filename) => {
@@ -189,10 +190,10 @@ export default function GeneralDashboardPage({
     }).catch(err => console.error('Error al exportar PDF:', err));
   };
 
-  // Cargar datos del dashboard
+  // Cargar datos del dashboard cuando cambia el período
   useEffect(() => {
     loadGeneralStats();
-  }, []);
+  }, [period]);
 
   const loadGeneralStats = async () => {
     setLoading(true);
@@ -205,10 +206,11 @@ export default function GeneralDashboardPage({
       }
 
       const axiosClient = window.axios || axios;
-      // Siempre forzar refresh para obtener datos actualizados
+      // Enviar el período seleccionado al backend
       const response = await axiosClient.get('/api/dashboard/general-stats', {
         params: {
           refresh: 'true',
+          period: period, // Enviar el período seleccionado
           _t: Date.now()
         },
         headers: {
@@ -331,7 +333,7 @@ export default function GeneralDashboardPage({
         {/* Toolbar: período, tabs y actualización */}
         <section className="toolbar">
           <div className="toolbar-left">
-            <Select defaultValue="month">
+            <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="btn-outline" style={{width:180}}>
                 <SelectValue placeholder="Seleccionar período" />
               </SelectTrigger>
@@ -377,7 +379,6 @@ export default function GeneralDashboardPage({
                         Tendencia de usuarios
                       </span>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <Badge variant="outline" style={{background:"#eff6ff",borderColor:"#bfdbfe",color:"#1e40af",fontWeight:600}}>6 meses</Badge>
                         <div style={{display:"flex",gap:4}}>
                           <button 
                             onClick={() => exportChartAsPNG('chart-users', 'tendencia-usuarios')}
@@ -449,7 +450,6 @@ export default function GeneralDashboardPage({
                         Evaluaciones por mes
                       </span>
                       <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <Badge variant="outline" style={{background:"#f3e8ff",borderColor:"#d8b4fe",color:"#7c3aed",fontWeight:600}}>5 meses</Badge>
                         <div style={{display:"flex",gap:4}}>
                           <button 
                             onClick={() => exportChartAsPNG('chart-evaluations', 'evaluaciones-por-mes')}

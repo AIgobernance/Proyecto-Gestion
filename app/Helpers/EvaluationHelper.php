@@ -572,5 +572,60 @@ class EvaluationHelper
             'puntuaciones_por_categoria' => $puntuacionesPorCategoria,
         ];
     }
+
+    /**
+     * Obtiene el nivel de madurez en gobernanza de IA basado en el porcentaje de implementación
+     * Según los niveles definidos en el documento de análisis de resultados
+     * 
+     * @param float $porcentaje Porcentaje de implementación (0-100)
+     * @return array Array con 'nivel' (nombre), 'descripcion' (descripción completa), 'rango' (rango de porcentajes)
+     */
+    public static function obtenerNivelMadurez(float $porcentaje): array
+    {
+        // Asegurar que el porcentaje esté en el rango 0-100
+        $porcentaje = max(0, min(100, $porcentaje));
+        
+        if ($porcentaje >= 0 && $porcentaje <= 20) {
+            return [
+                'nivel' => 'Inicial',
+                'descripcion' => 'No hay procesos definidos, gobernanza ad-hoc o inexistente',
+                'rango' => '0-20%',
+                'emoji' => '🌱',
+                'mensaje' => 'Nivel inicial — comienza tu camino en gobernanza de IA'
+            ];
+        } elseif ($porcentaje >= 21 && $porcentaje <= 40) {
+            return [
+                'nivel' => 'Básico',
+                'descripcion' => 'Se reconocen necesidades, se inician algunas políticas y roles',
+                'rango' => '21-40%',
+                'emoji' => '📋',
+                'mensaje' => 'Nivel básico — estás sentando las bases'
+            ];
+        } elseif ($porcentaje >= 41 && $porcentaje <= 60) {
+            return [
+                'nivel' => 'Intermedio',
+                'descripcion' => 'Procesos definidos, controles básicos, monitoreo parcial',
+                'rango' => '41-60%',
+                'emoji' => '📊',
+                'mensaje' => 'Nivel intermedio — ¡sigue mejorando!'
+            ];
+        } elseif ($porcentaje >= 61 && $porcentaje <= 80) {
+            return [
+                'nivel' => 'Avanzado',
+                'descripcion' => 'Procesos maduros, controles robustos, monitoreo proactivo',
+                'rango' => '61-80%',
+                'emoji' => '⭐',
+                'mensaje' => 'Nivel avanzado — excelente trabajo'
+            ];
+        } else { // 81-100
+            return [
+                'nivel' => 'Óptimo',
+                'descripcion' => 'Gobernanza integrada, proactiva, innovadora',
+                'rango' => '81-100%',
+                'emoji' => '🏆',
+                'mensaje' => 'Nivel óptimo — ¡felicidades por la excelencia!'
+            ];
+        }
+    }
 }
 

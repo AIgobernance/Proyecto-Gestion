@@ -124,6 +124,7 @@ export function DashboardPage({
     lastEvaluation: "N/A",
     averageScore: 0,
     completitud: 100,
+    nivelMadurez: null,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -154,8 +155,9 @@ export function DashboardPage({
         setUserStats({
           totalEvaluations: response.data.data.totalEvaluaciones || 0,
           lastEvaluation: response.data.data.ultimaEvaluacion || "N/A",
-          averageScore: Math.round(response.data.data.promedioPuntuacion || 0),
+          averageScore: response.data.data.promedioPuntuacion !== null && response.data.data.promedioPuntuacion !== undefined ? parseFloat(response.data.data.promedioPuntuacion) : 0,
           completitud: Math.round(response.data.data.completitud || 100),
+          nivelMadurez: response.data.data.nivelMadurez || null,
         });
       }
     } catch (err) {
@@ -167,6 +169,7 @@ export function DashboardPage({
         lastEvaluation: "N/A",
         averageScore: 0,
         completitud: 0,
+        nivelMadurez: null,
       });
     } finally {
       setLoading(false);
@@ -256,7 +259,7 @@ export function DashboardPage({
                   <span className="icon-badge" style={{background:"#e9fbf0",color:"#1b9a59"}}>
                     <TrendingUp className="w-5 h-5" />
                   </span>
-                  Score Promedio
+                  Puntuación Promedio
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -264,10 +267,14 @@ export function DashboardPage({
                   <div style={{display:"flex",alignItems:"center",gap:8,fontSize:32,color:"#173b8f"}}>
                     <Loader2 className="w-6 h-6 animate-spin" />
                   </div>
+                ) : userStats.averageScore > 0 ? (
+                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.averageScore.toFixed(1)}%</div>
                 ) : (
-                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.averageScore}%</div>
+                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>0%</div>
                 )}
-                <CardDescription className="text-slate-500 text-xs mt-1">Nivel de madurez</CardDescription>
+                <CardDescription className="text-slate-500 text-xs mt-1">
+                  {userStats.nivelMadurez ? `${userStats.nivelMadurez.nivel} (${userStats.nivelMadurez.rango})` : "Nivel de madurez"}
+                </CardDescription>
               </CardContent>
             </Card>
 
@@ -372,7 +379,21 @@ export function DashboardPage({
                 <span className="ico" style={{background:"#10b981"}}><Award className="w-5 h-5" /></span>
                 <div className="txt centered">  
                   <h4>Nivel Actual</h4>
-                  <small>Intermedio — ¡sigue mejorando!</small>
+                  <small>
+                    {loading ? (
+                      "Cargando..."
+                    ) : userStats.nivelMadurez ? (
+                      <>
+                        <strong>{userStats.nivelMadurez.nivel}</strong>
+                        <br />
+                        {userStats.nivelMadurez.mensaje ? userStats.nivelMadurez.mensaje.replace(userStats.nivelMadurez.nivel + " — ", "") : userStats.nivelMadurez.descripcion}
+                      </>
+                    ) : userStats.averageScore > 0 ? (
+                      "Calculando nivel..."
+                    ) : (
+                      "Completa una evaluación para ver tu nivel"
+                    )}
+                  </small>
                 </div>
               </div>
               </CardContent>

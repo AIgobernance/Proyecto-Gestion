@@ -604,8 +604,8 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
         >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Restablecer Contraseña</DialogTitle>
-              <DialogDescription>Ingresa tu correo electrónico y nueva contraseña</DialogDescription>
+              <DialogTitle style={{color: "#0b1324", fontSize: 22, fontWeight: 800, margin: 0, marginBottom: 4}}>Restablecer Contraseña</DialogTitle>
+              <p style={{color: "#334155", fontSize: 14, margin: 0, marginTop: 4}}>Ingresa tu correo electrónico y nueva contraseña</p>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
@@ -617,7 +617,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
               )}
 
               <div className="field">
-                <Label htmlFor="reset-email">Correo Electrónico</Label>
+                <Label htmlFor="reset-email" style={{color: "#0b1324", fontWeight: 700}}>Correo Electrónico</Label>
                 <Input
                   id="reset-email"
                   type="email"
@@ -628,7 +628,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
               </div>
 
               <div className="field">
-                <Label htmlFor="new-password">Nueva contraseña</Label>
+                <Label htmlFor="new-password" style={{color: "#0b1324", fontWeight: 700}}>Nueva contraseña</Label>
                 <Input
                   id="new-password"
                   type="password"
@@ -639,7 +639,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
               </div>
 
               <div className="field">
-                <Label htmlFor="confirm-password">Confirmar contraseña</Label>
+                <Label htmlFor="confirm-password" style={{color: "#0b1324", fontWeight: 700}}>Confirmar contraseña</Label>
                 <Input
                   id="confirm-password"
                   type="password"

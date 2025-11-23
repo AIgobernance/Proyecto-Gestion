@@ -438,7 +438,91 @@ class EvaluacionRepository
     public function calcularPromedioPuntuacion(int $idUsuario, string $columnaPuntuacion = 'Puntuacion'): ?float
     {
         try {
-            // Verificar si la columna existe
+            // Intentar primero obtener el promedio desde la tabla Resultados (prioridad)
+            try {
+                $tablaResultadosExiste = DB::selectOne("
+                    SELECT COUNT(*) as existe 
+                    FROM INFORMATION_SCHEMA.TABLES 
+                    WHERE TABLE_NAME = 'Resultados'
+                ");
+                
+                if ($tablaResultadosExiste && $tablaResultadosExiste->existe > 0) {
+                    // Verificar si la tabla Resultados tiene la columna Puntuacion
+                    $columnaPuntuacionExiste = DB::selectOne("
+                        SELECT COUNT(*) as existe 
+                        FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_NAME = 'Resultados' 
+                        AND COLUMN_NAME = 'Puntuacion'
+                    ");
+                    
+                    if ($columnaPuntuacionExiste && $columnaPuntuacionExiste->existe > 0) {
+                        // Verificar si la tabla Evaluacion tiene columna Puntuacion
+                        $columnaEvaluacionExiste = DB::selectOne("
+                            SELECT COUNT(*) as existe 
+                            FROM INFORMATION_SCHEMA.COLUMNS 
+                            WHERE TABLE_NAME = ? AND COLUMN_NAME = 'Puntuacion'
+                        ", [$this->table]);
+                        
+                        $tienePuntuacionEvaluacion = ($columnaEvaluacionExiste && $columnaEvaluacionExiste->existe > 0);
+                        
+                        // Construir el SELECT según las columnas disponibles
+                        if ($tienePuntuacionEvaluacion) {
+                            // Ambas tablas tienen Puntuacion
+                            $sql = "
+                                SELECT 
+                                    COALESCE(r.[Puntuacion], e.[Puntuacion]) as PuntuacionFinal
+                                FROM [{$this->table}] e
+                                LEFT JOIN [Resultados] r ON e.[Id_Evaluacion] = r.[Id_Evaluacion]
+                                WHERE e.[Id_Usuario] = ?
+                                    AND COALESCE(r.[Puntuacion], e.[Puntuacion]) IS NOT NULL
+                            ";
+                        } else {
+                            // Solo Resultados tiene Puntuacion
+                            $sql = "
+                                SELECT 
+                                    r.[Puntuacion] as PuntuacionFinal
+                                FROM [{$this->table}] e
+                                LEFT JOIN [Resultados] r ON e.[Id_Evaluacion] = r.[Id_Evaluacion]
+                                WHERE e.[Id_Usuario] = ?
+                                    AND r.[Puntuacion] IS NOT NULL
+                            ";
+                        }
+                        
+                        // Calcular promedio usando LEFT JOIN para obtener todas las evaluaciones
+                        // y priorizar Puntuacion de Resultados, con fallback a Evaluacion
+                        $resultados = DB::select($sql, [$idUsuario]);
+                        
+                        if (!empty($resultados)) {
+                            $suma = 0;
+                            $contador = 0;
+                            foreach ($resultados as $row) {
+                                if (isset($row->PuntuacionFinal) && $row->PuntuacionFinal !== null) {
+                                    $valor = (float) $row->PuntuacionFinal;
+                                    if ($valor >= 0 && $valor <= 100) {
+                                        $suma += $valor;
+                                        $contador++;
+                                    }
+                                }
+                            }
+                            
+                            if ($contador > 0) {
+                                $promedio = $suma / $contador;
+                                Log::info('Promedio calculado desde Resultados', [
+                                    'promedio' => $promedio,
+                                    'total_evaluaciones' => $contador
+                                ]);
+                                return round($promedio, 2);
+                            }
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Error al calcular promedio desde Resultados, intentando fallback', [
+                    'error' => $e->getMessage()
+                ]);
+            }
+            
+            // Fallback: usar solo la tabla Evaluacion
             $columnaExiste = DB::selectOne("
                 SELECT COUNT(*) as existe 
                 FROM INFORMATION_SCHEMA.COLUMNS 
@@ -571,11 +655,34 @@ class EvaluacionRepository
                 }
             }
 
+            // Calcular nivel de madurez basado en el promedio de puntuación
+            $nivelMadurez = null;
+            if ($promedioPuntuacion !== null && is_numeric($promedioPuntuacion) && $promedioPuntuacion >= 0) {
+                try {
+                    $nivelMadurez = \App\Helpers\EvaluationHelper::obtenerNivelMadurez((float)$promedioPuntuacion);
+                    Log::info('Nivel de madurez calculado', [
+                        'promedio' => $promedioPuntuacion,
+                        'nivel' => $nivelMadurez['nivel'] ?? 'N/A'
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('Error al calcular nivel de madurez', [
+                        'error' => $e->getMessage(),
+                        'promedio' => $promedioPuntuacion
+                    ]);
+                }
+            } else {
+                Log::info('No se calcula nivel de madurez', [
+                    'promedio' => $promedioPuntuacion,
+                    'razon' => 'promedio es null o inválido'
+                ]);
+            }
+
             return [
                 'totalEvaluaciones' => $totalEvaluaciones,
                 'ultimaEvaluacion' => $fechaUltima ?? 'N/A',
                 'promedioPuntuacion' => $promedioPuntuacion ?? 0,
                 'completitud' => $completitud ?? ($totalEvaluaciones > 0 ? 0 : 100.0),
+                'nivelMadurez' => $nivelMadurez,
             ];
         } catch (\Exception $e) {
             Log::error('Error al obtener estadísticas de evaluaciones', [
@@ -590,6 +697,7 @@ class EvaluacionRepository
                 'ultimaEvaluacion' => 'N/A',
                 'promedioPuntuacion' => 0,
                 'completitud' => 0,
+                'nivelMadurez' => null,
             ];
         }
     }

@@ -177,9 +177,30 @@ class DashboardController extends Controller
     public function getGeneralStats(Request $request)
     {
         try {
+            // Obtener el período seleccionado (week, month, quarter, year)
+            $period = $request->input('period', 'month');
+            
+            // Calcular la fecha de inicio según el período
+            switch($period) {
+                case 'week':
+                    $fechaInicio = DB::raw("DATEADD(DAY, -7, GETDATE())");
+                    break;
+                case 'month':
+                    $fechaInicio = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                    break;
+                case 'quarter':
+                    $fechaInicio = DB::raw("DATEADD(MONTH, -3, GETDATE())");
+                    break;
+                case 'year':
+                    $fechaInicio = DB::raw("DATEADD(YEAR, -1, GETDATE())");
+                    break;
+                default:
+                    $fechaInicio = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+            }
+            
             // Cachear estadísticas generales por 1 minuto
             $forceRefresh = $request->has('refresh') && $request->input('refresh') === 'true';
-            $cacheKey = "dashboard_general_stats";
+            $cacheKey = "dashboard_general_stats_{$period}";
             
             if ($forceRefresh) {
                 Cache::forget($cacheKey);
@@ -187,7 +208,7 @@ class DashboardController extends Controller
 
             // Temporalmente deshabilitar caché para debugging
             Cache::forget($cacheKey);
-            $estadisticas = (function () {
+            $estadisticas = (function () use ($period, $fechaInicio) {
                 try {
                     // Total de usuarios
                     $totalUsuarios = DB::table('usuario')->count();
@@ -221,34 +242,78 @@ class DashboardController extends Controller
                 ");
                 
                 if ($tieneFechaCreacion && $tieneFechaCreacion->existe > 0) {
-                    $usuariosPorMes = DB::select("
-                        SELECT 
-                            DATENAME(MONTH, FechaCrea) as month,
-                            MONTH(FechaCrea) as month_num,
-                            YEAR(FechaCrea) as year,
-                            COUNT(*) as users
-                        FROM [usuario]
-                        WHERE FechaCrea >= DATEADD(MONTH, -6, GETDATE())
-                        GROUP BY DATENAME(MONTH, FechaCrea), MONTH(FechaCrea), YEAR(FechaCrea)
-                        ORDER BY YEAR(FechaCrea), MONTH(FechaCrea)
-                    ");
+                    if ($period === 'week') {
+                        $usuariosPorMes = DB::select("
+                            SELECT 
+                                CAST(FechaCrea AS DATE) as date,
+                                COUNT(*) as users
+                            FROM [usuario]
+                            WHERE FechaCrea >= DATEADD(DAY, -7, GETDATE())
+                            GROUP BY CAST(FechaCrea AS DATE)
+                            ORDER BY CAST(FechaCrea AS DATE)
+                        ");
+                    } else {
+                        switch($period) {
+                            case 'month':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                                break;
+                            case 'quarter':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -3, GETDATE())");
+                                break;
+                            case 'year':
+                                $fechaInicioSQL = DB::raw("DATEADD(YEAR, -1, GETDATE())");
+                                break;
+                            default:
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                        }
+                        
+                        $usuariosPorMes = DB::table('usuario')
+                            ->select(DB::raw('DATENAME(MONTH, FechaCrea) as month, MONTH(FechaCrea) as month_num, YEAR(FechaCrea) as year, COUNT(*) as users'))
+                            ->where('FechaCrea', '>=', $fechaInicioSQL)
+                            ->groupBy(DB::raw('DATENAME(MONTH, FechaCrea), MONTH(FechaCrea), YEAR(FechaCrea)'))
+                            ->orderBy(DB::raw('YEAR(FechaCrea), MONTH(FechaCrea)'))
+                            ->get()
+                            ->toArray();
+                    }
                 } else {
                     $usuariosPorMes = [];
                 }
 
-                // Evaluaciones por mes (últimos 5 meses)
+                // Evaluaciones por período
                 try {
-                    $evaluacionesPorMes = DB::select("
-                        SELECT 
-                            DATENAME(MONTH, Fecha) as month,
-                            MONTH(Fecha) as month_num,
-                            YEAR(Fecha) as year,
-                            COUNT(*) as evaluations
-                        FROM [Evaluacion]
-                        WHERE Fecha >= DATEADD(MONTH, -5, GETDATE())
-                        GROUP BY DATENAME(MONTH, Fecha), MONTH(Fecha), YEAR(Fecha)
-                        ORDER BY YEAR(Fecha), MONTH(Fecha)
-                    ");
+                    if ($period === 'week') {
+                        $evaluacionesPorMes = DB::select("
+                            SELECT 
+                                CAST(Fecha AS DATE) as date,
+                                COUNT(*) as evaluations
+                            FROM [Evaluacion]
+                            WHERE Fecha >= DATEADD(DAY, -7, GETDATE())
+                            GROUP BY CAST(Fecha AS DATE)
+                            ORDER BY CAST(Fecha AS DATE)
+                        ");
+                    } else {
+                        switch($period) {
+                            case 'month':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                                break;
+                            case 'quarter':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -3, GETDATE())");
+                                break;
+                            case 'year':
+                                $fechaInicioSQL = DB::raw("DATEADD(YEAR, -1, GETDATE())");
+                                break;
+                            default:
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                        }
+                        
+                        $evaluacionesPorMes = DB::table('Evaluacion')
+                            ->select(DB::raw('DATENAME(MONTH, Fecha) as month, MONTH(Fecha) as month_num, YEAR(Fecha) as year, COUNT(*) as evaluations'))
+                            ->where('Fecha', '>=', $fechaInicioSQL)
+                            ->groupBy(DB::raw('DATENAME(MONTH, Fecha), MONTH(Fecha), YEAR(Fecha)'))
+                            ->orderBy(DB::raw('YEAR(Fecha), MONTH(Fecha)'))
+                            ->get()
+                            ->toArray();
+                    }
                 } catch (\Exception $e) {
                     Log::warning('Error al obtener evaluaciones por mes', ['error' => $e->getMessage()]);
                     $evaluacionesPorMes = [];
@@ -288,17 +353,39 @@ class DashboardController extends Controller
                 ");
                 
                 if ($tieneFechaCreacionDocs && $tieneFechaCreacionDocs->existe > 0) {
-                    $documentosPorMes = DB::select("
-                        SELECT 
-                            DATENAME(MONTH, Fecha_Creacion) as month,
-                            MONTH(Fecha_Creacion) as month_num,
-                            YEAR(Fecha_Creacion) as year,
-                            COUNT(*) as documents
-                        FROM [Documentos_Adjuntos]
-                        WHERE Fecha_Creacion >= DATEADD(MONTH, -5, GETDATE())
-                        GROUP BY DATENAME(MONTH, Fecha_Creacion), MONTH(Fecha_Creacion), YEAR(Fecha_Creacion)
-                        ORDER BY YEAR(Fecha_Creacion), MONTH(Fecha_Creacion)
-                    ");
+                    if ($period === 'week') {
+                        $documentosPorMes = DB::select("
+                            SELECT 
+                                CAST(Fecha_Creacion AS DATE) as date,
+                                COUNT(*) as documents
+                            FROM [Documentos_Adjuntos]
+                            WHERE Fecha_Creacion >= DATEADD(DAY, -7, GETDATE())
+                            GROUP BY CAST(Fecha_Creacion AS DATE)
+                            ORDER BY CAST(Fecha_Creacion AS DATE)
+                        ");
+                    } else {
+                        switch($period) {
+                            case 'month':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                                break;
+                            case 'quarter':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -3, GETDATE())");
+                                break;
+                            case 'year':
+                                $fechaInicioSQL = DB::raw("DATEADD(YEAR, -1, GETDATE())");
+                                break;
+                            default:
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                        }
+                        
+                        $documentosPorMes = DB::table('Documentos_Adjuntos')
+                            ->select(DB::raw('DATENAME(MONTH, Fecha_Creacion) as month, MONTH(Fecha_Creacion) as month_num, YEAR(Fecha_Creacion) as year, COUNT(*) as documents'))
+                            ->where('Fecha_Creacion', '>=', $fechaInicioSQL)
+                            ->groupBy(DB::raw('DATENAME(MONTH, Fecha_Creacion), MONTH(Fecha_Creacion), YEAR(Fecha_Creacion)'))
+                            ->orderBy(DB::raw('YEAR(Fecha_Creacion), MONTH(Fecha_Creacion)'))
+                            ->get()
+                            ->toArray();
+                    }
                 } else {
                     $documentosPorMes = [];
                 }
@@ -414,21 +501,39 @@ class DashboardController extends Controller
                             'percentChange' => $percentChangeDocumentos
                         ]
                     ],
-                    'userTrend' => array_map(function($item) {
-                        // Abreviar nombres de meses a 3 letras
-                        $mesAbrev = substr($item->month, 0, 3);
-                        return [
-                            'month' => $mesAbrev,
-                            'users' => (int)$item->users
-                        ];
+                    'userTrend' => array_map(function($item) use ($period) {
+                        if ($period === 'week') {
+                            // Para semana, usar formato de fecha
+                            $fecha = is_string($item->date) ? new \DateTime($item->date) : $item->date;
+                            return [
+                                'month' => $fecha instanceof \DateTime ? $fecha->format('d/m') : (string)$item->date,
+                                'users' => (int)$item->users
+                            ];
+                        } else {
+                            // Abreviar nombres de meses a 3 letras
+                            $mesAbrev = substr($item->month, 0, 3);
+                            return [
+                                'month' => $mesAbrev,
+                                'users' => (int)$item->users
+                            ];
+                        }
                     }, $usuariosPorMes),
-                    'evaluationsPerMonth' => array_map(function($item) {
-                        // Abreviar nombres de meses a 3 letras
-                        $mesAbrev = substr($item->month, 0, 3);
-                        return [
-                            'month' => $mesAbrev,
-                            'evaluations' => (int)$item->evaluations
-                        ];
+                    'evaluationsPerMonth' => array_map(function($item) use ($period) {
+                        if ($period === 'week') {
+                            // Para semana, usar formato de fecha
+                            $fecha = is_string($item->date) ? new \DateTime($item->date) : $item->date;
+                            return [
+                                'month' => $fecha instanceof \DateTime ? $fecha->format('d/m') : (string)$item->date,
+                                'evaluations' => (int)$item->evaluations
+                            ];
+                        } else {
+                            // Abreviar nombres de meses a 3 letras
+                            $mesAbrev = substr($item->month, 0, 3);
+                            return [
+                                'month' => $mesAbrev,
+                                'evaluations' => (int)$item->evaluations
+                            ];
+                        }
                     }, $evaluacionesPorMes),
                     'distributionByFramework' => $distribucionConColores,
                     'documentsPerMonth' => array_map(function($item) {

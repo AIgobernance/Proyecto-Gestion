@@ -127,6 +127,7 @@ export function ViewEvaluationsPage({
   const [evaluations, setEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [avgScore, setAvgScore] = useState(0); // Promedio desde el backend para consistencia
 
   /* ====== Cargar evaluaciones ====== */
   useEffect(() => {
@@ -269,14 +270,37 @@ export function ViewEvaluationsPage({
     return filteredEvals;
   }, [evaluations, range]);
 
-  // Calcular promedio de TODAS las evaluaciones (no solo las filtradas) con puntuación válida (> 0)
-  const avgScore = useMemo(() => {
-    if (evaluations.length === 0) return 0;
-    const evaluacionesConPuntuacion = evaluations.filter(ev => ev.score && ev.score > 0);
-    if (evaluacionesConPuntuacion.length === 0) return 0;
-    const suma = evaluacionesConPuntuacion.reduce((acc, ev) => acc + (parseFloat(ev.score) || 0), 0);
-    return Math.round(suma / evaluacionesConPuntuacion.length);
-  }, [evaluations]);
+  // Cargar promedio desde el backend para mantener consistencia con el dashboard
+  useEffect(() => {
+    const loadAverageScore = async () => {
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const axiosClient = window.axios || axios;
+        const response = await axiosClient.get('/api/dashboard/stats', {
+          params: {
+            refresh: 'true',
+            _t: Date.now()
+          }
+        });
+
+        if (response.data && response.data.success && response.data.data) {
+          const promedio = response.data.data.promedioPuntuacion;
+          // Usar el mismo redondeo que el dashboard para consistencia
+          setAvgScore(promedio !== null && promedio !== undefined ? Math.round(promedio) : 0);
+        }
+      } catch (err) {
+        console.error('Error al cargar promedio del dashboard:', err);
+        setAvgScore(0);
+      }
+    };
+
+    // Cargar promedio cuando el componente se monta o cuando cambian las evaluaciones
+    loadAverageScore();
+  }, [evaluations.length]); // Solo cuando cambia la cantidad de evaluaciones
 
   return (
     <div className="page">
