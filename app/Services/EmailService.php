@@ -41,21 +41,55 @@ class EmailService
         try {
             $activationUrl = JwtService::generateActivationUrl($activationToken);
 
+            // Logging detallado antes de enviar
+            Log::info('Intentando enviar email de activación', [
+                'email' => $email,
+                'username' => $userData['username'] ?? 'N/A',
+                'activation_url' => $activationUrl,
+                'mail_driver' => config('mail.default'),
+                'mail_host' => config('mail.mailers.smtp.host'),
+                'mail_from' => config('mail.from.address'),
+                'app_url' => config('app.url'),
+                'request_host' => request() ? request()->getHost() : 'N/A',
+                'request_scheme' => request() ? request()->getScheme() : 'N/A',
+                'is_console' => app()->runningInConsole()
+            ]);
+
+            // Validar que la URL no sea localhost antes de enviar
+            if (str_contains($activationUrl, 'localhost') || str_contains($activationUrl, '127.0.0.1')) {
+                Log::warning('URL de activación contiene localhost - podría ser rechazada por servidores SMTP', [
+                    'activation_url' => $activationUrl,
+                    'app_url' => config('app.url')
+                ]);
+            }
+
             Mail::to($email)->send(new AccountActivationMail(
                 $userData,
                 $activationUrl
             ));
 
-            Log::info('Email de activación enviado', [
+            Log::info('Email de activación enviado exitosamente', [
                 'email' => $email,
-                'username' => $userData['username'] ?? 'N/A'
+                'username' => $userData['username'] ?? 'N/A',
+                'activation_url' => $activationUrl
             ]);
 
             return true;
+        } catch (\Illuminate\Mail\MailException $e) {
+            Log::error('Error de Mail al enviar email de activación', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+                'previous_error' => $e->getPrevious() ? $e->getPrevious()->getMessage() : null,
+                'previous_code' => $e->getPrevious() ? $e->getPrevious()->getCode() : null,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return false;
         } catch (\Exception $e) {
             Log::error('Error al enviar email de activación', [
                 'email' => $email,
                 'error' => $e->getMessage(),
+                'class' => get_class($e),
                 'trace' => $e->getTraceAsString()
             ]);
 

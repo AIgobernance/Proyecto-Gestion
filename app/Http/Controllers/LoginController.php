@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Observer\ObserverManager;
 use App\Services\TwoFactorService;
 use App\Services\EmailService;
+use App\Services\SmsService;
 
 class LoginController extends Controller
 {
@@ -344,8 +345,61 @@ class LoginController extends Controller
                 Cache::forget($attemptsCacheKey);
                 TwoFactorService::clearCode($userId);
             } else if ($verificationMethod === 'sms') {
-                // Para SMS, aceptar cualquier código (sin validación real)
-                Log::info('Código SMS verificado (sin validación real)', [
+                // Verificar código SMS usando TwoFactorService
+                $isValid = TwoFactorService::verifyCode($userId, $inputCode);
+
+                if (!$isValid) {
+                    // Incrementar contador de intentos fallidos
+                    $attempts++;
+                    Cache::put($attemptsCacheKey, $attempts, now()->addMinutes(15)); // TTL de 15 minutos
+                    
+                    // Determinar mensaje según el número de intentos
+                    $errorMessage = '';
+                    $shouldBlock = false;
+                    
+                    if ($attempts == 1) {
+                        $errorMessage = 'Código incorrecto. Te quedan 2 intentos.';
+                    } elseif ($attempts == 2) {
+                        $errorMessage = 'Código incorrecto. Te queda 1 intento. Al tercer intento fallido, tu cuenta será bloqueada.';
+                    } elseif ($attempts >= 3) {
+                        $errorMessage = 'Tu cuenta ha sido bloqueada debido a múltiples intentos fallidos de verificación. Por favor, contacte con soporte para más información.';
+                        $shouldBlock = true;
+                        
+                        // Bloquear la cuenta
+                        try {
+                            $this->usuarioRepository->actualizar($userId, [
+                                'Activate' => 0 // Bloquear cuenta
+                            ]);
+                            
+                            // Limpiar sesión de 2FA pendiente
+                            $request->session()->forget('pending_2fa_user');
+                            $request->session()->forget('2fa_method');
+                            
+                            Log::warning('Cuenta bloqueada por intentos fallidos de 2FA (SMS)', [
+                                'user_id' => $userId,
+                                'attempts' => $attempts
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error('Error al bloquear cuenta después de intentos fallidos de 2FA (SMS)', [
+                                'user_id' => $userId,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
+                    
+                    return response()->json([
+                        'message' => 'Código de verificación incorrecto',
+                        'errors' => ['code' => [$errorMessage]],
+                        'attempts' => $attempts,
+                        'blocked' => $shouldBlock,
+                        'clear_code' => true // Indicar al frontend que debe limpiar el código
+                    ], 400);
+                }
+                
+                // Si el código es válido, limpiar los intentos fallidos
+                Cache::forget($attemptsCacheKey);
+                
+                Log::info('Código SMS verificado exitosamente', [
                     'user_id' => $userId
                 ]);
             }
@@ -552,14 +606,64 @@ class LoginController extends Controller
                     'method' => 'email'
                 ], 200);
             } else if ($method === 'sms') {
-                // Para SMS, no enviamos código real (funciona sin validar)
-                // Solo retornamos éxito para que el frontend continúe
-                Log::info('Método SMS seleccionado (sin validación)', [
-                    'user_id' => $userId
+                // Obtener número de teléfono del usuario
+                $userPhone = $usuarioBD->Telefono ?? $usuarioBD->telefono ?? null;
+
+                if (!$userPhone) {
+                    return response()->json([
+                        'message' => 'Número de teléfono no encontrado',
+                        'errors' => ['method' => ['No se encontró el número de teléfono del usuario']]
+                    ], 400);
+                }
+
+                // Generar código 2FA de 6 dígitos
+                $twoFactorCode = TwoFactorService::generateCode();
+
+                // Guardar código en caché (válido por 10 minutos)
+                TwoFactorService::storeCode($userId, $twoFactorCode, 10);
+
+                // Enviar código por SMS usando Twilio
+                $smsService = new \App\Services\SmsService();
+                $smsResult = $smsService->sendVerificationCode($userPhone, $twoFactorCode);
+
+                if (!$smsResult['success']) {
+                    // Limpiar código si no se pudo enviar
+                    TwoFactorService::clearCode($userId);
+                    
+                    Log::error('Error al enviar código SMS', [
+                        'user_id' => $userId,
+                        'phone' => $userPhone,
+                        'error' => $smsResult['message']
+                    ]);
+
+                    // Determinar el mensaje de error apropiado
+                    $errorMessage = $smsResult['message'] ?? 'Error al enviar el código. Por favor, intenta nuevamente o usa el método de email.';
+                    
+                    if (str_contains($smsResult['message'], 'no disponible') || str_contains($smsResult['message'], 'no configurado')) {
+                        $errorMessage = 'El servicio SMS no está configurado. Por favor, contacta al administrador o usa el método de email.';
+                        Log::warning('Servicio SMS no configurado - usuario intentó usar SMS', [
+                            'user_id' => $userId,
+                            'phone' => $userPhone
+                        ]);
+                    } elseif (isset($smsResult['error_code']) && $smsResult['error_code'] == 21608) {
+                        // Error de número no verificado en cuenta de prueba
+                        $errorMessage = 'Tu número de teléfono no está verificado en Twilio. Las cuentas de prueba solo pueden enviar SMS a números verificados. Por favor, usa el método de email.';
+                    }
+
+                    return response()->json([
+                        'message' => 'Error al seleccionar método SMS',
+                        'errors' => ['method' => [$errorMessage]]
+                    ], 400); // Cambiar a 400 en lugar de 500 para errores de negocio
+                }
+
+                Log::info('Código 2FA enviado por SMS via Twilio', [
+                    'user_id' => $userId,
+                    'phone' => $userPhone,
+                    'message_sid' => $smsResult['message_sid'] ?? 'N/A'
                 ]);
 
                 return response()->json([
-                    'message' => 'Método SMS seleccionado',
+                    'message' => 'Código de verificación enviado a tu número de teléfono',
                     'method' => 'sms'
                 ], 200);
             }

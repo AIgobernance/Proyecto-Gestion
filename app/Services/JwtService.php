@@ -162,7 +162,24 @@ class JwtService
      */
     public static function generateActivationUrl(string $token): string
     {
+        // Intentar obtener la URL desde múltiples fuentes para evitar problemas con IPs externas
         $baseUrl = config('app.url', 'http://localhost:8000');
+        
+        // Si la URL es localhost o 127.0.0.1, intentar usar la IP del servidor o la del request
+        if (str_contains($baseUrl, 'localhost') || str_contains($baseUrl, '127.0.0.1')) {
+            // Intentar obtener la URL desde el request actual si está disponible
+            if (app()->runningInConsole() === false && request()) {
+                $scheme = request()->getScheme();
+                $host = request()->getHost();
+                $port = request()->getPort();
+                
+                // Solo usar la URL del request si no es localhost
+                if (!str_contains($host, 'localhost') && !str_contains($host, '127.0.0.1')) {
+                    $baseUrl = $scheme . '://' . $host . ($port && $port != 80 && $port != 443 ? ':' . $port : '');
+                }
+            }
+        }
+        
         return rtrim($baseUrl, '/') . '/verify-email?token=' . urlencode($token);
     }
 }
