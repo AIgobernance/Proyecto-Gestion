@@ -35,11 +35,11 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 2. Abrir el repositorio y desplegar terminal.
 3. En la terminal escribir "npm run dev"
 
-<figure><img src=".gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 4. Abrir otra pestañas en la terminal y escribir el comando "php artisan serve".
 
-<figure><img src=".gitbook/assets/image (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 5. Entrar al link que proporciona la terminal.
 6. Seleccionar una de las siguientes opciones:
@@ -110,7 +110,7 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 #### Formulario de Evaluación
 
-
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-15 180836.png" alt=""><figcaption></figcaption></figure>
 
 #### Visualización de Resultados
 
@@ -118,7 +118,7 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 #### Hoja de Ruta Personalizada
 
-
+<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
 
 #### Historial de Evaluaciones
 
@@ -194,7 +194,7 @@ Es el núcleo del sistema.
 * Permite subir documentos de respaldo (PDF) con un máximo de 2MB, estos documentos son si aplican gobernanza en las organizaciones.
 * Al finalizar, los datos se envían al backend Laravel → n8n → IA.
 
-
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-15 180836 (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Módulo de Documentación
 
@@ -203,7 +203,7 @@ Es el núcleo del sistema.
 * Cada archivo se asocia a una evaluación registrada.
 * Permite subir documentos de respaldo (PDF) con un máximo de 2MB, estos documentos son si aplican gobernanza en las organizaciones.
 
-
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-23 115701.png" alt=""><figcaption></figcaption></figure>
 
 #### Módulo de Resultados
 
@@ -220,7 +220,9 @@ Muestra el resultado analizado por la IA, incluyendo:
 * El PDF se genera automáticamente desde la IA vía n8n y se guarda en el servidor.
 * El usuario puede acceder con un botón “Descargar hoja de ruta” en la vista de resultados.
 
+<figure><img src=".gitbook/assets/hojade ruta.png" alt=""><figcaption></figcaption></figure>
 
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-23 115051.png" alt=""><figcaption></figcaption></figure>
 
 #### Modulo de Historial de Evaluaciones
 
@@ -301,7 +303,7 @@ Al iniciar sesión, el Administrador accede a un **panel de control** con acceso
 
 #### Panel
 
-<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Administración de Usuarios
 
@@ -317,15 +319,7 @@ Al iniciar sesión, el Administrador accede a un **panel de control** con acceso
 
 #### Dashboard General
 
-<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-13 095651 (1).png" alt=""><figcaption></figcaption></figure>
-
-#### Analiticas
-
-<figure><img src=".gitbook/assets/image (7).png" alt=""><figcaption></figcaption></figure>
-
-#### Actividad Reciente
-
-<figure><img src=".gitbook/assets/image (8).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/Imagen de WhatsApp 2025-11-23 a las 13.05.27_a5aa2bc4 (1).jpg" alt=""><figcaption></figcaption></figure>
 
 ### Restablecimiento de Contraseña
 
@@ -373,18 +367,16 @@ Este modulo nos permite ingresar las credenciales creadas en el registro para ac
 
 <figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 141955.png" alt=""><figcaption></figcaption></figure>
 
-#### Modulo de Dashboards Descriptivos
+#### Modulo de Dashboard Descriptivo
 
 El panel presenta información visual en tiempo real sobre el uso del sistema:
 
 * Cantidad de organizaciones registradas.
 * Número total de evaluaciones completadas.
-* Estado de autenticaciones 2FA (por correo o SMS).
-* Actividad general de los usuarios.
+* Documentos Generados.
+* Graficas de Actividades generales de los usuarios por tiempo.
 
-<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
-
-<figure><img src=".gitbook/assets/image (2).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/Imagen de WhatsApp 2025-11-23 a las 13.05.27_a5aa2bc4.jpg" alt=""><figcaption></figcaption></figure>
 
 #### Modulo de Administración de Usuarios
 
@@ -436,4 +428,4 @@ El aplicativo emplea autenticación 2FA (autenticación de doble factor) para re
 
 Para consultas o asistencia:
 
-<mark style="color:blue;">pgestionti@gmail.com</mark>\
+<mark style="color:blue;">pgestionti@gmail.com</mark><br>
