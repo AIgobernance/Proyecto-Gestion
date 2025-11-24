@@ -40,6 +40,7 @@ return array(
     'App\\Services\\EmailService' => $baseDir . '/app/Services/EmailService.php',
     'App\\Services\\JwtService' => $baseDir . '/app/Services/JwtService.php',
     'App\\Services\\N8nService' => $baseDir . '/app/Services/N8nService.php',
+    'App\\Services\\SmsService' => $baseDir . '/app/Services/SmsService.php',
     'App\\Services\\TwoFactorService' => $baseDir . '/app/Services/TwoFactorService.php',
     'Attribute' => $vendorDir . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
     'Barryvdh\\DomPDF\\Facade\\Pdf' => $vendorDir . '/barryvdh/laravel-dompdf/src/Facade/Pdf.php',

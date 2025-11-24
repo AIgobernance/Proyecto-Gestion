@@ -451,20 +451,55 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
     };
   }, [chartData, pdfReady]);
 
-  const handleDownloadPdf = () => {
-    if (pdfUrl) {
+  const handleDownloadPdf = async () => {
+    if (!id) {
+      console.error('No hay ID de evaluación para descargar');
+      return;
+    }
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      
+      // Usar el endpoint de descarga que valida permisos y envía headers correctos
+      const response = await axiosClient.get(`/api/evaluation/${id}/download-pdf`, {
+        responseType: 'blob', // Importante: indicar que esperamos un archivo binario
+        timeout: 60000, // 60 segundos de timeout para archivos grandes
+      });
+
+      // Crear un blob del PDF descargado
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      
       // Crear un enlace temporal para descargar el PDF
       const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = `evaluacion-${id || 'resultados'}.pdf`; // Nombre del archivo
-      link.target = '_blank';
+      link.href = url;
+      link.download = `evaluacion-${id || 'resultados'}.pdf`;
       document.body.appendChild(link);
       link.click();
+      
+      // Limpiar
       document.body.removeChild(link);
-    } else if (onDownloadPdf) {
-      onDownloadPdf();
-    } else {
-      console.error('No hay URL de PDF disponible para descargar');
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error al descargar PDF:', err);
+      
+      // Fallback: intentar usar la URL directa si el endpoint falla
+      if (pdfUrl) {
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `evaluacion-${id || 'resultados'}.pdf`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert('Error al descargar el PDF. Por favor, intenta más tarde.');
+      }
     }
   };
 

@@ -619,6 +619,7 @@ class ComposerStaticInitc514d8f7b9fc5970bdd94287905ef584
         'App\\Services\\EmailService' => __DIR__ . '/../..' . '/app/Services/EmailService.php',
         'App\\Services\\JwtService' => __DIR__ . '/../..' . '/app/Services/JwtService.php',
         'App\\Services\\N8nService' => __DIR__ . '/../..' . '/app/Services/N8nService.php',
+        'App\\Services\\SmsService' => __DIR__ . '/../..' . '/app/Services/SmsService.php',
         'App\\Services\\TwoFactorService' => __DIR__ . '/../..' . '/app/Services/TwoFactorService.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
         'Barryvdh\\DomPDF\\Facade\\Pdf' => __DIR__ . '/..' . '/barryvdh/laravel-dompdf/src/Facade/Pdf.php',

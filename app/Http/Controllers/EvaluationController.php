@@ -632,6 +632,96 @@ class EvaluationController extends Controller
     }
 
     /**
+     * Descarga el PDF de una evaluación
+     *
+     * @param Request $request
+     * @param int $idEvaluacion
+     * @return \Illuminate\Http\Response|\Illuminate\Http\JsonResponse
+     */
+    public function downloadPdf(Request $request, int $idEvaluacion)
+    {
+        try {
+            $userId = SessionHelper::getUserId($request);
+            
+            if (!$userId) {
+                return response()->json([
+                    'error' => 'Usuario no autenticado'
+                ], 401);
+            }
+
+            // Verificar que la evaluación pertenece al usuario
+            $evaluacion = $this->evaluacionRepository->obtenerPorId($idEvaluacion);
+            
+            if (!$evaluacion) {
+                return response()->json([
+                    'error' => 'Evaluación no encontrada'
+                ], 404);
+            }
+
+            if ($evaluacion['Id_Usuario'] != $userId) {
+                return response()->json([
+                    'error' => 'No tienes permiso para acceder a esta evaluación'
+                ], 403);
+            }
+
+            // Obtener resultados de la evaluación
+            $resultados = $this->resultadosRepository->obtenerPorEvaluacion($idEvaluacion);
+            
+            $pdfPath = $resultados['PDF_Path'] ?? null;
+            
+            if (!$pdfPath) {
+                return response()->json([
+                    'error' => 'PDF no encontrado para esta evaluación'
+                ], 404);
+            }
+
+            // Construir ruta completa del archivo
+            $fullPath = storage_path('app/public/' . $pdfPath);
+            
+            // Verificar que el archivo existe
+            if (!file_exists($fullPath)) {
+                Log::warning('PDF no encontrado físicamente', [
+                    'id_evaluacion' => $idEvaluacion,
+                    'pdf_path' => $pdfPath,
+                    'full_path' => $fullPath
+                ]);
+                
+                return response()->json([
+                    'error' => 'El archivo PDF no se encuentra en el servidor'
+                ], 404);
+            }
+
+            // Verificar que es un archivo válido
+            if (!is_file($fullPath)) {
+                return response()->json([
+                    'error' => 'La ruta especificada no es un archivo válido'
+                ], 400);
+            }
+
+            // Obtener el nombre del archivo para la descarga
+            $filename = 'evaluacion-' . $idEvaluacion . '.pdf';
+            
+            // Descargar el archivo con headers correctos
+            return response()->download($fullPath, $filename, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al descargar PDF', [
+                'id_evaluacion' => $idEvaluacion,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Error al descargar el PDF',
+                'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
+        }
+    }
+
+    /**
      * Obtiene los datos necesarios para generar las gráficas de la evaluación
      *
      * @param Request $request
