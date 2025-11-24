@@ -1049,8 +1049,49 @@ class EvaluationController extends Controller
 
                     // Usar Browsershot para renderizar HTML con JavaScript ejecutado
                     // Esto permite que Chart.js renderice las gráficas antes de convertir a PDF
-                    Browsershot::html($html)
-                        ->setOption('args', [
+                    
+                    // Configurar ruta de Chrome/Chromium para Windows
+                    $chromePath = null;
+                    if (PHP_OS_FAMILY === 'Windows') {
+                        // Prioridad 1: Chromium de Puppeteer (más confiable)
+                        $puppeteerCache = getenv('USERPROFILE') . '\.cache\puppeteer\chrome';
+                        if (is_dir($puppeteerCache)) {
+                            $chromeDirs = glob($puppeteerCache . '\win64-*\chrome-win64\chrome.exe');
+                            if (!empty($chromeDirs)) {
+                                $chromePath = $chromeDirs[0]; // Usar la versión más reciente
+                            }
+                        }
+                        
+                        // Prioridad 2: Chrome instalado en el sistema
+                        if (!$chromePath) {
+                            $possiblePaths = [
+                                'C:\Program Files\Google\Chrome\Application\chrome.exe',
+                                'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+                                env('CHROME_PATH'), // Permitir configuración desde .env
+                            ];
+                            
+                            foreach ($possiblePaths as $path) {
+                                if ($path && file_exists($path)) {
+                                    $chromePath = $path;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    $browsershot = Browsershot::html($html);
+                    
+                    // Configurar Chrome/Chromium si se encontró
+                    if ($chromePath) {
+                        $browsershot->setChromePath($chromePath);
+                        Log::info('Usando Chrome/Chromium desde ruta específica', [
+                            'chrome_path' => $chromePath
+                        ]);
+                    } else {
+                        Log::warning('No se encontró Chrome/Chromium, Browsershot intentará usar el predeterminado');
+                    }
+                    
+                    $browsershot->setOption('args', [
                             '--no-sandbox',
                             '--disable-setuid-sandbox',
                             '--disable-dev-shm-usage',
@@ -1213,5 +1254,6 @@ class EvaluationController extends Controller
             ], 500);
         }
     }
+
 }
 

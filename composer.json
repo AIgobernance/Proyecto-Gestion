@@ -84,6 +84,10 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "github-protocols": ["https"],
+        "github-domains": ["github.com"],
+        "secure-http": true,
+        "disable-tls": false,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
