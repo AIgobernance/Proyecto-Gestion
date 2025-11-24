@@ -14,3 +14,10 @@ Proporcionar a las organizaciones una plataforma digital que facilite la evaluac
 El aplicativo está dirigido a empresas y organizaciones que utilizan inteligencia artificial en sus procesos, pero que no cuentan con una estrategia formal de gobernanza o ética en IA.
 
 Su propósito es ofrecerles una hoja de ruta práctica y personalizada para implementar buenas prácticas de gobernanza, cumplimiento normativo y alineación con los principios éticos de algunos marcos y estándares internacionales y nacionales de gobernanza de IA.
+
+### Storytelling
+
+{% hint style="info" %}
+[https://youtu.be/xB6jAJP6Bak](https://youtu.be/xB6jAJP6Bak)
+{% endhint %}
+

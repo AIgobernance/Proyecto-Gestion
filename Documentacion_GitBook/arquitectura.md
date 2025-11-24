@@ -46,7 +46,7 @@ La base de datos SQL Server cumple un papel central en este flujo, actuando como
 
 En conjunto, este flujo garantiza una comunicación eficiente entre todas las capas del sistema: React capta la interacción del usuario, Laravel gestiona la lógica y las validaciones, los servicios externos amplían las capacidades del aplicativo mediante automatización y seguridad, y SQL Server asegura el almacenamiento estructurado y confiable de la información generada durante todo el ciclo de uso del sistema
 
-#### Diagrama de La Arquitectura:
+#### Diagrama de la Arquitectura del Sistema:
 
 <figure><img src=".gitbook/assets/Imagen de WhatsApp 2025-11-10 a las 19.55.21_b4386831.jpg" alt=""><figcaption></figcaption></figure>
 

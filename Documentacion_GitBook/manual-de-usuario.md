@@ -33,13 +33,21 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 
 1. Descargar el repositorio en [https://github.com/AIgobernance/Proyecto-Gestion](https://github.com/AIgobernance/Proyecto-Gestion)
 2. Abrir el repositorio y desplegar terminal.
-3. En la terminal escribir "npm run dev"
+3. Para ejecutar React se debe descargar npn, escribir en la terminal "npm install"
 
-<figure><img src=".gitbook/assets/image (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
 
-4. Abrir otra pestañas en la terminal y escribir el comando "php artisan serve".
+4. En la terminal escribir "npm run dev"
 
 <figure><img src=".gitbook/assets/image (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+
+5. Abrir otra pestañas en la terminal, para ejecutar el backend se necesita una descarga, escribir en la terminar "composer install"
+
+<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+
+5. Escribir el comando "php artisan serve" en la terminal.
+
+<figure><img src=".gitbook/assets/image (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 5. Entrar al link que proporciona la terminal.
 6. Seleccionar una de las siguientes opciones:
@@ -47,7 +55,7 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
    * **Registrarse** (si es la primera vez que accede).
 7. Seleccionar rol (Administrador o Usuario).
 
-<figure><img src=".gitbook/assets/image (11).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (11) (1).png" alt=""><figcaption></figcaption></figure>
 
 ***
 
@@ -59,7 +67,7 @@ Este manual describe los pasos a seguir para la correcta utilización del sistem
 
 En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
-<figure><img src=".gitbook/assets/image (5) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (5) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 ### Registro de Usuario
 
@@ -71,15 +79,15 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 #### Formulario de Registro
 
-<figure><img src=".gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (3) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Activación de Cuenta (SMTP)
 
-<figure><img src=".gitbook/assets/image (6) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (6) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Confirmación de Creación de Cuenta
 
-<figure><img src=".gitbook/assets/image (7) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (7) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 ### Inicio de Sesión
 
@@ -90,23 +98,23 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 #### Formulario Inicio de Sesión
 
-<figure><img src=".gitbook/assets/image (8) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (8) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Verificación en Dos Pasos (2FA)
 
-<figure><img src=".gitbook/assets/image (9) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (9) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Código de Verificación
 
-<figure><img src=".gitbook/assets/image (10) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (10) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Panel Principal
 
-<figure><img src=".gitbook/assets/image (11) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (11) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Creación de Nueva Evaluación y Acciones Rápidas
 
-<figure><img src=".gitbook/assets/image (13).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (13) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Formulario de Evaluación
 
@@ -114,11 +122,11 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 #### Visualización de Resultados
 
-<figure><img src=".gitbook/assets/image (9).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (9) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Hoja de Ruta Personalizada
 
-<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (16).png" alt=""><figcaption></figcaption></figure>
 
 #### Historial de Evaluaciones
 
@@ -212,7 +220,7 @@ Muestra el resultado analizado por la IA, incluyendo:
 * Puntaje de gobernanza general, porcentaje de cumplimiento de los marcos.
 * Gráficas y visualizaciones interactivas.
 
-<figure><img src=".gitbook/assets/image (10).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (10) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Módulo de Hoja de Ruta
 
@@ -228,7 +236,7 @@ Muestra el resultado analizado por la IA, incluyendo:
 
 Muestra las evaluaciones completadas, las pendientes, cuantas evaluaciones ha realizado, puntuación de los resultados por evaluación y promedio entre estos, ultima evaluación realizada y filtros de fecha.
 
-<figure><img src=".gitbook/assets/image (12).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (12) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Modulo de Actualización de Datos
 
@@ -252,7 +260,7 @@ Este manual muestra las funcionalidades del administrador de manera secuencial, 
 
 En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
-<figure><img src=".gitbook/assets/image (5) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (5) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 ### Registro de Usuario
 
@@ -264,7 +272,7 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 #### Formulario de Registro
 
-<figure><img src=".gitbook/assets/image (14).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (14) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Verificación por Correo
 
@@ -283,15 +291,15 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 #### Formulario de Inicio de Sesión
 
-<figure><img src=".gitbook/assets/image (16).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (16) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Verificación en Dos Pasos (2FA)
 
-<figure><img src=".gitbook/assets/image (15).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (15) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Código de Verificación
 
-<figure><img src=".gitbook/assets/image (10) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (10) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 ### Panel Principal
 
@@ -303,7 +311,7 @@ Al iniciar sesión, el Administrador accede a un **panel de control** con acceso
 
 #### Panel
 
-<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Administración de Usuarios
 
@@ -311,11 +319,11 @@ Al iniciar sesión, el Administrador accede a un **panel de control** con acceso
 
 #### Creación de Nuevo Usuario
 
-<figure><img src=".gitbook/assets/image (4).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (4) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Restablecimiento de Contraseña de Usuarios
 
-<figure><img src=".gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (5) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Dashboard General
 
@@ -385,7 +393,7 @@ El panel presenta información visual en tiempo real sobre el uso del sistema:
 * Puede eliminar usuarios inactivos o duplicados.
 * Cada modificación queda registrada en la base de datos.
 
-<figure><img src=".gitbook/assets/image (3).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Modulo de Restablecimiento de Contraseña
 
@@ -402,11 +410,11 @@ El aplicativo emplea autenticación 2FA (autenticación de doble factor) para re
 
 #### Verificación en Dos Pasos (2FA)
 
-<figure><img src=".gitbook/assets/image (15).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (15) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Código de Verificación
 
-<figure><img src=".gitbook/assets/image (10) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (10) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 ***
 
