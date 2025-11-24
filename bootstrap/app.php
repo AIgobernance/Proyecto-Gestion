@@ -11,7 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Excluir ruta de N8N de verificación CSRF
+        $middleware->validateCsrfTokens(except: [
+            '/api/evaluation/n8n-results',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

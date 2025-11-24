@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogClose } from "../ui/dialog";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
@@ -6,23 +6,46 @@ import { Label } from "../ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "../ui/input-otp";
 import { Mail, Phone, Shield, ArrowLeft, CheckCircle2, RotateCw } from "lucide-react";
 
-export function CodeVerificationModal({ method, onVerify, onBack }) {
+export function CodeVerificationModal({ method, onVerify, onBack, onResendCode, error, onCodeCleared }) {
   const [code, setCode] = useState("");
   const [isResending, setIsResending] = useState(false);
   const otpWrapperRef = useRef(null);
 
   const Icon = method === "email" ? Mail : Phone;
 
+  // Limpiar código cuando hay error
+  useEffect(() => {
+    if (error) {
+      setCode("");
+      // Enfocar el primer input después de limpiar
+      setTimeout(() => {
+        const el = otpWrapperRef.current?.querySelector("input");
+        if (el) el.focus();
+      }, 100);
+    }
+  }, [error]);
+
   const handleSubmit = () => {
     if (code.length === 6) onVerify(code);
   };
 
-  const handleResendCode = () => {
+  const handleResendCode = async () => {
     setIsResending(true);
-    setTimeout(() => {
+    try {
+      if (onResendCode) {
+        await onResendCode();
+      } else {
+        // Fallback si no se proporciona la función
+        setTimeout(() => {
+          setIsResending(false);
+          alert(`Código reenviado a tu ${method === "email" ? "correo electrónico" : "teléfono"}`);
+        }, 1200);
+      }
+    } catch (error) {
+      console.error('Error al reenviar código:', error);
+    } finally {
       setIsResending(false);
-      alert(`Código reenviado a tu ${method === "email" ? "correo electrónico" : "teléfono"}`);
-    }, 1200);
+    }
   };
 
   // Si el usuario hace click en el contenedor, enfocamos el primer slot
@@ -139,6 +162,22 @@ export function CodeVerificationModal({ method, onVerify, onBack }) {
                 <p style={{ color: "#64748b", textAlign: "center", fontSize: 13, marginTop: 8 }}>
                   {code.length}/6 dígitos
                 </p>
+                
+                {/* Mensaje de error */}
+                {error && (
+                  <div style={{
+                    marginTop: 12,
+                    padding: 12,
+                    background: "#fef2f2",
+                    border: "1px solid #fecaca",
+                    borderRadius: 8,
+                    color: "#dc2626",
+                    fontSize: 13,
+                    textAlign: "center"
+                  }}>
+                    {error}
+                  </div>
+                )}
               </div>
 
               {/* Reenviar (discreto) */}

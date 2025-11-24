@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import imgLogo from "../assets/logo-principal.jpg";
 import {
   User, FileText, LogOut, PlayCircle, BarChart3,
-  TrendingUp, Award, CheckCircle2, Clock, Info
+  TrendingUp, Award, CheckCircle2, Clock, Info, Loader2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -100,6 +101,15 @@ const styles = `
   align-items:center;      /* centra el h4 y el small como columna */
   text-align:center;       /* alinea el texto al centro */
 }
+
+/* Animación de carga */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
 `;
 
 export function DashboardPage({
@@ -109,11 +119,61 @@ export function DashboardPage({
   onStartEvaluation = () => window.location.assign("/evaluation/start"),
   onViewProfile = () => window.location.assign("/profile"),
 }) {
-  const userStats = {
-    totalEvaluations: 3,
-    lastEvaluation: "15 Oct 2024",
-    averageScore: 78,
-    completionRate: 100,
+  const [userStats, setUserStats] = useState({
+    totalEvaluations: 0,
+    lastEvaluation: "N/A",
+    averageScore: 0,
+    completitud: 100,
+    nivelMadurez: null,
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  useEffect(() => {
+    loadDashboardStats();
+  }, []);
+
+  const loadDashboardStats = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      // Forzar actualización agregando timestamp para evitar caché del navegador
+      const response = await axiosClient.get('/api/dashboard/stats', {
+        params: {
+          refresh: 'true',
+          _t: Date.now() // Timestamp para evitar caché del navegador
+        }
+      });
+
+      if (response.data && response.data.success && response.data.data) {
+        setUserStats({
+          totalEvaluations: response.data.data.totalEvaluaciones || 0,
+          lastEvaluation: response.data.data.ultimaEvaluacion || "N/A",
+          averageScore: response.data.data.promedioPuntuacion !== null && response.data.data.promedioPuntuacion !== undefined ? parseFloat(response.data.data.promedioPuntuacion) : 0,
+          completitud: Math.round(response.data.data.completitud || 100),
+          nivelMadurez: response.data.data.nivelMadurez || null,
+        });
+      }
+    } catch (err) {
+      console.error('Error al cargar estadísticas del dashboard:', err);
+      setError('No se pudieron cargar las estadísticas. Por favor, intenta más tarde.');
+      // Mantener valores por defecto en caso de error
+      setUserStats({
+        totalEvaluations: 0,
+        lastEvaluation: "N/A",
+        averageScore: 0,
+        completitud: 0,
+        nivelMadurez: null,
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -161,7 +221,13 @@ export function DashboardPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.totalEvaluations}</div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:32,color:"#173b8f"}}>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.totalEvaluations}</div>
+                )}
                 <CardDescription className="text-slate-500 text-xs mt-1">Completadas</CardDescription>
               </CardContent>
             </Card>
@@ -176,7 +242,13 @@ export function DashboardPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div style={{fontSize:18,color:"#173b8f",fontWeight:700}}>{userStats.lastEvaluation}</div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:18,color:"#173b8f"}}>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  </div>
+                ) : (
+                  <div style={{fontSize:18,color:"#173b8f",fontWeight:700}}>{userStats.lastEvaluation}</div>
+                )}
                 <CardDescription className="text-slate-500 text-xs mt-1">Fecha reciente</CardDescription>
               </CardContent>
             </Card>
@@ -187,12 +259,22 @@ export function DashboardPage({
                   <span className="icon-badge" style={{background:"#e9fbf0",color:"#1b9a59"}}>
                     <TrendingUp className="w-5 h-5" />
                   </span>
-                  Score Promedio
+                  Puntuación Promedio
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.averageScore}%</div>
-                <CardDescription className="text-slate-500 text-xs mt-1">Nivel de madurez</CardDescription>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:32,color:"#173b8f"}}>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : userStats.averageScore > 0 ? (
+                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.averageScore.toFixed(1)}%</div>
+                ) : (
+                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>0%</div>
+                )}
+                <CardDescription className="text-slate-500 text-xs mt-1">
+                  {userStats.nivelMadurez ? `${userStats.nivelMadurez.nivel} (${userStats.nivelMadurez.rango})` : "Nivel de madurez"}
+                </CardDescription>
               </CardContent>
             </Card>
 
@@ -206,11 +288,31 @@ export function DashboardPage({
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.completionRate}%</div>
+                {loading ? (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:32,color:"#173b8f"}}>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : (
+                  <div style={{fontSize:32,color:"#173b8f",fontWeight:800}}>{userStats.completitud}%</div>
+                )}
                 <CardDescription className="text-slate-500 text-xs mt-1">Cuestionarios</CardDescription>
               </CardContent>
             </Card>
           </section>
+
+          {/* Mensaje de error */}
+          {error && (
+            <div style={{
+              marginTop: 20,
+              padding: 16,
+              background: "#fee2e2",
+              border: "1px solid #fecaca",
+              borderRadius: 12,
+              color: "#991b1b"
+            }}>
+              <p style={{margin: 0, fontSize: 14}}>{error}</p>
+            </div>
+          )}
 
           {/* CTA + Acciones */}
           <section className="cols">
@@ -230,15 +332,19 @@ export function DashboardPage({
 
                   {/* Lista con iconos alineados */}
                   <ul className="list">
-                    <li><CheckCircle2 className="w-5 h-5" /> <span>50 preguntas en 5 dimensiones</span></li>
+                    <li><CheckCircle2 className="w-5 h-5" /> <span>30 preguntas en 5 dimensiones</span></li>
                     <li><CheckCircle2 className="w-5 h-5" /> <span>Basado en ISO 27090 DIS - 27091, ISO 23894, NIS2 / AI Act, ISO 42001 - 42005, CONPES 4144</span></li>
                     <li><CheckCircle2 className="w-5 h-5" /> <span>Resultados con gráficos y recomendaciones</span></li>
                     <li><CheckCircle2 className="w-5 h-5" /> <span>Tiempo estimado: 15–20 minutos</span></li>
                   </ul>
                 </div>
 
-                <div style={{marginTop:16}}>
-                  <button className="btn-primary" onClick={onStartEvaluation} aria-label="Iniciar nueva evaluación">
+                <div style={{marginTop:16, display:"flex", flexDirection:"column", gap:12}}>
+                  <button 
+                    className="btn-primary" 
+                    onClick={onStartEvaluation} 
+                    aria-label="Iniciar nueva evaluación"
+                  >
                     <PlayCircle className="w-5 h-5" />
                     Iniciar Nueva Evaluación
                   </button>
@@ -273,7 +379,21 @@ export function DashboardPage({
                 <span className="ico" style={{background:"#10b981"}}><Award className="w-5 h-5" /></span>
                 <div className="txt centered">  
                   <h4>Nivel Actual</h4>
-                  <small>Intermedio — ¡sigue mejorando!</small>
+                  <small>
+                    {loading ? (
+                      "Cargando..."
+                    ) : userStats.nivelMadurez ? (
+                      <>
+                        <strong>{userStats.nivelMadurez.nivel}</strong>
+                        <br />
+                        {userStats.nivelMadurez.mensaje ? userStats.nivelMadurez.mensaje.replace(userStats.nivelMadurez.nivel + " — ", "") : userStats.nivelMadurez.descripcion}
+                      </>
+                    ) : userStats.averageScore > 0 ? (
+                      "Calculando nivel..."
+                    ) : (
+                      "Completa una evaluación para ver tu nivel"
+                    )}
+                  </small>
                 </div>
               </div>
               </CardContent>

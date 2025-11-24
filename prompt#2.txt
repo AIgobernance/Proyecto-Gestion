@@ -1,0 +1,298 @@
+Quiero que generes únicamente código HTML, sin comentarios, sin texto fuera del documento, sin explicaciones y sin usar bloques ```.
+La salida será usada automáticamente por Laravel y n8n para generar un archivo PDF, por lo que debe ser estrictamente HTML válido.
+
+⚠️ REGLA CRÍTICA: El documento DEBE estar COMPLETO. NO puedes cortar contenido ni dejar secciones incompletas. Si el contenido es largo, genera TODO el HTML completo sin importar la longitud.
+
+Contexto obligatorio de la arquitectura (NO OMITAS ESTO EN LA RESPUESTA)
+
+El sistema trabaja con una arquitectura de 4 capas:
+
+Frontend – React
+Donde el usuario completa la evaluación de gobernanza y descarga el PDF generado.
+
+Backend – Laravel
+Maneja la lógica del negocio, seguridad, validaciones, comunicación con servicios externos y conexión con la base de datos.
+
+Servicios Externos – N8N, SMS, SMTP
+N8N automatiza procesos y envía las respuestas a una IA para generar este informe.
+SMS/SMTP se usa para autenticación 2FA, no relevante para el informe.
+N8N devuelve tu HTML a Laravel para convertirlo en PDF.
+
+Base de Datos – SQL Server
+Donde se guardan resultados, configuraciones y toda la trazabilidad.
+
+Flujo donde entra este prompt
+
+React envía las respuestas del formulario a Laravel.
+Laravel las envía a N8N.
+N8N llama a esta IA con tu prompt.
+La IA debe devolver solo HTML limpio, que será transformado directamente en PDF.
+Laravel recibe ese HTML, guarda datos y envía al frontend para descargar.
+
+Por ese motivo:
+
+✔ NO puedes devolver texto adicional.
+✔ NO puedes explicar nada fuera del HTML.
+✔ Solo puedes devolver el archivo HTML listo para PDF.
+✔ El HTML DEBE estar COMPLETO desde <!DOCTYPE html> hasta </html> sin cortes.
+
+Datos para el informe
+
+Empresa: {NOMBRE_EMPRESA}
+Sector: {SECTOR}
+Resultados de las 30 preguntas (pregunta → valor):
+{LISTA_PREGUNTAS_Y_VALORES}
+Ponderaciones por sector: {PONDERACIONES}
+Archivos de apoyo / evidencias recibidas:
+{LISTA_ARCHIVOS_APOYO}
+
+ESTRUCTURA OBLIGATORIA Y COMPLETA DEL HTML
+
+El HTML debe ser un informe ejecutivo profesional y COMPLETO. DEBES incluir TODAS las siguientes secciones sin excepción:
+
+1. PORTADA (OBLIGATORIA)
+
+Debe incluir EXACTAMENTE:
+- Título principal: "Informe de Evaluación de Gobernanza de IA" o "Informe de Gobernanza de Inteligencia Artificial"
+- Nombre de la empresa (usar el valor de {NOMBRE_EMPRESA})
+- Sector (usar el valor de {SECTOR})
+- Fecha actual (generar usando JavaScript: new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }))
+- Descripción breve del propósito del documento (2-3 líneas)
+
+2. RESUMEN EJECUTIVO (OBLIGATORIA Y COMPLETA)
+
+DEBES incluir TODAS estas subsecciones:
+
+2.1. Propósito del Informe
+- Explicación clara del objetivo del informe (2-3 párrafos)
+
+2.2. Contexto de la Evaluación
+- Mencionar los marcos evaluados: ISO 27090/27091, ISO 23894, NIS2/AI Act, ISO 42001-42005, CONPES 4144
+- Explicar que la evaluación consta de 30 preguntas
+
+2.3. Nivel de Implementación y su Interpretación
+- Explicar la escala: 0 = 0%, 0.25 = 25%, 0.5 = 50%, 1 = 100%
+- Explicar qué significa cada nivel de implementación
+
+2.4. Importancia de las Evaluaciones de Gobernanza de IA
+- Explicar por qué son importantes (1-2 párrafos)
+
+2.5. Resultados Globales Consolidados
+- Calcular y mostrar la puntuación global (promedio de todas las respuestas * 100)
+- Mostrar el puntaje en formato: "El puntaje global consolidado es del X%"
+- Incluir una caja destacada con la puntuación
+
+3. ANÁLISIS DE RESULTADOS (OBLIGATORIA Y COMPLETA)
+
+DEBES incluir TODAS estas subsecciones en este orden:
+
+3.1. Tabla de Preguntas y Valores
+- Tabla HTML estilizada con TODAS las 30 preguntas
+- Columnas: Número, Pregunta, Valor (mostrar como porcentaje)
+- NO omitas ninguna pregunta
+
+3.2. Explicación de Valores
+- Párrafo explicando qué representa cada valor (0%, 25%, 50%, 100%)
+
+3.3. Interpretación Ejecutiva del Puntaje General
+- Párrafo analizando el significado del puntaje obtenido
+- Mencionar el nivel de riesgo asociado
+- Importancia de abordar las deficiencias
+
+3.4. Identificación de Fortalezas
+- Título: "Fortalezas" o "Identificación de Fortalezas"
+- Si el puntaje es bajo (0-30%), mencionar que no se identifican fortalezas significativas y explicar por qué
+- Si el puntaje es medio/alto, listar las fortalezas identificadas
+- NO dejes esta sección incompleta
+
+3.5. Identificación de Debilidades
+- Título: "Debilidades" o "Identificación de Debilidades"
+- Listar TODAS las áreas críticas que representan debilidades
+- Ser específico: mencionar categorías (Ciberseguridad, IA Explicable, Regulación, Gestión, Marco Nacional)
+- Incluir explicación del impacto de cada debilidad
+- NO cortes esta sección
+
+3.6. Nivel de Madurez en Gobernanza de IA
+- Título: "Nivel de Madurez en Gobernanza de IA" o similar
+- DEBES clasificar el nivel según el puntaje:
+  * Inicial (0-20%): No hay procesos definidos, gobernanza ad-hoc o inexistente
+  * Básico (21-40%): Se reconocen necesidades, se inician algunas políticas y roles
+  * Intermedio (41-60%): Procesos definidos, controles básicos, monitoreo parcial
+  * Avanzado (61-80%): Procesos maduros, controles robustos, monitoreo proactivo
+  * Óptimo (81-100%): Gobernanza integrada, proactiva, innovadora
+- Explicar en qué nivel se encuentra la empresa según el puntaje
+- Explicar qué significa ese nivel en detalle
+
+3.7. Riesgos y Oportunidades
+- Título: "Riesgos y Oportunidades"
+- Subsección "Riesgos" con lista de riesgos identificados:
+  * Riesgo Regulatorio y Legal
+  * Riesgo Ético y Reputacional
+  * Riesgos de Ciberseguridad
+  * Riesgos Operacionales
+  * Pérdida de Ventaja Competitiva
+- Subsección "Oportunidades" con lista de oportunidades:
+  * Establecer Fundamentos Sólidos
+  * Generar Confianza
+  * Optimizar la Innovación
+  * Asegurar el Cumplimiento
+  * Mejorar la Eficiencia Operacional
+- Para cada riesgo y oportunidad, incluir explicación del impacto
+
+4. GRÁFICAS (OBLIGATORIO Y CRÍTICO)
+
+DEBES incluir EXACTAMENTE dos gráficas:
+
+4.1. Gráfica de Barras - Nivel de Implementación por Pilar
+- Título: "Nivel de Implementación por Pilar de Gobernanza (Puntuación Ponderada)" o similar
+- Mostrar los 5 pilares:
+  1. Ciberseguridad (ISO 27090/27091)
+  2. IA Explicable (ISO 23894)
+  3. Regulación UE (NIS2/AI Act)
+  4. Gestión IA (ISO 42001-42005)
+  5. Marco Nacional (CONPES 4144)
+- Calcular el promedio ponderado para cada pilar basándose en las respuestas
+- Canvas ID: "barChart"
+- Dimensiones: width="600" height="400"
+- Incluir explicación debajo de la gráfica sobre qué representa y cómo interpretarla
+
+4.2. Gráfica Radar - Ponderación Relativa de las Áreas
+- Título: "Ponderación Relativa de las Áreas de Gobernanza" o "Madurez en Gobernanza de IA por Pilar (Gráfica Radar)"
+- Mostrar las ponderaciones proporcionadas en {PONDERACIONES}
+- Canvas ID: "radarChart"
+- Dimensiones: width="600" height="400"
+- Incluir explicación debajo de la gráfica sobre qué representa y cómo interpretarla
+
+REQUISITOS TÉCNICOS PARA GRÁFICAS:
+- Script Chart.js desde CDN: <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+- Scripts de inicialización DENTRO de <script> tags antes de </body>
+- Cada gráfica debe tener un contenedor div con clase "chart-container"
+- Incluir código JavaScript COMPLETO y FUNCIONAL para ambas gráficas
+- Usar datos reales de las respuestas y ponderaciones proporcionadas
+
+5. RECOMENDACIONES ESTRATÉGICAS (OBLIGATORIA Y COMPLETA)
+
+DEBES incluir TODAS estas subsecciones:
+
+5.1. Introducción a las Recomendaciones
+- Párrafo explicando cómo se construyen las recomendaciones (basándose en puntaje, fortalezas, debilidades)
+
+5.2. Acciones Críticas Priorizadas
+- Lista numerada con al menos 5 acciones críticas
+- Cada acción debe incluir:
+  * Título descriptivo
+  * Descripción del qué y por qué
+
+5.3. Plan de Mejora Escalonado
+- Subsección "Corto Plazo (0-6 meses)":
+  * Lista con al menos 4 acciones concretas
+  * Ejemplos: Creación de comité, inventario, políticas fundamentales, documentación mínima
+- Subsección "Mediano Plazo (6-18 meses)":
+  * Lista con al menos 4 acciones
+  * Ejemplos: Estandarización, herramientas de monitoreo, capacitación, explicabilidad
+- Subsección "Largo Plazo (18+ meses)":
+  * Lista con al menos 4 acciones
+  * Ejemplos: Optimización continua, explicabilidad externa, participación en ecosistemas, cultura organizacional
+
+5.4. Impacto en Gobernanza, Riesgo y Madurez
+- Explicar cómo las recomendaciones impactan en:
+  * Gobernanza: Establecimiento de marco robusto
+  * Riesgo: Reducción de riesgos
+  * Madurez: Evolución hacia niveles avanzados
+
+6. ESTILO Y FORMATO PARA PDF (CRÍTICO)
+
+REGLAS OBLIGATORIAS:
+
+CSS @page:
+@page {
+  size: A4;
+  margin: 2cm;
+}
+
+Reglas page-break:
+- h1, h2, h3: page-break-after: avoid;
+- .section, .container: page-break-inside: avoid;
+- Tablas: page-break-inside: avoid;
+- Gráficas: page-break-inside: avoid;
+
+CSS General:
+- body: margin: 0; padding: 0; font-family: Arial, sans-serif;
+- Contenedor principal: max-width: 100%; padding: 20px;
+- Títulos: color corporativo (#004d99 o similar), margin apropiados
+- Tablas: border-collapse: collapse; width: 100%; estilizadas
+- Cajas destacadas: background-color suave; padding; border-left
+
+Estructura HTML Requerida (COMPLETA):
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Informe de Gobernanza de IA - {NOMBRE_EMPRESA}</title>
+  <style>
+    /* TODO el CSS aquí con @page y todas las reglas */
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- 1. PORTADA -->
+    <div class="cover-page">
+      <!-- Contenido completo de portada -->
+    </div>
+    
+    <!-- 2. RESUMEN EJECUTIVO -->
+    <section class="executive-summary">
+      <!-- TODAS las subsecciones 2.1 a 2.5 -->
+    </section>
+    
+    <!-- 3. ANÁLISIS DE RESULTADOS -->
+    <section class="results-analysis">
+      <!-- TODAS las subsecciones 3.1 a 3.7 SIN CORTAR -->
+    </section>
+    
+    <!-- 4. GRÁFICAS -->
+    <section class="charts-section">
+      <!-- Ambas gráficas con explicaciones -->
+    </section>
+    
+    <!-- 5. RECOMENDACIONES -->
+    <section class="recommendations">
+      <!-- TODAS las subsecciones 5.1 a 5.4 COMPLETAS -->
+    </section>
+    
+    <!-- Pie de página opcional -->
+    <div class="footer">
+      <p>&copy; {AÑO} {NOMBRE_EMPRESA}. Todos los derechos reservados.</p>
+    </div>
+  </div>
+  
+  <script>
+    // Inicialización COMPLETA de ambas gráficas Chart.js
+    // NO omitas el código JavaScript
+  </script>
+</body>
+</html>
+
+REGLAS ANTI-ERRORES CRÍTICAS
+
+⚠️ EL DOCUMENTO DEBE ESTAR COMPLETO:
+- NO cortes el contenido a mitad de una sección
+- NO omitas subsecciones obligatorias
+- NO dejes secciones incompletas
+- TODAS las 30 preguntas deben estar en la tabla
+- TODAS las secciones 3.1 a 3.7 deben estar completas
+- TODAS las secciones 5.1 a 5.4 deben estar completas
+- Las gráficas DEBEN tener código JavaScript funcional completo
+
+La salida debe ser SOLO el HTML completo desde <!DOCTYPE html> hasta </html>.
+Sin comentarios HTML.
+Sin texto antes o después del HTML.
+No inventes datos si falta información.
+No uses markdown.
+No uses ``` nunca.
+NO dejes secciones vacías.
+NO uses divs vacíos.
+El HTML DEBE estar completo sin importar su longitud.

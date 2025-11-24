@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import { VerificationMethodModal } from "./VerificationMethodModal";
 import { CodeVerificationModal } from "./CodeVerificationModal";
 import { PasswordResetSuccessModal } from "./PasswordResetSuccessModal";
@@ -18,6 +19,16 @@ import { Dialog, DialogContent } from "../ui/dialog";
 import { ArrowLeft, Lock, User, AlertCircle, Shield } from "lucide-react";
 // Logo
 import imgLogo from "../assets/logo-principal.jpg";
+
+// Configuración global de Axios (igual que el login general)
+const token = document.head?.querySelector('meta[name="csrf-token"]');
+if (token) {
+  axios.defaults.headers.common["X-CSRF-TOKEN"] = token.content;
+}
+axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest";
+axios.defaults.headers.common["Content-Type"] = "application/json";
+axios.defaults.headers.common["Accept"] = "application/json";
+axios.defaults.withCredentials = true;
 
 /* ===== Estilos coherentes y overlay/centrado de Dialog ===== */
 const styles = `
@@ -79,6 +90,8 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userData, setUserData] = useState(null); // Guardar datos del usuario después del login
 
   // Flujo de recuperación
   const [resetUsername, setResetUsername] = useState("");
@@ -86,22 +99,287 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetError, setResetError] = useState("");
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!username || !password) {
       setError("Por favor, complete todos los campos");
       return;
     }
+
     setError("");
-    setVerificationStep("selectMethod");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+      }
+
+      const response = await axios.post("/login", {
+        username: username,
+        password: password,
+      });
+
+      if (response.status === 200) {
+        // Flujo actualizado del backend: primero selecciona método 2FA
+        if (response.data.requires_2fa && response.data.user_id) {
+          setUserData({
+            id: response.data.user_id,
+            nombre: username,
+          });
+          setVerificationStep("selectMethod");
+          return;
+        }
+
+        // Compatibilidad si el backend devuelve los datos completos
+        if (response.data.user) {
+          const role = response.data.user.rol || response.data.user.role || "usuario";
+          if (role !== "admin") {
+            setError("Este usuario no tiene permisos de administrador");
+            return;
+          }
+          setUserData({
+            id: response.data.user.id,
+            nombre: response.data.user.nombre || response.data.user.username || username,
+          });
+          setVerificationStep("selectMethod");
+          return;
+        }
+
+        setError("No fue posible iniciar sesión. Intente nuevamente.");
+      }
+    } catch (error) {
+      console.error("Error al iniciar sesión:", error);
+
+      if (error.response && error.response.status === 403) {
+        const responseData = error.response.data;
+        if (responseData.deactivated) {
+          setError("Su cuenta ha sido desactivada. Por favor, contacte con soporte para más información.");
+        } else if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.username
+            ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
+            : responseData.message || "Su cuenta ha sido desactivada. Por favor, contacte con soporte.";
+          setError(errorMessage);
+        } else {
+          setError(responseData.message || "Su cuenta ha sido desactivada. Por favor, contacte con soporte.");
+        }
+      } else if (error.response && error.response.status === 401) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.username
+            ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
+            : responseData.message || "Usuario o contraseña incorrectos";
+          setError(errorMessage);
+        } else {
+          setError(responseData.message || "Usuario o contraseña incorrectos");
+        }
+      } else if (error.response && error.response.status === 419) {
+        setError("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
+        const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+        if (tokenMeta) {
+          axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+        }
+      } else if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.username
+            ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)
+            : responseData.message || "Error al iniciar sesión";
+          setError(errorMessage);
+        } else {
+          setError(responseData.message || "Error al iniciar sesión. Verifica tus credenciales.");
+        }
+      } else {
+        setError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Selección método 2FA
-  const handleSelectEmail = () => { setVerificationMethod("email"); setVerificationStep("enterCode"); };
-  const handleSelectPhone = () => { setVerificationMethod("phone"); setVerificationStep("enterCode"); };
+  const handleSelectEmail = async () => {
+    setVerificationMethod("email");
+
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+      }
+
+      const response = await axios.post("/login/send-2fa", {
+        user_id: userData.id,
+        method: "email",
+      });
+
+      if (response.status === 200) {
+        setVerificationStep("enterCode");
+      }
+    } catch (error) {
+      console.error("Error al enviar código 2FA:", error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Error al enviar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  const handleSelectPhone = async () => {
+    setVerificationMethod("phone");
+
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+      }
+
+      const response = await axios.post("/login/send-2fa", {
+        user_id: userData.id,
+        method: "sms",
+      });
+
+      if (response.status === 200) {
+        setVerificationStep("enterCode");
+      }
+    } catch (error) {
+      console.error("Error al seleccionar método SMS:", error);
+      setVerificationStep("enterCode");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Verificación OK
-  const handleVerify = (code) => {
-    if (onLoginSuccess) onLoginSuccess(username);
+  const handleVerify = async (code) => {
+    if (!code || code.length !== 6) {
+      setError("Por favor, ingresa un código de 6 dígitos");
+      return;
+    }
+
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario. Por favor, inicia sesión nuevamente.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+      }
+
+      const response = await axios.post("/login/verify-2fa", {
+        user_id: userData.id,
+        code: code.trim(),
+        method: verificationMethod === "phone" ? "sms" : "email",
+      });
+
+      if (response.status === 200 && response.data.user) {
+        const role = response.data.user.rol || response.data.user.role || "usuario";
+        if (role !== "admin") {
+          setError("Este usuario no tiene permisos de administrador.");
+          await axios.post("/logout").catch(() => {});
+          setVerificationStep("login");
+          setUserData(null);
+          return;
+        }
+
+        setError("");
+        if (onLoginSuccess) {
+          onLoginSuccess(response.data.user.nombre || username, response.data.user);
+        }
+      }
+    } catch (error) {
+      console.error("Error al verificar código 2FA:", error);
+
+      if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        let errorMessage = "";
+
+        if (errorData.errors?.code) {
+          errorMessage = Array.isArray(errorData.errors.code)
+            ? errorData.errors.code[0]
+            : errorData.errors.code;
+        } else {
+          errorMessage = errorData.message || "Código incorrecto. Por favor, verifica e intenta nuevamente.";
+        }
+
+        setError(errorMessage);
+
+        if (errorData.blocked) {
+          setTimeout(() => {
+            setVerificationStep("login");
+            setUserData(null);
+            setError("Tu cuenta ha sido bloqueada. Por favor, contacte con soporte.");
+          }, 2000);
+        }
+      } else if (error.response?.status === 419) {
+        setError("Error de seguridad. Por favor, recarga la página e intenta nuevamente.");
+        const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+        if (tokenMeta) {
+          axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+        }
+      } else {
+        setError("Error al verificar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  const handleResendCode = async () => {
+    if (!userData || !userData.id) {
+      setError("Error: No se encontró información del usuario.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+      }
+
+      const response = await axios.post("/login/resend-2fa", {
+        user_id: userData.id,
+      });
+
+      if (response.status === 200) {
+        alert("Código reenviado exitosamente. Por favor, revisa tu correo.");
+      }
+    } catch (error) {
+      console.error("Error al reenviar código:", error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError("Error al reenviar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   const handleBackToMethod = () => setVerificationStep("selectMethod");
   const handleCloseModal = () => setVerificationStep("login");
@@ -200,8 +478,12 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
 
               {/* Acciones */}
               <div className="actions">
-                <Button className="btn-primary" onClick={handleAccept}>
-                  Iniciar Sesión
+                <Button 
+                  className="btn-primary" 
+                  onClick={handleAccept}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Iniciando sesión..." : "Iniciar Sesión"}
                 </Button>
                 <Button className="btn-ghost" onClick={handleResetPassword}>
                   Restablecer Contraseña
@@ -225,6 +507,8 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
             method={verificationMethod}
             onVerify={handleVerify}
             onBack={handleBackToMethod}
+            onResendCode={handleResendCode}
+            error={error}
           />
         )}
 

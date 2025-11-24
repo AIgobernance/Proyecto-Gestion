@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import axios from "axios";
 import imgLogo from "../assets/logo-principal.jpg";
 import { motion } from "motion/react";
 import {
@@ -11,6 +12,7 @@ import {
   Clock,
   X,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Progress } from "../ui/progress";
@@ -99,31 +101,133 @@ const styles = `
   box-shadow:0 12px 28px rgba(2,6,23,.18); cursor:pointer;
 }
 .btn-primary:hover{filter:brightness(1.02)}
+
+/* Animación de carga */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
 `;
 
-/* Datos de ejemplo */
-const MOCK_EVALUATIONS = [
-  { id: 1, name: "Evaluación ISO 27090", date: "15/10/2024", time: "14:30", score: 95, framework: "ISO 27090", status: "Completada" },
-  { id: 2, name: "Evaluación NIS2/AI Act", date: "20/09/2024", time: "10:15", score: 85, framework: "NIS2/AI Act", status: "Completada" },
-  { id: 3, name: "Evaluación ISO 42001", date: "05/08/2024", time: "16:45", score: 78, framework: "ISO 42001", status: "Completada" },
-];
+/* Datos de ejemplo (fallback si no hay datos) */
+const MOCK_EVALUATIONS = [];
 
 /* Utils */
 const parseDMY = (str) => { const [d, m, y] = str.split("/").map(Number); return new Date(y, m - 1, d); };
 const formatDMY = (d) => d ? `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}` : "";
 
-/* Badge score */
-const getScoreBadge = (score) => {
-  if (score >= 90) return { label: "Excelente", cls: "badge--excelente" };
-  if (score >= 75) return { label: "Bueno", cls: "badge--bueno" };
-  if (score >= 60) return { label: "Regular", cls: "badge--regular" };
-  return { label: "Mejora", cls: "badge--mejora" };
-};
-
 export function ViewEvaluationsPage({
   onExit = () => window.location.assign("/dashboard"),
   onViewResults = (id) => window.location.assign(`/evaluation/${id}/completed`),
 }) {
+  /* ====== Estado ====== */
+  const [evaluations, setEvaluations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [avgScore, setAvgScore] = useState(0); // Promedio desde el backend para consistencia
+
+  /* ====== Cargar evaluaciones ====== */
+  useEffect(() => {
+    loadEvaluations();
+  }, []);
+
+  const loadEvaluations = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      // Forzar actualización agregando timestamp para evitar caché
+      const response = await axiosClient.get('/api/evaluations', {
+        params: {
+          _t: Date.now() // Timestamp para evitar caché del navegador
+        }
+      });
+
+      console.log('=== DEBUG: Respuesta completa del API ===', response);
+      console.log('=== DEBUG: response.data ===', response.data);
+      console.log('=== DEBUG: response.data.success ===', response.data?.success);
+      console.log('=== DEBUG: response.data.data ===', response.data?.data);
+      console.log('=== DEBUG: response.data.debug ===', response.data?.debug);
+      
+      // Mostrar información del debug si está disponible
+      if (response.data?.debug) {
+        console.log('=== DEBUG INFO ===', {
+          user_id: response.data.debug.user_id,
+          total_en_bd: response.data.debug.total_en_bd,
+          total_formateadas: response.data.debug.total_formateadas
+        });
+      }
+
+      if (response.data && response.data.success !== false) {
+        const data = response.data.data || response.data || [];
+        console.log('=== DEBUG: Evaluaciones recibidas ===', {
+          esArray: Array.isArray(data),
+          longitud: Array.isArray(data) ? data.length : 'NO ES ARRAY',
+          datos: data
+        });
+        
+        // Asegurar que los datos tengan el formato correcto
+        let evaluacionesFormateadas = [];
+        
+        if (Array.isArray(data) && data.length > 0) {
+          // Calcular número de evaluación relativo al usuario
+          // Las evaluaciones están ordenadas por fecha DESC, así que la más reciente es la primera (índice 0)
+          // El usuario quiere que la primera en la lista (más reciente) tenga el número más alto
+          // Usar data.length - index para que: índice 0 (más reciente) = #total, índice 1 = #(total-1), ..., última = #1
+          const totalEvaluaciones = data.length;
+          evaluacionesFormateadas = data.map((ev, index) => {
+            console.log(`=== DEBUG: Evaluación ${index} ===`, ev);
+            // Número de evaluación relativo al usuario (la más reciente tiene el número más alto)
+            const numeroEvaluacion = totalEvaluaciones - index;
+            
+            return {
+              id: ev.id || ev.Id_Evaluacion || ev.id_evaluacion || null,
+              name: ev.name || ev.Nombre || ev.nombre || `Evaluación #${numeroEvaluacion}`,
+              date: ev.date || ev.Fecha || ev.fecha || 'N/A',
+              time: ev.time || ev.Hora || ev.hora || 'N/A',
+              tiempo: ev.tiempo || ev.Tiempo || ev.tiempo || 'N/A',
+              score: ev.score !== undefined && ev.score !== null ? (parseFloat(ev.score) || 0) : (ev.Puntuacion !== undefined && ev.Puntuacion !== null ? (parseFloat(ev.Puntuacion) || 0) : (ev.puntuacion !== undefined && ev.puntuacion !== null ? (parseFloat(ev.puntuacion) || 0) : 0)),
+              framework: ev.framework || ev.Marco || ev.marco || ev.Framework || ev.framework || 'N/A',
+              status: ev.status || ev.Estado || ev.estado || 'Completada'
+            };
+          });
+        } else if (Array.isArray(data)) {
+          console.warn('=== DEBUG: Array vacío recibido ===');
+          evaluacionesFormateadas = [];
+        } else {
+          console.warn('=== DEBUG: No es un array, tipo:', typeof data, data);
+          evaluacionesFormateadas = [];
+        }
+        
+        console.log('=== DEBUG: Evaluaciones formateadas finales ===', evaluacionesFormateadas);
+        setEvaluations(evaluacionesFormateadas);
+      } else {
+        console.warn('La respuesta no tiene el formato esperado:', response.data);
+        setEvaluations([]);
+      }
+    } catch (err) {
+      console.error('Error al cargar evaluaciones:', err);
+      console.error('Detalles del error:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      setError('No se pudieron cargar las evaluaciones. Por favor, intenta más tarde.');
+      setEvaluations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* ====== Filtros ====== */
   // Fecha (rango)
   const [openCal, setOpenCal] = useState(false);
@@ -150,18 +254,53 @@ export function ViewEvaluationsPage({
 
   /* Filtrado */
   const filtered = useMemo(() => {
-    if (!range.from && !range.to) return MOCK_EVALUATIONS;
-    return MOCK_EVALUATIONS.filter((ev) => {
+    let filteredEvals = evaluations;
+    
+    // Aplicar filtro de fecha si existe
+    if (range.from || range.to) {
+      filteredEvals = evaluations.filter((ev) => {
       const d = parseDMY(ev.date);
+        if (!d) return false;
       if (range.from && d < new Date(range.from.getFullYear(), range.from.getMonth(), range.from.getDate())) return false;
       if (range.to && d > new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate())) return false;
       return true;
     });
-  }, [range]);
+    }
+    
+    return filteredEvals;
+  }, [evaluations, range]);
 
-  const avgScore = filtered.length
-    ? Math.round(filtered.reduce((acc, ev) => acc + ev.score, 0) / filtered.length)
-    : 0;
+  // Cargar promedio desde el backend para mantener consistencia con el dashboard
+  useEffect(() => {
+    const loadAverageScore = async () => {
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const axiosClient = window.axios || axios;
+        const response = await axiosClient.get('/api/dashboard/stats', {
+          params: {
+            refresh: 'true',
+            _t: Date.now()
+          }
+        });
+
+        if (response.data && response.data.success && response.data.data) {
+          const promedio = response.data.data.promedioPuntuacion;
+          // Usar el mismo redondeo que el dashboard para consistencia
+          setAvgScore(promedio !== null && promedio !== undefined ? Math.round(promedio) : 0);
+        }
+      } catch (err) {
+        console.error('Error al cargar promedio del dashboard:', err);
+        setAvgScore(0);
+      }
+    };
+
+    // Cargar promedio cuando el componente se monta o cuando cambian las evaluaciones
+    loadAverageScore();
+  }, [evaluations.length]); // Solo cuando cambia la cantidad de evaluaciones
 
   return (
     <div className="page">
@@ -174,9 +313,9 @@ export function ViewEvaluationsPage({
           <FileText className="w-5 h-5" style={{color:"#4d82bc"}} />
           Mis Evaluaciones
         </h1>
-        <button className="btn-ghost" onClick={onExit} aria-label="Salir">
-          <LogOut className="w-4 h-4" style={{marginRight:8,color:"#173b8f"}} />
-          Salir
+        <button className="btn-ghost" onClick={onExit} aria-label="Volver al Dashboard">
+          <FileText className="w-4 h-4" style={{marginRight:8,color:"#173b8f"}} />
+          Volver al Dashboard
         </button>
       </header>
 
@@ -188,7 +327,7 @@ export function ViewEvaluationsPage({
             <div className="metric">
               <div>
                 <div style={{color:"#5b677a",fontSize:14,marginBottom:4}}>Total Evaluaciones</div>
-                <div className="num">{filtered.length}</div>
+                <div className="num">{evaluations.length}</div>
               </div>
               <span className="bubble"><FileText className="w-6 h-6" /></span>
             </div>
@@ -209,7 +348,7 @@ export function ViewEvaluationsPage({
               <div>
                 <div style={{color:"#5b677a",fontSize:14,marginBottom:4}}>Última Evaluación</div>
                 <div style={{fontSize:18,color:"#173b8f",fontWeight:700}}>
-                  {filtered.length ? filtered[0].date : "—"}
+                  {evaluations.length ? evaluations[0].date : "—"}
                 </div>
               </div>
               <span className="bubble" style={{background:"#f3ecff",color:"#7a4fd6"}}><CalIcon className="w-6 h-6" /></span>
@@ -300,10 +439,25 @@ export function ViewEvaluationsPage({
             </CardHeader>
 
             <CardContent style={{padding:18,display:"grid",gap:12}}>
-              {filtered.map((ev, i) => {
-                const badge = getScoreBadge(ev.score);
+              {loading ? (
+                <div style={{textAlign:"center",padding:"48px 8px",color:"#5b677a"}}>
+                  <Loader2 className="w-8 h-8 animate-spin" style={{margin:"0 auto 16px",color:"#4d82bc"}} />
+                  <p>Cargando evaluaciones...</p>
+                </div>
+              ) : error ? (
+                <div style={{textAlign:"center",padding:"36px 8px",color:"#ef4444"}}>
+                  <p>{error}</p>
+                  <button 
+                    className="btn-primary" 
+                    onClick={loadEvaluations}
+                    style={{marginTop:16}}
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              ) : filtered.map((ev, i) => {
                 return (
-                  <motion.div key={ev.id} initial={{opacity:0, x:-12}} animate={{opacity:1, x:0}} transition={{duration:0.22, delay:0.05*i}}>
+                  <motion.div key={ev.id || i} initial={{opacity:0, x:-12}} animate={{opacity:1, x:0}} transition={{duration:0.22, delay:0.05*i}}>
                     <div className="item" style={{padding:16,background:"#fff"}}>
                       <div style={{display:"flex",alignItems:"stretch",gap:16}}>
                         {/* Columna info */}
@@ -314,9 +468,13 @@ export function ViewEvaluationsPage({
                               <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
                                 <div className="row"><CalIcon className="w-4 h-4" /> {ev.date}</div>
                                 <div className="row"><Clock className="w-4 h-4" /> {ev.time}</div>
+                                {ev.tiempo && ev.tiempo !== 'N/A' && (
+                                  <div className="row" style={{color:"#7c3aed"}}>
+                                    <Clock className="w-4 h-4" /> Duración: {ev.tiempo}
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            <span className={`badge ${badge.cls}`}>{badge.label}</span>
                           </div>
 
                           {/* Progreso */}
@@ -343,7 +501,15 @@ export function ViewEvaluationsPage({
                 );
               })}
 
-              {filtered.length === 0 && (
+              {!loading && !error && filtered.length === 0 && evaluations.length === 0 && (
+                <div style={{textAlign:"center",padding:"36px 8px",color:"#5b677a"}}>
+                  <FileText className="w-12 h-12" style={{margin:"0 auto 16px",color:"#94a3b8",opacity:0.5}} />
+                  <p style={{fontSize:16,marginBottom:8,fontWeight:600}}>No tienes evaluaciones aún</p>
+                  <p style={{fontSize:14,color:"#64748b"}}>Comienza creando tu primera evaluación desde el dashboard</p>
+                </div>
+              )}
+
+              {!loading && !error && filtered.length === 0 && evaluations.length > 0 && (
                 <div style={{textAlign:"center",padding:"36px 8px",color:"#5b677a"}}>
                   No hay evaluaciones dentro del filtro seleccionado.
                 </div>

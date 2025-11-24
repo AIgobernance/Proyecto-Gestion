@@ -1,0 +1,568 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use App\Helpers\SessionHelper;
+use Database\Models\EvaluacionRepository;
+use Database\Models\DocumentosAdjuntosRepository;
+
+class DashboardController extends Controller
+{
+    protected EvaluacionRepository $evaluacionRepository;
+    protected DocumentosAdjuntosRepository $documentosRepository;
+
+    public function __construct(
+        EvaluacionRepository $evaluacionRepository,
+        DocumentosAdjuntosRepository $documentosRepository
+    ) {
+        $this->evaluacionRepository = $evaluacionRepository;
+        $this->documentosRepository = $documentosRepository;
+    }
+
+    /**
+     * Obtiene las estadísticas del dashboard para el usuario autenticado
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getStats(Request $request)
+    {
+        try {
+            // Obtener userId de forma optimizada
+            $userId = SessionHelper::getUserId($request);
+            
+            if (!$userId) {
+                Log::warning('No se encontró usuario en la sesión para las estadísticas del dashboard');
+                return response()->json([
+                    'error' => 'Usuario no autenticado'
+                ], 401);
+            }
+
+            // Cachear estadísticas por 30 segundos para mejorar rendimiento
+            // Permitir forzar actualización con parámetro ?refresh=true
+            $forceRefresh = $request->has('refresh') && $request->input('refresh') === 'true';
+            $cacheKey = "dashboard_stats_user_{$userId}";
+            
+            if ($forceRefresh) {
+                // Forzar actualización: limpiar caché y obtener datos frescos
+                Cache::forget($cacheKey);
+                $estadisticas = $this->evaluacionRepository->obtenerEstadisticas($userId);
+            } else {
+                // Usar caché con duración reducida (30 segundos en lugar de 2 minutos)
+                $estadisticas = Cache::remember($cacheKey, 30, function () use ($userId) {
+                    return $this->evaluacionRepository->obtenerEstadisticas($userId);
+                });
+            }
+
+            Log::info('Estadísticas del dashboard obtenidas', [
+                'user_id' => $userId,
+                'estadisticas' => $estadisticas
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $estadisticas
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener estadísticas del dashboard', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Error al obtener las estadísticas',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtiene todas las evaluaciones del usuario autenticado formateadas
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getEvaluations(Request $request)
+    {
+        try {
+            // Obtener userId de forma optimizada
+            $userId = SessionHelper::getUserId($request);
+            
+            // Logging detallado de la sesión
+            $sessionData = $request->session()->all();
+            $userData = $request->session()->get('user');
+            
+            // Verificar también cuántas evaluaciones tiene este usuario
+            $totalEvalsUsuario = DB::table('Evaluacion')
+                ->where('Id_Usuario', $userId)
+                ->count();
+            
+            Log::info('Datos de sesión al obtener evaluaciones', [
+                'session_user_data' => $userData,
+                'userId_obtenido' => $userId,
+                'total_evaluaciones_usuario' => $totalEvalsUsuario,
+                'correo_en_sesion' => $userData['correo'] ?? $userData['Correo'] ?? null
+            ]);
+            
+            if (!$userId) {
+                Log::warning('No se encontró usuario en la sesión para obtener evaluaciones', [
+                    'session_keys' => array_keys($sessionData),
+                    'user_session' => $request->session()->get('user')
+                ]);
+                return response()->json([
+                    'error' => 'Usuario no autenticado',
+                    'debug' => [
+                        'session_keys' => array_keys($sessionData),
+                        'user_data' => $request->session()->get('user')
+                    ]
+                ], 401);
+            }
+
+            // Verificar primero que existan evaluaciones en la BD para este usuario
+            $totalEnBD = DB::table('Evaluacion')
+                ->where('Id_Usuario', $userId)
+                ->count();
+            
+            Log::info('Verificación de evaluaciones en BD', [
+                'user_id' => $userId,
+                'total_en_bd' => $totalEnBD
+            ]);
+            
+            // NO cachear evaluaciones para detectar cambios inmediatos (evaluaciones incompletas)
+            // El cache causaba que no se detectaran evaluaciones recién guardadas
+            $evaluaciones = $this->evaluacionRepository->obtenerFormateadasPorUsuario($userId);
+
+            // Logging detallado para depuración
+            Log::info('Evaluaciones obtenidas del repositorio', [
+                'user_id' => $userId,
+                'total_en_bd' => $totalEnBD,
+                'total_formateadas' => count($evaluaciones),
+                'evaluaciones' => $evaluaciones
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $evaluaciones,
+                'debug' => [
+                    'user_id' => $userId,
+                    'total_en_bd' => $totalEnBD,
+                    'total_formateadas' => count($evaluaciones)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener evaluaciones', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Error al obtener las evaluaciones',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtiene las estadísticas generales del sistema (para dashboard de administrador)
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getGeneralStats(Request $request)
+    {
+        try {
+            // Obtener el período seleccionado (week, month, quarter, year)
+            $period = $request->input('period', 'month');
+            
+            // Calcular la fecha de inicio según el período
+            switch($period) {
+                case 'week':
+                    $fechaInicio = DB::raw("DATEADD(DAY, -7, GETDATE())");
+                    break;
+                case 'month':
+                    $fechaInicio = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                    break;
+                case 'quarter':
+                    $fechaInicio = DB::raw("DATEADD(MONTH, -3, GETDATE())");
+                    break;
+                case 'year':
+                    $fechaInicio = DB::raw("DATEADD(YEAR, -1, GETDATE())");
+                    break;
+                default:
+                    $fechaInicio = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+            }
+            
+            // Cachear estadísticas generales por 1 minuto
+            $forceRefresh = $request->has('refresh') && $request->input('refresh') === 'true';
+            $cacheKey = "dashboard_general_stats_{$period}";
+            
+            if ($forceRefresh) {
+                Cache::forget($cacheKey);
+            }
+
+            // Temporalmente deshabilitar caché para debugging
+            Cache::forget($cacheKey);
+            $estadisticas = (function () use ($period, $fechaInicio) {
+                try {
+                    // Total de usuarios
+                    $totalUsuarios = DB::table('usuario')->count();
+                } catch (\Exception $e) {
+                    Log::warning('Error al contar usuarios', ['error' => $e->getMessage()]);
+                    $totalUsuarios = 0;
+                }
+                
+                try {
+                    // Total de evaluaciones (sin filtrar por Estado ya que la columna no existe)
+                    $totalEvaluaciones = DB::table('Evaluacion')->count();
+                } catch (\Exception $e) {
+                    Log::warning('Error al contar evaluaciones', ['error' => $e->getMessage()]);
+                    $totalEvaluaciones = 0;
+                }
+                
+                try {
+                    // Total de documentos
+                    $totalDocumentos = DB::table('Documentos_Adjuntos')->count();
+                } catch (\Exception $e) {
+                    Log::warning('Error al contar documentos', ['error' => $e->getMessage()]);
+                    $totalDocumentos = 0;
+                }
+
+                // Tendencias de usuarios por mes (últimos 6 meses)
+                // Verificar si existe la columna FechaCrea (sin guión bajo)
+                $tieneFechaCreacion = DB::selectOne("
+                    SELECT COUNT(*) as existe 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'usuario' AND COLUMN_NAME = 'FechaCrea'
+                ");
+                
+                if ($tieneFechaCreacion && $tieneFechaCreacion->existe > 0) {
+                    if ($period === 'week') {
+                        $usuariosPorMes = DB::select("
+                            SELECT 
+                                CAST(FechaCrea AS DATE) as date,
+                                COUNT(*) as users
+                            FROM [usuario]
+                            WHERE FechaCrea >= DATEADD(DAY, -7, GETDATE())
+                            GROUP BY CAST(FechaCrea AS DATE)
+                            ORDER BY CAST(FechaCrea AS DATE)
+                        ");
+                    } else {
+                        switch($period) {
+                            case 'month':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                                break;
+                            case 'quarter':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -3, GETDATE())");
+                                break;
+                            case 'year':
+                                $fechaInicioSQL = DB::raw("DATEADD(YEAR, -1, GETDATE())");
+                                break;
+                            default:
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                        }
+                        
+                        $usuariosPorMes = DB::table('usuario')
+                            ->select(DB::raw('DATENAME(MONTH, FechaCrea) as month, MONTH(FechaCrea) as month_num, YEAR(FechaCrea) as year, COUNT(*) as users'))
+                            ->where('FechaCrea', '>=', $fechaInicioSQL)
+                            ->groupBy(DB::raw('DATENAME(MONTH, FechaCrea), MONTH(FechaCrea), YEAR(FechaCrea)'))
+                            ->orderBy(DB::raw('YEAR(FechaCrea), MONTH(FechaCrea)'))
+                            ->get()
+                            ->toArray();
+                    }
+                } else {
+                    $usuariosPorMes = [];
+                }
+
+                // Evaluaciones por período
+                try {
+                    if ($period === 'week') {
+                        $evaluacionesPorMes = DB::select("
+                            SELECT 
+                                CAST(Fecha AS DATE) as date,
+                                COUNT(*) as evaluations
+                            FROM [Evaluacion]
+                            WHERE Fecha >= DATEADD(DAY, -7, GETDATE())
+                            GROUP BY CAST(Fecha AS DATE)
+                            ORDER BY CAST(Fecha AS DATE)
+                        ");
+                    } else {
+                        switch($period) {
+                            case 'month':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                                break;
+                            case 'quarter':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -3, GETDATE())");
+                                break;
+                            case 'year':
+                                $fechaInicioSQL = DB::raw("DATEADD(YEAR, -1, GETDATE())");
+                                break;
+                            default:
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                        }
+                        
+                        $evaluacionesPorMes = DB::table('Evaluacion')
+                            ->select(DB::raw('DATENAME(MONTH, Fecha) as month, MONTH(Fecha) as month_num, YEAR(Fecha) as year, COUNT(*) as evaluations'))
+                            ->where('Fecha', '>=', $fechaInicioSQL)
+                            ->groupBy(DB::raw('DATENAME(MONTH, Fecha), MONTH(Fecha), YEAR(Fecha)'))
+                            ->orderBy(DB::raw('YEAR(Fecha), MONTH(Fecha)'))
+                            ->get()
+                            ->toArray();
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Error al obtener evaluaciones por mes', ['error' => $e->getMessage()]);
+                    $evaluacionesPorMes = [];
+                }
+
+                // Distribución por marco de gobernanza
+                try {
+                    // Verificar si existe la columna Marco
+                    $tieneMarco = DB::selectOne("
+                        SELECT COUNT(*) as existe 
+                        FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_NAME = 'Evaluacion' AND COLUMN_NAME = 'Marco'
+                    ");
+                    
+                    if ($tieneMarco && $tieneMarco->existe > 0) {
+                        $distribucionPorMarco = DB::select("
+                            SELECT 
+                                COALESCE(Marco, 'Sin marco') as name,
+                                COUNT(*) as value
+                            FROM [Evaluacion]
+                            GROUP BY Marco
+                        ");
+                    } else {
+                        $distribucionPorMarco = [];
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Error al obtener distribución por marco', ['error' => $e->getMessage()]);
+                    $distribucionPorMarco = [];
+                }
+
+                // Documentos por mes (últimos 5 meses)
+                // Verificar si existe la columna Fecha_Creacion
+                $tieneFechaCreacionDocs = DB::selectOne("
+                    SELECT COUNT(*) as existe 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'Documentos_Adjuntos' AND COLUMN_NAME = 'Fecha_Creacion'
+                ");
+                
+                if ($tieneFechaCreacionDocs && $tieneFechaCreacionDocs->existe > 0) {
+                    if ($period === 'week') {
+                        $documentosPorMes = DB::select("
+                            SELECT 
+                                CAST(Fecha_Creacion AS DATE) as date,
+                                COUNT(*) as documents
+                            FROM [Documentos_Adjuntos]
+                            WHERE Fecha_Creacion >= DATEADD(DAY, -7, GETDATE())
+                            GROUP BY CAST(Fecha_Creacion AS DATE)
+                            ORDER BY CAST(Fecha_Creacion AS DATE)
+                        ");
+                    } else {
+                        switch($period) {
+                            case 'month':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                                break;
+                            case 'quarter':
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -3, GETDATE())");
+                                break;
+                            case 'year':
+                                $fechaInicioSQL = DB::raw("DATEADD(YEAR, -1, GETDATE())");
+                                break;
+                            default:
+                                $fechaInicioSQL = DB::raw("DATEADD(MONTH, -1, GETDATE())");
+                        }
+                        
+                        $documentosPorMes = DB::table('Documentos_Adjuntos')
+                            ->select(DB::raw('DATENAME(MONTH, Fecha_Creacion) as month, MONTH(Fecha_Creacion) as month_num, YEAR(Fecha_Creacion) as year, COUNT(*) as documents'))
+                            ->where('Fecha_Creacion', '>=', $fechaInicioSQL)
+                            ->groupBy(DB::raw('DATENAME(MONTH, Fecha_Creacion), MONTH(Fecha_Creacion), YEAR(Fecha_Creacion)'))
+                            ->orderBy(DB::raw('YEAR(Fecha_Creacion), MONTH(Fecha_Creacion)'))
+                            ->get()
+                            ->toArray();
+                    }
+                } else {
+                    $documentosPorMes = [];
+                }
+
+
+                // Calcular porcentajes de cambio (comparar con mes anterior)
+                // Solo si existe la columna FechaCrea
+                try {
+                    if ($tieneFechaCreacion && $tieneFechaCreacion->existe > 0) {
+                        $mesAnteriorUsuarios = DB::table('usuario')
+                            ->whereBetween('FechaCrea', [
+                                DB::raw("DATEADD(MONTH, -2, GETDATE())"),
+                                DB::raw("DATEADD(MONTH, -1, GETDATE())")
+                            ])
+                            ->count();
+                        
+                        $mesActualUsuarios = DB::table('usuario')
+                            ->whereBetween('FechaCrea', [
+                                DB::raw("DATEADD(MONTH, -1, GETDATE())"),
+                                DB::raw("GETDATE()")
+                            ])
+                            ->count();
+                    } else {
+                        $mesAnteriorUsuarios = 0;
+                        $mesActualUsuarios = 0;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Error al calcular cambio de usuarios', ['error' => $e->getMessage()]);
+                    $mesAnteriorUsuarios = 0;
+                    $mesActualUsuarios = 0;
+                }
+
+                $percentChangeUsuarios = $mesAnteriorUsuarios > 0 
+                    ? round((($mesActualUsuarios - $mesAnteriorUsuarios) / $mesAnteriorUsuarios) * 100, 1)
+                    : 0;
+
+                try {
+                    $mesAnteriorEvaluaciones = DB::table('Evaluacion')
+                        ->whereBetween('Fecha', [
+                            DB::raw("DATEADD(MONTH, -2, GETDATE())"),
+                            DB::raw("DATEADD(MONTH, -1, GETDATE())")
+                        ])
+                        ->count();
+                    
+                    $mesActualEvaluaciones = DB::table('Evaluacion')
+                        ->whereBetween('Fecha', [
+                            DB::raw("DATEADD(MONTH, -1, GETDATE())"),
+                            DB::raw("GETDATE()")
+                        ])
+                        ->count();
+                } catch (\Exception $e) {
+                    Log::warning('Error al calcular cambio de evaluaciones', ['error' => $e->getMessage()]);
+                    $mesAnteriorEvaluaciones = 0;
+                    $mesActualEvaluaciones = 0;
+                }
+
+                $percentChangeEvaluaciones = $mesAnteriorEvaluaciones > 0 
+                    ? round((($mesActualEvaluaciones - $mesAnteriorEvaluaciones) / $mesAnteriorEvaluaciones) * 100, 1)
+                    : 0;
+
+                // Solo si existe la columna Fecha_Creacion
+                try {
+                    if ($tieneFechaCreacionDocs && $tieneFechaCreacionDocs->existe > 0) {
+                        $mesAnteriorDocumentos = DB::table('Documentos_Adjuntos')
+                            ->whereBetween('Fecha_Creacion', [
+                                DB::raw("DATEADD(MONTH, -2, GETDATE())"),
+                                DB::raw("DATEADD(MONTH, -1, GETDATE())")
+                            ])
+                            ->count();
+                        
+                        $mesActualDocumentos = DB::table('Documentos_Adjuntos')
+                            ->whereBetween('Fecha_Creacion', [
+                                DB::raw("DATEADD(MONTH, -1, GETDATE())"),
+                                DB::raw("GETDATE()")
+                            ])
+                            ->count();
+                    } else {
+                        $mesAnteriorDocumentos = 0;
+                        $mesActualDocumentos = 0;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Error al calcular cambio de documentos', ['error' => $e->getMessage()]);
+                    $mesAnteriorDocumentos = 0;
+                    $mesActualDocumentos = 0;
+                }
+
+                $percentChangeDocumentos = $mesAnteriorDocumentos > 0 
+                    ? round((($mesActualDocumentos - $mesAnteriorDocumentos) / $mesAnteriorDocumentos) * 100, 1)
+                    : 0;
+
+                // Colores para distribución por marco
+                $colores = ['#3b82f6', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444'];
+                $distribucionConColores = array_map(function($item, $index) use ($colores) {
+                    return [
+                        'name' => $item->name,
+                        'value' => (int)$item->value,
+                        'color' => $colores[$index % count($colores)]
+                    ];
+                }, $distribucionPorMarco, array_keys($distribucionPorMarco));
+
+                return [
+                    'kpis' => [
+                        'users' => [
+                            'current' => $totalUsuarios,
+                            'percentChange' => $percentChangeUsuarios
+                        ],
+                        'evaluations' => [
+                            'current' => $totalEvaluaciones,
+                            'percentChange' => $percentChangeEvaluaciones
+                        ],
+                        'documents' => [
+                            'current' => $totalDocumentos,
+                            'percentChange' => $percentChangeDocumentos
+                        ]
+                    ],
+                    'userTrend' => array_map(function($item) use ($period) {
+                        if ($period === 'week') {
+                            // Para semana, usar formato de fecha
+                            $fecha = is_string($item->date) ? new \DateTime($item->date) : $item->date;
+                            return [
+                                'month' => $fecha instanceof \DateTime ? $fecha->format('d/m') : (string)$item->date,
+                                'users' => (int)$item->users
+                            ];
+                        } else {
+                            // Abreviar nombres de meses a 3 letras
+                            $mesAbrev = substr($item->month, 0, 3);
+                            return [
+                                'month' => $mesAbrev,
+                                'users' => (int)$item->users
+                            ];
+                        }
+                    }, $usuariosPorMes),
+                    'evaluationsPerMonth' => array_map(function($item) use ($period) {
+                        if ($period === 'week') {
+                            // Para semana, usar formato de fecha
+                            $fecha = is_string($item->date) ? new \DateTime($item->date) : $item->date;
+                            return [
+                                'month' => $fecha instanceof \DateTime ? $fecha->format('d/m') : (string)$item->date,
+                                'evaluations' => (int)$item->evaluations
+                            ];
+                        } else {
+                            // Abreviar nombres de meses a 3 letras
+                            $mesAbrev = substr($item->month, 0, 3);
+                            return [
+                                'month' => $mesAbrev,
+                                'evaluations' => (int)$item->evaluations
+                            ];
+                        }
+                    }, $evaluacionesPorMes),
+                    'distributionByFramework' => $distribucionConColores,
+                    'documentsPerMonth' => array_map(function($item) {
+                        // Abreviar nombres de meses a 3 letras
+                        $mesAbrev = substr($item->month, 0, 3);
+                        return [
+                            'month' => $mesAbrev,
+                            'documents' => (int)$item->documents
+                        ];
+                    }, $documentosPorMes)
+                ];
+            })();
+
+            return response()->json([
+                'success' => true,
+                'data' => $estadisticas
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error al obtener estadísticas generales', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'error' => 'Error al obtener las estadísticas generales',
+                'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
+            ], 500);
+        }
+    }
+}
+

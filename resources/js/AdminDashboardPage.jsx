@@ -93,7 +93,7 @@ export function AdminDashboardPage({
       <main className="wrap">
         <div className="subhead">
           <div>
-            <h2 className="title">
+            <h2 className="title" style={{color:"#ffffff"}}>
               <Users className="w-5 h-5" style={{color:"#4d82bc"}} />
               Bienvenido, {username}
             </h2>

@@ -1,11 +1,42 @@
-import React from "react";
+import React, { useState } from "react";
 import { Upload, Camera, X } from "lucide-react";
 
-export function ChangePhotoModal({ onClose, onSelectFile }) {
+export function ChangePhotoModal({ onClose, onSelectFile, onSave }) {
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+
   const handleFileInput = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      onSelectFile(file);
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        alert("Por favor seleccione una imagen");
+        return;
+      }
+      
+      // Validar tamaño (máximo 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        alert("La imagen no debe superar los 2MB");
+        return;
+      }
+
+      setSelectedFile(file);
+      
+      // Crear preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSave = () => {
+    if (selectedFile && onSave) {
+      onSave(selectedFile);
+    } else if (selectedFile && onSelectFile) {
+      // Fallback al comportamiento anterior
+      onSelectFile(selectedFile);
       onClose();
     }
   };
@@ -79,10 +110,29 @@ export function ChangePhotoModal({ onClose, onSelectFile }) {
           </div>
 
           <div className="modal-body">
+            {preview && (
+              <div style={{marginBottom:16,textAlign:"center"}}>
+                <img 
+                  src={preview} 
+                  alt="Preview" 
+                  style={{
+                    width:150,
+                    height:150,
+                    borderRadius:"50%",
+                    objectFit:"cover",
+                    border:"3px solid #4d82bc",
+                    margin:"0 auto"
+                  }}
+                />
+              </div>
+            )}
+
             {/* ÚNICA OPCIÓN: Importar archivo */}
             <label className="opt" htmlFor="file-upload">
               <Upload className="w-5 h-5 text-[#2b51c2]" />
-              <span style={{fontWeight:700,color:"#0f172a"}}>Importar desde tu equipo</span>
+              <span style={{fontWeight:700,color:"#0f172a"}}>
+                {selectedFile ? "Cambiar imagen" : "Importar desde tu equipo"}
+              </span>
             </label>
             <input
               id="file-upload"
@@ -91,8 +141,26 @@ export function ChangePhotoModal({ onClose, onSelectFile }) {
               onChange={handleFileInput}
             />
 
-            <div style={{display:"flex",justifyContent:"center",marginTop:4}}>
+            <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:12}}>
               <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
+              {selectedFile && onSave && (
+                <button 
+                  type="button" 
+                  className="btn-primary" 
+                  onClick={handleSave}
+                  style={{
+                    background:"linear-gradient(90deg,#4d82bc,#5a8fc9)",
+                    color:"#fff",
+                    border:"none",
+                    borderRadius:999,
+                    padding:"10px 18px",
+                    fontWeight:800,
+                    cursor:"pointer"
+                  }}
+                >
+                  Guardar foto
+                </button>
+              )}
             </div>
           </div>
         </div>

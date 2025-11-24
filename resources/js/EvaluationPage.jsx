@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,7 +10,9 @@ import {
   BookOpen,
   Target,
   Award,
+  Loader2,
 } from "lucide-react";
+import { DocumentUpload } from "./DocumentUpload";
 import imgLogo from "../assets/logo-principal.jpg";
 
 /* ===== Preguntas (puedes ampliar la lista) ===== */
@@ -675,11 +678,139 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
   const [answers, setAnswers] = useState({});
   const [selected, setSelected] = useState(null);
   const [elapsed, setElapsed] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [showRetry, setShowRetry] = useState(false);
+  const [lastAnswers, setLastAnswers] = useState(null); // Guardar respuestas para reintentar
+  const [evaluationId, setEvaluationId] = useState(null); // ID de la evaluación actual
+  const [savingProgress, setSavingProgress] = useState(false); // Guardando progreso
+  
+  // Estado para documentos (máximo 3)
+  const [documents, setDocuments] = useState({
+    0: null, // Documento después de pregunta 10 (índice 9)
+    1: null, // Documento después de pregunta 20 (índice 19)
+    2: null, // Documento después de pregunta 30 (índice 29)
+  });
 
   const currentQuestion = QUESTIONS[currentIndex];
 
   const answeredCount = Object.keys(answers).length;
   const progress = (answeredCount / TOTAL_QUESTIONS) * 100;
+
+  // Inicializar: crear evaluación vacía al montar el componente
+  // Usar useRef para evitar crear múltiples evaluaciones en React StrictMode
+  const hasCreatedEvaluation = useRef(false);
+  
+  useEffect(() => {
+    // Evitar crear múltiples evaluaciones si ya se creó una
+    if (hasCreatedEvaluation.current || evaluationId) {
+      return;
+    }
+
+    const createEvaluation = async () => {
+      // Marcar inmediatamente para evitar llamadas concurrentes
+      hasCreatedEvaluation.current = true;
+      
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const axiosClient = window.axios || axios;
+        const response = await axiosClient.post('/api/evaluation/create', {
+          tiempo: 0,
+        }, {
+          timeout: 10000, // 10 segundos para crear evaluación
+        });
+
+        if (response.data && response.data.success && response.data.data?.id_evaluacion) {
+          setEvaluationId(response.data.data.id_evaluacion);
+        } else {
+          // Si no se pudo crear, permitir reintentar
+          hasCreatedEvaluation.current = false;
+        }
+      } catch (error) {
+        console.error('Error al crear evaluación:', error);
+        // Si hay error, permitir reintentar
+        hasCreatedEvaluation.current = false;
+      }
+    };
+
+    createEvaluation();
+  }, []); // Solo ejecutar una vez al montar
+
+  // Guardar progreso automáticamente cuando se selecciona una respuesta (asíncrono, no bloquea UI)
+  const saveProgress = (preguntaIndex, respuestaTexto) => {
+    // Si aún no hay evaluationId, esperar un momento y reintentar
+    if (!evaluationId) {
+      // Esperar hasta 2 segundos a que se cree la evaluación
+      let attempts = 0;
+      const checkEvaluation = setInterval(() => {
+        attempts++;
+        if (evaluationId) {
+          clearInterval(checkEvaluation);
+          saveSingleAnswer(evaluationId, preguntaIndex, respuestaTexto);
+        } else if (attempts >= 20) { // 2 segundos máximo
+          clearInterval(checkEvaluation);
+          console.warn('No se pudo crear la evaluación a tiempo');
+        }
+      }, 100);
+      return;
+    }
+
+    // Guardar de forma asíncrona sin bloquear la UI (no usar await)
+    saveSingleAnswer(evaluationId, preguntaIndex, respuestaTexto);
+  };
+
+  // Guardar una respuesta individual (asíncrono, no bloquea la UI)
+  const saveSingleAnswer = async (idEval, preguntaIndex, respuestaTexto) => {
+    // Validar que tenemos un ID de evaluación válido
+    if (!idEval || preguntaIndex === undefined || preguntaIndex === null) {
+      console.warn('No se puede guardar: falta id_evaluacion o pregunta_index', { idEval, preguntaIndex });
+      return;
+    }
+
+    // Usar un debounce simple para evitar múltiples llamadas simultáneas para la misma pregunta
+    const saveKey = `${idEval}_${preguntaIndex}`;
+    if (window[`saving_${saveKey}`]) {
+      return; // Ya hay un guardado en progreso para esta pregunta
+    }
+    
+    window[`saving_${saveKey}`] = true;
+    
+    // Guardar en background sin bloquear la UI
+    (async () => {
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const axiosClient = window.axios || axios;
+        await axiosClient.post('/api/evaluation/save-progress', {
+          id_evaluacion: idEval,
+          pregunta_index: preguntaIndex,
+          respuesta: respuestaTexto,
+        }, {
+          timeout: 15000, // Timeout aumentado a 15 segundos para evitar errores
+        });
+      } catch (error) {
+        // Solo loguear errores de timeout o conexión, no mostrar al usuario
+        // Los errores de timeout son normales si el servidor está lento
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          console.warn('Timeout al guardar progreso (no crítico):', preguntaIndex);
+        } else {
+          console.error('Error al guardar progreso:', error);
+        }
+      } finally {
+        // Limpiar el flag después de un delay para evitar spam
+        setTimeout(() => {
+          delete window[`saving_${saveKey}`];
+        }, 1000);
+      }
+    })();
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setElapsed((t) => t + 1), 1000);
@@ -707,20 +838,134 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
 
   const handleNext = () => {
     if (selected === null) return;
+    
     const newAnswers = { ...answers, [currentIndex]: selected };
     setAnswers(newAnswers);
 
+    // Guardar progreso automáticamente (asíncrono, no bloquea)
+    const pregunta = QUESTIONS[currentIndex];
+    const respuestaTexto = pregunta.options[selected];
+    saveProgress(currentIndex, respuestaTexto); // Sin await
+
     if (currentIndex === TOTAL_QUESTIONS - 1) {
-      onComplete?.(newAnswers);
+      // Última pregunta - enviar evaluación
+      handleSubmitEvaluation(newAnswers);
       return;
     }
     setCurrentIndex((i) => i + 1);
+  };
+
+  const handleSubmitEvaluation = async (allAnswers, isRetry = false) => {
+    // Validar que todas las preguntas estén respondidas
+    const preguntasRespondidas = Object.keys(allAnswers).length;
+    if (preguntasRespondidas < TOTAL_QUESTIONS) {
+      const preguntasPendientes = TOTAL_QUESTIONS - preguntasRespondidas;
+      setSubmitError(`Debes responder todas las preguntas antes de finalizar. Te faltan ${preguntasPendientes} pregunta${preguntasPendientes > 1 ? 's' : ''}.`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    setShowRetry(false);
+    
+    // Guardar respuestas para poder reintentar
+    if (!isRetry) {
+      setLastAnswers(allAnswers);
+    }
+
+    try {
+      // Obtener token CSRF
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      // Convertir respuestas a formato de array [0 => "a", 1 => "b", ...]
+      // donde el índice es el número de pregunta (0-based) y el valor es la opción seleccionada
+      const respuestasArray = [];
+      for (let i = 0; i < TOTAL_QUESTIONS; i++) {
+        if (allAnswers[i] !== undefined) {
+          // Obtener el texto de la opción seleccionada
+          const pregunta = QUESTIONS[i];
+          const opcionSeleccionada = pregunta.options[allAnswers[i]];
+          respuestasArray.push(opcionSeleccionada);
+        } else {
+          respuestasArray.push(''); // Pregunta no respondida
+        }
+      }
+
+      // Calcular tiempo en minutos
+      const tiempoMinutos = elapsed / 60;
+
+      // Preparar datos para enviar
+      // Si hay una evaluación existente, incluir su ID
+      const datosEnvio = {
+        respuestas: respuestasArray,
+        tiempo: parseFloat(tiempoMinutos.toFixed(2)),
+        prompt: '', // El usuario puede agregar un prompt personalizado si lo desea
+        documentos: Object.values(documents).filter(doc => doc !== null), // Solo documentos subidos
+        id_evaluacion: evaluationId, // Incluir ID si existe
+      };
+
+      const axiosClient = window.axios || axios;
+      
+      // Timeout aumentado a 3 minutos (180 segundos) porque la generación del PDF puede tardar
+      // No mostrar error automático antes de tiempo
+      const TIMEOUT_MS = 180000; // 3 minutos
+
+      try {
+        const response = await axiosClient.post('/api/evaluation/submit', datosEnvio, {
+          timeout: TIMEOUT_MS, // 3 minutos - tiempo suficiente para generar PDF
+        });
+
+        if (response.data && response.data.success) {
+          // Éxito - llamar al callback con el ID de evaluación
+          onComplete?.(allAnswers, response.data.data?.id_evaluacion);
+        } else {
+          throw new Error(response.data?.error || 'Error al enviar la evaluación');
+        }
+      } catch (requestError) {
+        // Si es un error de timeout, mostrar mensaje de reintentar
+        if (requestError.code === 'ECONNABORTED' || requestError.message?.includes('timeout')) {
+          setShowRetry(true);
+          setSubmitError('La solicitud tardó demasiado (más de 3 minutos). Por favor, verifica tu conexión e intenta nuevamente.');
+          setIsSubmitting(false);
+          return;
+        }
+        
+        // Para otros errores, lanzar la excepción para que se maneje abajo
+        throw requestError;
+      }
+
+    } catch (error) {
+      console.error('Error al enviar evaluación:', error);
+      
+      // Si no es un error de timeout, mostrar el error normal
+      if (!showRetry) {
+        setSubmitError(
+          error.response?.data?.error || 
+          error.response?.data?.message || 
+          'Error al enviar la evaluación. Por favor, intenta nuevamente.'
+        );
+        setShowRetry(true); // Permitir reintentar en caso de error
+      }
+      
+      setIsSubmitting(false);
+      // No llamar a onComplete si hay error
+    }
+  };
+
+  const handleRetry = () => {
+    if (lastAnswers) {
+      handleSubmitEvaluation(lastAnswers, true);
+    }
   };
 
   const handlePrev = () => {
     if (currentIndex === 0) return;
     setCurrentIndex((i) => i - 1);
   };
+
 
   return (
     <div className="eval-page">
@@ -896,6 +1141,84 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                 })}
               </div>
 
+              {/* Subida de documentos cada 10 preguntas */}
+              {(currentIndex === 9 || currentIndex === 19 || currentIndex === 29) && (
+                <DocumentUpload
+                  currentFileIndex={Math.floor(currentIndex / 10)}
+                  maxFiles={3}
+                  maxSizeMB={2}
+                  uploadedFile={documents[Math.floor(currentIndex / 10)]}
+                  evaluationId={evaluationId}
+                  onUpload={(documentData) => {
+                    setDocuments(prev => ({
+                      ...prev,
+                      [Math.floor(currentIndex / 10)]: documentData
+                    }));
+                    // Actualizar evaluationId si viene en la respuesta
+                    if (documentData.id_evaluacion && !evaluationId) {
+                      setEvaluationId(documentData.id_evaluacion);
+                    }
+                  }}
+                  disabled={isSubmitting}
+                />
+              )}
+
+              {/* Mensaje de error y opción de reintentar */}
+              {submitError && (
+                <div style={{
+                  marginTop: 12,
+                  padding: 16,
+                  background: showRetry ? "#fef3c7" : "#fee2e2",
+                  border: `1px solid ${showRetry ? "#fcd34d" : "#fecaca"}`,
+                  borderRadius: 12,
+                  color: showRetry ? "#92400e" : "#991b1b",
+                  fontSize: 14
+                }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <strong style={{ display: "block", marginBottom: 4 }}>
+                        {showRetry ? "⏱️ Tiempo de espera agotado" : "❌ Error al enviar"}
+                      </strong>
+                      <p style={{ margin: 0, fontSize: 13 }}>
+                        {submitError}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {showRetry && (
+                    <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        className="btn-nav btn-nav--next"
+                        onClick={handleRetry}
+                        disabled={isSubmitting}
+                        style={{
+                          background: "linear-gradient(90deg, #f59e0b, #f97316)",
+                          color: "#fff",
+                          border: "none",
+                          padding: "10px 20px",
+                          borderRadius: "999px",
+                          fontWeight: 700,
+                          cursor: isSubmitting ? "not-allowed" : "pointer",
+                          opacity: isSubmitting ? 0.6 : 1,
+                        }}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            Reintentando...
+                          </>
+                        ) : (
+                          <>
+                            🔄 Reintentar Envío
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Navegación */}
               <div className="eval-nav">
                 <button
@@ -916,7 +1239,7 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                   ) : (
                     <span className="eval-nav__center--ok">
                       <CheckCircle size={14} />
-                      Respuesta seleccionada
+                      Respuesta seleccionada ({answeredCount}/{TOTAL_QUESTIONS})
                     </span>
                   )}
                 </div>
@@ -925,10 +1248,39 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
                   type="button"
                   className="btn-nav btn-nav--next"
                   onClick={handleNext}
-                  disabled={selected === null}
+                  disabled={selected === null || isSubmitting}
+                  title={
+                    selected === null 
+                      ? "Debes seleccionar una respuesta para continuar" 
+                      : currentIndex === TOTAL_QUESTIONS - 1 && answeredCount < TOTAL_QUESTIONS
+                        ? `Te faltan ${TOTAL_QUESTIONS - answeredCount} pregunta${TOTAL_QUESTIONS - answeredCount > 1 ? 's' : ''} por responder`
+                        : ""
+                  }
                 >
-                  {currentIndex === TOTAL_QUESTIONS - 1 ? "Finalizar" : "Siguiente"}
-                  <ArrowRight size={16} />
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      Procesando... (puede tardar unos minutos)
+                    </>
+                  ) : currentIndex === TOTAL_QUESTIONS - 1 ? (
+                    <>
+                      {answeredCount < TOTAL_QUESTIONS ? (
+                        <>
+                          Finalizar ({answeredCount}/{TOTAL_QUESTIONS})
+                        </>
+                      ) : (
+                        <>
+                          Finalizar
+                          <ArrowRight size={16} />
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      Siguiente
+                      <ArrowRight size={16} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>

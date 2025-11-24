@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import {
   CheckCircle2,
   Trophy,
@@ -8,9 +9,11 @@ import {
   Clock,
   Target,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { motion } from "motion/react";
+import { useParams } from "react-router-dom";
 import imgLogo from "../assets/logo-principal.jpg";
 
 /* ========= Estilos embebidos (coherentes con Login/Dashboard/Perfil) ========= */
@@ -67,18 +70,437 @@ const styles = `
 
 /* Footer note */
 .note{color:#e2e8f0;text-align:center;font-size:13px;margin-top:16px}
+
+/* Gráficas */
+.charts-section{margin-top:24px;padding-top:24px;border-top:1px solid rgba(255,255,255,.18)}
+.chart-container{background:rgba(255,255,255,.1);backdrop-filter:blur(4px);border-radius:18px;padding:20px;margin-bottom:20px}
+.chart-container h3{color:#fff;font-size:18px;font-weight:700;margin:0 0 16px;text-align:center}
+.chart-wrapper{position:relative;width:100%;height:400px;margin:0 auto}
+
+/* Animación de carga */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
 `;
 
 export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
-  // Datos de ejemplo (puedes sustituir con los reales)
-  const evaluationData = {
-    questionsAnswered: 50,
-    timeSpent: "18 min",
+  const { id } = useParams(); // Obtener ID de la evaluación de la URL
+  const [pdfReady, setPdfReady] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [puntuacion, setPuntuacion] = useState(null);
+  const [error, setError] = useState(null);
+  const [chartData, setChartData] = useState(null);
+  
+  // Estado para datos de la evaluación
+  const [evaluationData, setEvaluationData] = useState({
+    questionsAnswered: 30,
+    timeSpent: "Calculando...",
     completionDate: new Date().toLocaleDateString("es-ES", {
       day: "numeric",
       month: "long",
       year: "numeric",
     }),
+  });
+
+  // Verificar estado del PDF periódicamente
+  useEffect(() => {
+    if (!id) {
+      // Si no hay ID, asumir que el PDF ya está listo (compatibilidad con ruta sin ID)
+      setPdfReady(true);
+      setIsChecking(false);
+      return;
+    }
+
+    let pollInterval;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 120; // Máximo 10 minutos (120 * 5 segundos)
+    const POLL_INTERVAL = 5000; // Verificar cada 5 segundos
+
+    const checkPdfStatus = async () => {
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const axiosClient = window.axios || axios;
+        const response = await axiosClient.get(`/api/evaluation/${id}/pdf-status`, {
+          timeout: 30000, // Aumentar timeout a 30 segundos
+        });
+
+        if (response.data && response.data.success) {
+          const data = response.data.data;
+          
+          // Log para debugging
+          console.log('Datos recibidos del endpoint pdf-status:', {
+            puntuacion: data.puntuacion,
+            pdf_ready: data.pdf_ready,
+            tiempo: data.tiempo
+          });
+          
+          // Actualizar datos de la evaluación si están disponibles
+          if (data.tiempo !== undefined && data.tiempo !== null) {
+            const tiempoMinutos = parseFloat(data.tiempo);
+            let tiempoFormateado = "0 min";
+            
+            if (tiempoMinutos < 60) {
+              tiempoFormateado = `${Math.round(tiempoMinutos)} min`;
+            } else {
+              const horas = Math.floor(tiempoMinutos / 60);
+              const mins = Math.round(tiempoMinutos % 60);
+              tiempoFormateado = `${horas}h ${mins} min`;
+            }
+            
+            setEvaluationData(prev => ({
+              ...prev,
+              timeSpent: tiempoFormateado,
+            }));
+          }
+          
+          // Actualizar fecha de completación si está disponible
+          if (data.fecha_completado) {
+            try {
+              const fechaObj = new Date(data.fecha_completado);
+              setEvaluationData(prev => ({
+                ...prev,
+                completionDate: fechaObj.toLocaleDateString("es-ES", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }),
+              }));
+            } catch (e) {
+              // Mantener fecha por defecto si hay error
+            }
+          }
+          
+          // Actualizar puntuación SIEMPRE que venga en la respuesta, no solo cuando el PDF esté listo
+          if (data.puntuacion !== undefined && data.puntuacion !== null && data.puntuacion !== '') {
+            const puntuacionValue = parseFloat(data.puntuacion);
+            if (!isNaN(puntuacionValue) && puntuacionValue >= 0) {
+              console.log('Actualizando puntuación:', puntuacionValue);
+              setPuntuacion(puntuacionValue);
+            } else {
+              console.warn('Puntuación inválida:', data.puntuacion);
+            }
+          } else {
+            console.warn('No se recibió puntuación en la respuesta:', data.puntuacion);
+          }
+          
+          if (data.pdf_ready) {
+            setPdfReady(true);
+            setPdfUrl(data.pdf_url);
+            setIsChecking(false);
+            
+            // Limpiar intervalo cuando el PDF esté listo
+            if (pollInterval) {
+              clearInterval(pollInterval);
+            }
+          } else {
+            attempts++;
+            
+            // Si excedemos el máximo de intentos, mostrar error
+            if (attempts >= MAX_ATTEMPTS) {
+              setIsChecking(false);
+              setError('El PDF está tardando más de lo esperado. Por favor, intenta más tarde.');
+              if (pollInterval) {
+                clearInterval(pollInterval);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // No loguear errores de timeout, son normales durante el polling
+        if (err.code !== 'ECONNABORTED' && !err.message?.includes('timeout')) {
+          console.error('Error al verificar estado del PDF:', err);
+        }
+        
+        attempts++;
+        
+        // Solo mostrar error después de muchos intentos fallidos (no solo timeouts)
+        // Continuar intentando incluso si hay timeouts
+        if (attempts >= 20 && err.code !== 'ECONNABORTED' && !err.message?.includes('timeout')) {
+          setIsChecking(false);
+          setError('Error al verificar el estado del PDF. Por favor, intenta más tarde.');
+          if (pollInterval) {
+            clearInterval(pollInterval);
+          }
+        }
+      }
+    };
+
+    // Verificar inmediatamente
+    checkPdfStatus();
+
+    // Configurar polling cada 5 segundos
+    pollInterval = setInterval(checkPdfStatus, POLL_INTERVAL);
+
+    // Limpiar intervalo al desmontar
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [id]);
+
+  // Obtener datos para las gráficas
+  useEffect(() => {
+    if (!id || !pdfReady) return;
+
+    const fetchChartData = async () => {
+      try {
+        const token = document.head?.querySelector('meta[name="csrf-token"]');
+        if (token) {
+          axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+        }
+
+        const axiosClient = window.axios || axios;
+        const response = await axiosClient.get(`/api/evaluation/${id}/chart-data`, {
+          timeout: 10000,
+        });
+
+        if (response.data && response.data.success) {
+          setChartData(response.data.data);
+        }
+      } catch (err) {
+        console.error('Error al obtener datos de gráficas:', err);
+      }
+    };
+
+    fetchChartData();
+  }, [id, pdfReady]);
+
+  // Cargar Chart.js y renderizar gráficas cuando chartData esté disponible
+  useEffect(() => {
+    if (!chartData || !pdfReady) return;
+
+    // Cargar Chart.js desde CDN si no está cargado
+    if (!window.Chart) {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      script.onload = () => renderCharts();
+      document.head.appendChild(script);
+    } else {
+      renderCharts();
+    }
+
+    function renderCharts() {
+      // Limpiar gráficas anteriores
+      const barCanvas = document.getElementById('barChart');
+      const radarCanvas = document.getElementById('radarChart');
+      
+      if (barCanvas && window.Chart) {
+        const existingBarChart = window.Chart.getChart(barCanvas);
+        if (existingBarChart) {
+          existingBarChart.destroy();
+        }
+
+        const barCtx = barCanvas.getContext('2d');
+        new window.Chart(barCtx, {
+          type: 'bar',
+          data: {
+            labels: chartData.categories,
+            datasets: [{
+              label: 'Porcentaje de Implementación',
+              data: chartData.scores,
+              backgroundColor: [
+                'rgba(0, 77, 153, 0.7)',
+                'rgba(0, 102, 204, 0.7)',
+                'rgba(0, 128, 255, 0.7)',
+                'rgba(51, 153, 255, 0.7)',
+                'rgba(102, 178, 255, 0.7)'
+              ],
+              borderColor: [
+                'rgba(0, 77, 153, 1)',
+                'rgba(0, 102, 204, 1)',
+                'rgba(0, 128, 255, 1)',
+                'rgba(51, 153, 255, 1)',
+                'rgba(102, 178, 255, 1)'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: {
+                display: false
+              },
+              title: {
+                display: true,
+                text: 'Nivel de Implementación por Categoría de Gobernanza de IA',
+                color: '#fff',
+                font: {
+                  size: 16
+                }
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  color: '#fff'
+                },
+                title: {
+                  display: true,
+                  text: 'Porcentaje de Implementación',
+                  color: '#fff'
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              },
+              x: {
+                ticks: {
+                  color: '#fff',
+                  maxRotation: 45,
+                  minRotation: 45
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }
+              }
+            }
+          }
+        });
+      }
+
+      if (radarCanvas && window.Chart) {
+        const existingRadarChart = window.Chart.getChart(radarCanvas);
+        if (existingRadarChart) {
+          existingRadarChart.destroy();
+        }
+
+        const radarCtx = radarCanvas.getContext('2d');
+        new window.Chart(radarCtx, {
+          type: 'radar',
+          data: {
+            labels: chartData.categories.map(cat => cat.split('(')[0].trim()),
+            datasets: [{
+              label: 'Ponderación (%)',
+              data: chartData.weights,
+              backgroundColor: 'rgba(0, 77, 153, 0.4)',
+              borderColor: 'rgba(0, 77, 153, 1)',
+              pointBackgroundColor: 'rgba(0, 77, 153, 1)',
+              pointBorderColor: '#fff',
+              pointHoverBackgroundColor: '#fff',
+              pointHoverBorderColor: 'rgba(0, 77, 153, 1)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: {
+                display: true,
+                labels: {
+                  color: '#fff'
+                }
+              },
+              title: {
+                display: true,
+                text: 'Ponderación de Áreas de Gobernanza de IA',
+                color: '#fff',
+                font: {
+                  size: 16
+                }
+              }
+            },
+            scales: {
+              r: {
+                beginAtZero: true,
+                max: 40,
+                ticks: {
+                  color: '#fff',
+                  stepSize: 5
+                },
+                pointLabels: {
+                  color: '#fff',
+                  font: {
+                    size: 11
+                  }
+                },
+                grid: {
+                  color: 'rgba(255, 255, 255, 0.2)'
+                }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    return () => {
+      // Limpiar gráficas al desmontar
+      const barCanvas = document.getElementById('barChart');
+      const radarCanvas = document.getElementById('radarChart');
+      
+      if (barCanvas && window.Chart) {
+        const chart = window.Chart.getChart(barCanvas);
+        if (chart) chart.destroy();
+      }
+      
+      if (radarCanvas && window.Chart) {
+        const chart = window.Chart.getChart(radarCanvas);
+        if (chart) chart.destroy();
+      }
+    };
+  }, [chartData, pdfReady]);
+
+  const handleDownloadPdf = async () => {
+    if (!id) {
+      console.error('No hay ID de evaluación para descargar');
+      return;
+    }
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const axiosClient = window.axios || axios;
+      
+      // Usar el endpoint de descarga que valida permisos y envía headers correctos
+      const response = await axiosClient.get(`/api/evaluation/${id}/download-pdf`, {
+        responseType: 'blob', // Importante: indicar que esperamos un archivo binario
+        timeout: 60000, // 60 segundos de timeout para archivos grandes
+      });
+
+      // Crear un blob del PDF descargado
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Crear un enlace temporal para descargar el PDF
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `evaluacion-${id || 'resultados'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Limpiar
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error al descargar PDF:', err);
+      
+      // Fallback: intentar usar la URL directa si el endpoint falla
+      if (pdfUrl) {
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `evaluacion-${id || 'resultados'}.pdf`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else {
+        alert('Error al descargar el PDF. Por favor, intenta más tarde.');
+      }
+    }
   };
 
   return (
@@ -124,11 +546,18 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
 
           {/* Título y subtítulo en BLANCO */}
           <h1 style={{ margin:"0 0 6px", color:"#ffffff", fontSize:32, fontWeight:900 }}>
-            ¡Evaluación completada!
+            {isChecking ? "Procesando evaluación..." : "¡Evaluación completada!"}
           </h1>
           <p style={{ margin:0, color:"#ffffff" }}>
-            Has finalizado la evaluación de gobernanza de IA. Tus resultados ya están disponibles.
+            {isChecking 
+              ? "Estamos generando tu informe detallado. Esto puede tardar unos minutos..." 
+              : "Has finalizado la evaluación de gobernanza de IA. Tus resultados ya están disponibles."}
           </p>
+          {error && (
+            <p style={{ margin:"12px 0 0", color:"#fecaca", fontSize:14 }}>
+              {error}
+            </p>
+          )}
         </motion.div>
 
         {/* Métricas */}
@@ -152,37 +581,95 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
           <Card className="metric-card">
             <CardContent className="metric-body">
               <div className="metric-icon" style={{background:"#e9fbf0", color:"#16a34a"}}><Trophy size={26} /></div>
-              <div className="metric-title" style={{fontSize:20}}>Completada</div>
-              <p className="metric-sub">{evaluationData.completionDate}</p>
+              <div className="metric-title" style={{fontSize:28}}>
+                {puntuacion !== null && typeof puntuacion === 'number' && !isNaN(puntuacion) 
+                  ? `${Number(puntuacion).toFixed(1)}%` 
+                  : isChecking 
+                    ? "Calculando..." 
+                    : "N/A"}
+              </div>
+              <p className="metric-sub">Puntuación obtenida</p>
             </CardContent>
           </Card>
         </section>
 
         {/* Resultados disponibles (solo botón Descargar PDF) */}
-        <section className="results-card">
-          <div className="results-head">
-            <h2 className="results-title">Resultados disponibles</h2>
-            <p className="results-desc">Tu análisis detallado de gobernanza de IA está listo para descargar</p>
-          </div>
-
-          <div className="results-body">
-            <div className="results-list">
-              <h3><Star size={18} color="#fde047" /> Lo que incluye el informe</h3>
-              <ul>
-                <li><CheckCircle2 size={18} color="#bbf7d0" /> Puntuación general de madurez en gobernanza de IA.</li>
-                <li><CheckCircle2 size={18} color="#bbf7d0" /> Análisis por cada una de las 5 dimensiones evaluadas.</li>
-                <li><CheckCircle2 size={18} color="#bbf7d0" /> Gráficos de radar y barras comparativas.</li>
-                <li><CheckCircle2 size={18} color="#bbf7d0" /> Recomendaciones priorizadas para mejorar.</li>
-                <li><CheckCircle2 size={18} color="#bbf7d0" /> Comparativa con marcos (ISO, NIS2, CONPES).</li>
-              </ul>
+        {isChecking ? (
+          <section className="results-card">
+            <div className="results-head">
+              <h2 className="results-title">Generando informe...</h2>
+              <p className="results-desc">Por favor espera mientras procesamos tu evaluación con IA</p>
+            </div>
+            <div className="results-body" style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <Loader2 size={48} color="#fff" style={{ margin: '0 auto 20px', animation: 'spin 1s linear infinite' }} />
+              <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '15px', margin: 0 }}>
+                Esto puede tardar entre 1 y 3 minutos
+              </p>
+            </div>
+          </section>
+        ) : pdfReady ? (
+          <section className="results-card">
+            <div className="results-head">
+              <h2 className="results-title">Resultados disponibles</h2>
+              <p className="results-desc">Tu análisis detallado de gobernanza de IA está listo para descargar</p>
+              {puntuacion !== null && typeof puntuacion === 'number' && !isNaN(puntuacion) && (
+                <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '16px', marginTop: '8px', fontWeight: 600 }}>
+                  Puntuación: {Number(puntuacion).toFixed(2)} / 100
+                </p>
+              )}
             </div>
 
-            {/* ÚNICO botón: Descargar PDF */}
-            <button className="btn-secondary" onClick={onDownloadPdf}>
-              <Download size={18} /> Descargar PDF
-            </button>
-          </div>
-        </section>
+            <div className="results-body">
+              <div className="results-list">
+                <h3><Star size={18} color="#fde047" /> Lo que incluye el informe</h3>
+                <ul>
+                  <li><CheckCircle2 size={18} color="#bbf7d0" /> Puntuación general de madurez en gobernanza de IA.</li>
+                  <li><CheckCircle2 size={18} color="#bbf7d0" /> Análisis por cada una de las 5 dimensiones evaluadas.</li>
+                  <li><CheckCircle2 size={18} color="#bbf7d0" /> Gráficos de radar y barras comparativas.</li>
+                  <li><CheckCircle2 size={18} color="#bbf7d0" /> Recomendaciones priorizadas para mejorar.</li>
+                  <li><CheckCircle2 size={18} color="#bbf7d0" /> Comparativa con marcos (ISO, NIS2, CONPES).</li>
+                </ul>
+              </div>
+
+              {/* ÚNICO botón: Descargar PDF */}
+              <button className="btn-secondary" onClick={handleDownloadPdf}>
+                <Download size={18} /> Descargar PDF
+              </button>
+
+              {/* Gráficas */}
+              {chartData && chartData.categories && (
+                <div className="charts-section">
+                  <div className="chart-container">
+                    <h3>Nivel de Implementación por Categoría</h3>
+                    <div className="chart-wrapper">
+                      <canvas id="barChart"></canvas>
+                    </div>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', marginTop: '12px', textAlign: 'center' }}>
+                      Esta gráfica muestra el nivel de implementación promedio para cada una de las categorías de gobernanza de IA.
+                    </p>
+                  </div>
+
+                  <div className="chart-container">
+                    <h3>Ponderación Relativa de las Áreas de Gobernanza</h3>
+                    <div className="chart-wrapper">
+                      <canvas id="radarChart"></canvas>
+                    </div>
+                    <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px', marginTop: '12px', textAlign: 'center' }}>
+                      Esta gráfica ilustra la importancia relativa que se ha asignado a cada área de gobernanza de IA para tu empresa.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        ) : (
+          <section className="results-card">
+            <div className="results-head">
+              <h2 className="results-title">Error al generar informe</h2>
+              <p className="results-desc">{error || 'No se pudo generar el PDF. Por favor, intenta más tarde.'}</p>
+            </div>
+          </section>
+        )}
 
         <p className="note">
           Gracias por utilizar el Evaluador de Gobernanza de IA. Tu compromiso con la IA responsable es clave.
