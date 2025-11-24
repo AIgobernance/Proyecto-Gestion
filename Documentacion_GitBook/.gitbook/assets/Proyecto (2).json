@@ -1,0 +1,817 @@
+{
+  "name": "Proyecto",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Evaluacion",
+        "responseMode": "lastNode",
+        "responseData": "allEntries",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        -272
+      ],
+      "id": "2209facf-b184-4c80-9e96-3c084a81d907",
+      "name": "Webhook",
+      "webhookId": "5f5befb5-9d0b-4729-9d2f-3b8a1c04b572"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.system_prompt }}",
+              "role": "model"
+            },
+            {
+              "content": "={{ $json.full_prompt }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1456,
+        -368
+      ],
+      "id": "4b7e9c66-a780-4d1a-af61-726b44a633fb",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SryCXjArP9VXPdeP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ $json.system_prompt }}",
+              "role": "model"
+            },
+            {
+              "content": "={{ $json.full_prompt }}"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        880,
+        -176
+      ],
+      "id": "d3ed9116-b9de-4b45-9535-ac0311de0d5b",
+      "name": "Message a model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "SryCXjArP9VXPdeP",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/evaluation/n8n-results",
+        "sendBody": true,
+        "specifyBody": "=keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "id_evaluacion",
+              "value": "={{ $json.id_evaluacion }}"
+            },
+            {
+              "name": "html",
+              "value": "={{ $json.html }}"
+            },
+            {
+              "name": "puntuacion",
+              "value": "={{ $json.puntuacion }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2256,
+        -176
+      ],
+      "id": "0a719cd6-bdc9-4a94-86e0-1d3d413dc175",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/api/evaluation/n8n-results",
+        "sendBody": true,
+        "specifyBody": "=keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "id_evaluacion",
+              "value": "={{ $json.id_evaluacion }}"
+            },
+            {
+              "name": "html",
+              "value": "={{ $json.html }}"
+            },
+            {
+              "name": "puntuacion",
+              "value": "={{ $json.puntuacion }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2704,
+        -368
+      ],
+      "id": "03495eba-d8ef-4672-a8f3-740c6c0c0fc8",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1fe53c4a-14eb-4344-b1ea-fbbc7a9a4820",
+              "name": "body.metadatos",
+              "value": "={{ $json.body.metadatos }}",
+              "type": "object"
+            },
+            {
+              "id": "9d032dd0-cd40-440a-b9da-67ba8733f129",
+              "name": "body.respuestas",
+              "value": "={{ $json.body.respuestas }}",
+              "type": "object"
+            },
+            {
+              "id": "40630372-a82b-446b-b215-f0cccf8c0308",
+              "name": "body.documentos",
+              "value": "={{ $json.body.documentos }}",
+              "type": "array"
+            },
+            {
+              "id": "7fa84d94-c744-4994-974a-d3c29333a350",
+              "name": "body.id_evaluacion",
+              "value": "={{ $json.body.id_evaluacion }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -16,
+        -272
+      ],
+      "id": "99224c3c-ed77-41b6-8599-ca26d9df8a8c",
+      "name": "Obtener datos"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "758f53b2-c99d-4dd8-90d4-eaadc8355742",
+              "leftValue": "={{ $json.body.documentos }}",
+              "rightValue": "",
+              "operator": {
+                "type": "array",
+                "operation": "exists",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "e03b7195-53ae-4e9d-bbb8-591a9f34a102",
+              "leftValue": "={{ $json.body.documentos.length}}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        -272
+      ],
+      "id": "bd45c04b-866f-4608-bd6e-b703099797fb",
+      "name": "If Verificar documentos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar estructura sin documentos para el nodo Set\nreturn {\n  json: {\n    ...$input.item.json, // Mantener todos los datos originales\n    documentos_texto_combinado: 'No se proporcionaron documentos para análisis',\n    total_documentos: 0,\n    tiene_documentos: false\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -176
+      ],
+      "id": "5468b714-5cb5-428d-8fe5-bc7c191f8e36",
+      "name": "Arreglar estructura"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4e21aaed-d193-4c42-80a0-656008c6e641",
+              "name": "system_prompt",
+              "value": "Quiero que generes únicamente código HTML, sin comentarios, sin texto fuera del documento, sin explicaciones y sin usar bloques ```. La salida será usada automáticamente por Laravel y n8n para generar un archivo PDF, por lo que debe ser estrictamente HTML válido.  ⚠️ REGLA CRÍTICA: El documento DEBE estar COMPLETO. NO puedes cortar contenido ni dejar secciones incompletas. Si el contenido es largo, genera TODO el HTML completo sin importar la longitud.  Contexto obligatorio de la arquitectura (NO OMITAS ESTO EN LA RESPUESTA)  El sistema trabaja con una arquitectura de 4 capas:  Frontend – React Donde el usuario completa la evaluación de gobernanza y descarga el PDF generado.  Backend – Laravel Maneja la lógica del negocio, seguridad, validaciones, comunicación con servicios externos y conexión con la base de datos.  Servicios Externos – N8N, SMS, SMTP N8N automatiza procesos y envía las respuestas a una IA para generar este informe. SMS/SMTP se usa para autenticación 2FA, no relevante para el informe. N8N devuelve tu HTML a Laravel para convertirlo en PDF.  Base de Datos – SQL Server Donde se guardan resultados, configuraciones y toda la trazabilidad.  Flujo donde entra este prompt  React envía las respuestas del formulario a Laravel. Laravel las envía a N8N. N8N llama a esta IA con tu prompt. La IA debe devolver solo HTML limpio, que será transformado directamente en PDF. Laravel recibe ese HTML, guarda datos y envía al frontend para descargar.  Por ese motivo:  ✔ NO puedes devolver texto adicional. ✔ NO puedes explicar nada fuera del HTML. ✔ Solo puedes devolver el archivo HTML listo para PDF. ✔ El HTML DEBE estar COMPLETO desde <!DOCTYPE html> hasta </html> sin cortes.  Datos para el informe  Empresa: {NOMBRE_EMPRESA} Sector: {SECTOR} Resultados de las 30 preguntas (pregunta → valor): {LISTA_PREGUNTAS_Y_VALORES} Ponderaciones por sector: {PONDERACIONES} Archivos de apoyo / evidencias recibidas: {LISTA_ARCHIVOS_APOYO}  ESTRUCTURA OBLIGATORIA Y COMPLETA DEL HTML  El HTML debe ser un informe ejecutivo profesional y COMPLETO. DEBES incluir TODAS las siguientes secciones sin excepción:  1. PORTADA (OBLIGATORIA)  Debe incluir EXACTAMENTE: - Título principal: \"Informe de Evaluación de Gobernanza de IA\" o \"Informe de Gobernanza de Inteligencia Artificial\" - Nombre de la empresa (usar el valor de {NOMBRE_EMPRESA}) - Sector (usar el valor de {SECTOR}) - Fecha actual (generar usando JavaScript: new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })) - Descripción breve del propósito del documento (2-3 líneas)  2. RESUMEN EJECUTIVO (OBLIGATORIA Y COMPLETA)  DEBES incluir TODAS estas subsecciones:  2.1. Propósito del Informe - Explicación clara del objetivo del informe (2-3 párrafos)  2.2. Contexto de la Evaluación - Mencionar los marcos evaluados: ISO 27090/27091, ISO 23894, NIS2/AI Act, ISO 42001-42005, CONPES 4144 - Explicar que la evaluación consta de 30 preguntas  2.3. Nivel de Implementación y su Interpretación - Explicar la escala: 0 = 0%, 0.25 = 25%, 0.5 = 50%, 1 = 100% - Explicar qué significa cada nivel de implementación  2.4. Importancia de las Evaluaciones de Gobernanza de IA - Explicar por qué son importantes (1-2 párrafos)  2.5. Resultados Globales Consolidados - Calcular y mostrar la puntuación global (promedio de todas las respuestas * 100) - Mostrar el puntaje en formato: \"El puntaje global consolidado es del X%\" - Incluir una caja destacada con la puntuación  3. ANÁLISIS DE RESULTADOS (OBLIGATORIA Y COMPLETA)  DEBES incluir TODAS estas subsecciones en este orden:  3.1. Tabla de Preguntas y Valores - Tabla HTML estilizada con TODAS las 30 preguntas - Columnas: Número, Pregunta, Valor (mostrar como porcentaje) - NO omitas ninguna pregunta  3.2. Explicación de Valores - Párrafo explicando qué representa cada valor (0%, 25%, 50%, 100%)  3.3. Interpretación Ejecutiva del Puntaje General - Párrafo analizando el significado del puntaje obtenido - Mencionar el nivel de riesgo asociado - Importancia de abordar las deficiencias  3.4. Identificación de Fortalezas - Título: \"Fortalezas\" o \"Identificación de Fortalezas\" - Si el puntaje es bajo (0-30%), mencionar que no se identifican fortalezas significativas y explicar por qué - Si el puntaje es medio/alto, listar las fortalezas identificadas - NO dejes esta sección incompleta  3.5. Identificación de Debilidades - Título: \"Debilidades\" o \"Identificación de Debilidades\" - Listar TODAS las áreas críticas que representan debilidades - Ser específico: mencionar categorías (Ciberseguridad, IA Explicable, Regulación, Gestión, Marco Nacional) - Incluir explicación del impacto de cada debilidad - NO cortes esta sección  3.6. Nivel de Madurez en Gobernanza de IA - Título: \"Nivel de Madurez en Gobernanza de IA\" o similar - DEBES clasificar el nivel según el puntaje:   * Inicial (0-20%): No hay procesos definidos, gobernanza ad-hoc o inexistente   * Básico (21-40%): Se reconocen necesidades, se inician algunas políticas y roles   * Intermedio (41-60%): Procesos definidos, controles básicos, monitoreo parcial   * Avanzado (61-80%): Procesos maduros, controles robustos, monitoreo proactivo   * Óptimo (81-100%): Gobernanza integrada, proactiva, innovadora - Explicar en qué nivel se encuentra la empresa según el puntaje - Explicar qué significa ese nivel en detalle  3.7. Riesgos y Oportunidades - Título: \"Riesgos y Oportunidades\" - Subsección \"Riesgos\" con lista de riesgos identificados:   * Riesgo Regulatorio y Legal   * Riesgo Ético y Reputacional   * Riesgos de Ciberseguridad   * Riesgos Operacionales   * Pérdida de Ventaja Competitiva - Subsección \"Oportunidades\" con lista de oportunidades:   * Establecer Fundamentos Sólidos   * Generar Confianza   * Optimizar la Innovación   * Asegurar el Cumplimiento   * Mejorar la Eficiencia Operacional - Para cada riesgo y oportunidad, incluir explicación del impacto  4. GRÁFICAS (OBLIGATORIO Y CRÍTICO)  DEBES incluir EXACTAMENTE dos gráficas:  4.1. Gráfica de Barras - Nivel de Implementación por Pilar - Título: \"Nivel de Implementación por Pilar de Gobernanza (Puntuación Ponderada)\" o similar - Mostrar los 5 pilares:   1. Ciberseguridad (ISO 27090/27091)   2. IA Explicable (ISO 23894)   3. Regulación UE (NIS2/AI Act)   4. Gestión IA (ISO 42001-42005)   5. Marco Nacional (CONPES 4144) - Calcular el promedio ponderado para cada pilar basándose en las respuestas - Canvas ID: \"barChart\" - Dimensiones: width=\"600\" height=\"400\" - Incluir explicación debajo de la gráfica sobre qué representa y cómo interpretarla  4.2. Gráfica Radar - Ponderación Relativa de las Áreas - Título: \"Ponderación Relativa de las Áreas de Gobernanza\" o \"Madurez en Gobernanza de IA por Pilar (Gráfica Radar)\" - Mostrar las ponderaciones proporcionadas en {PONDERACIONES} - Canvas ID: \"radarChart\" - Dimensiones: width=\"600\" height=\"400\" - Incluir explicación debajo de la gráfica sobre qué representa y cómo interpretarla  REQUISITOS TÉCNICOS PARA GRÁFICAS: - Script Chart.js desde CDN: <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script> - Scripts de inicialización DENTRO de <script> tags antes de </body> - Cada gráfica debe tener un contenedor div con clase \"chart-container\" - Incluir código JavaScript COMPLETO y FUNCIONAL para ambas gráficas - Usar datos reales de las respuestas y ponderaciones proporcionadas  5. RECOMENDACIONES ESTRATÉGICAS (OBLIGATORIA Y COMPLETA)  DEBES incluir TODAS estas subsecciones:  5.1. Introducción a las Recomendaciones - Párrafo explicando cómo se construyen las recomendaciones (basándose en puntaje, fortalezas, debilidades)  5.2. Acciones Críticas Priorizadas - Lista numerada con al menos 5 acciones críticas - Cada acción debe incluir:   * Título descriptivo   * Descripción del qué y por qué  5.3. Plan de Mejora Escalonado - Subsección \"Corto Plazo (0-6 meses)\":   * Lista con al menos 4 acciones concretas   * Ejemplos: Creación de comité, inventario, políticas fundamentales, documentación mínima - Subsección \"Mediano Plazo (6-18 meses)\":   * Lista con al menos 4 acciones   * Ejemplos: Estandarización, herramientas de monitoreo, capacitación, explicabilidad - Subsección \"Largo Plazo (18+ meses)\":   * Lista con al menos 4 acciones   * Ejemplos: Optimización continua, explicabilidad externa, participación en ecosistemas, cultura organizacional  5.4. Impacto en Gobernanza, Riesgo y Madurez - Explicar cómo las recomendaciones impactan en:   * Gobernanza: Establecimiento de marco robusto   * Riesgo: Reducción de riesgos   * Madurez: Evolución hacia niveles avanzados  6. ESTILO Y FORMATO PARA PDF (CRÍTICO)  REGLAS OBLIGATORIAS:  CSS @page: @page {   size: A4;   margin: 2cm; }  Reglas page-break: - h1, h2, h3: page-break-after: avoid; - .section, .container: page-break-inside: avoid; - Tablas: page-break-inside: avoid; - Gráficas: page-break-inside: avoid;  CSS General: - body: margin: 0; padding: 0; font-family: Arial, sans-serif; - Contenedor principal: max-width: 100%; padding: 20px; - Títulos: color corporativo (#004d99 o similar), margin apropiados - Tablas: border-collapse: collapse; width: 100%; estilizadas - Cajas destacadas: background-color suave; padding; border-left  Estructura HTML Requerida (COMPLETA):  <!DOCTYPE html> <html lang=\"es\"> <head>   <meta charset=\"UTF-8\">   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">   <title>Informe de Gobernanza de IA - {NOMBRE_EMPRESA}</title>   <style>     /* TODO el CSS aquí con @page y todas las reglas */   </style>   <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script> </head> <body>   <div class=\"container\">     <!-- 1. PORTADA -->     <div class=\"cover-page\">       <!-- Contenido completo de portada -->     </div>          <!-- 2. RESUMEN EJECUTIVO -->     <section class=\"executive-summary\">       <!-- TODAS las subsecciones 2.1 a 2.5 -->     </section>          <!-- 3. ANÁLISIS DE RESULTADOS -->     <section class=\"results-analysis\">       <!-- TODAS las subsecciones 3.1 a 3.7 SIN CORTAR -->     </section>          <!-- 4. GRÁFICAS -->     <section class=\"charts-section\">       <!-- Ambas gráficas con explicaciones -->     </section>          <!-- 5. RECOMENDACIONES -->     <section class=\"recommendations\">       <!-- TODAS las subsecciones 5.1 a 5.4 COMPLETAS -->     </section>          <!-- Pie de página opcional -->     <div class=\"footer\">       <p>&copy; {AÑO} {NOMBRE_EMPRESA}. Todos los derechos reservados.</p>     </div>   </div>      <script>     // Inicialización COMPLETA de ambas gráficas Chart.js     // NO omitas el código JavaScript   </script> </body> </html>  REGLAS ANTI-ERRORES CRÍTICAS  ⚠️ EL DOCUMENTO DEBE ESTAR COMPLETO: - NO cortes el contenido a mitad de una sección - NO omitas subsecciones obligatorias - NO dejes secciones incompletas - TODAS las 30 preguntas deben estar en la tabla - TODAS las secciones 3.1 a 3.7 deben estar completas - TODAS las secciones 5.1 a 5.4 deben estar completas - Las gráficas DEBEN tener código JavaScript funcional completo  La salida debe ser SOLO el HTML completo desde <!DOCTYPE html> hasta </html>. Sin comentarios HTML. Sin texto antes o después del HTML. No inventes datos si falta información. No uses markdown. No uses ``` nunca. NO dejes secciones vacías. NO uses divs vacíos. El HTML DEBE estar completo sin importar su longitud.",
+              "type": "string"
+            },
+            {
+              "id": "5fbfdae4-bbc7-49ef-b9bc-555b0cec1945",
+              "name": "user_context",
+              "value": "=={{ \"Usuario: \" + $json.body.metadatos.nombre_usuario + \"\\nEmpresa: \" + $json.body.metadatos.empresa + \"\\nCorreo: \" + $json.body.metadatos.correo + \"\\nSector: \" + ($json.body.metadatos.sector || \"N/A\") }}",
+              "type": "string"
+            },
+            {
+              "id": "671a08e5-6646-419a-8381-b46cb0be36f9",
+              "name": "respuestas_texto",
+              "value": "=={{ JSON.stringify($json.body.respuestas || {}, null, 2) }}",
+              "type": "string"
+            },
+            {
+              "id": "b7128ad1-1de2-4b23-8d25-12dc3332e933",
+              "name": "documentos_texto",
+              "value": "={{ $json.documentos_texto_combinado }}",
+              "type": "string"
+            },
+            {
+              "id": "1da441e9-be2b-4fbc-8d0e-4bf465032ea3",
+              "name": "ponderaciones",
+              "value": "=={{ JSON.stringify($json.body.metadatos.ponderaciones || {}, null, 2) }}",
+              "type": "string"
+            },
+            {
+              "id": "bac3d83e-9ec8-4acf-ad22-52fb0cb49b06",
+              "name": "full_prompt",
+              "value": "=={{ \n\"Datos para el informe:\\n\\n\" +\n\"=== INFORMACIÓN DE LA EMPRESA ===\\n\" +\n\"Empresa: \" + ($json.body.metadatos.empresa || \"N/A\") + \"\\n\" +\n\"Sector: \" + ($json.body.metadatos.sector || \"N/A\") + \"\\n\" +\n\"Usuario: \" + ($json.body.metadatos.nombre_usuario || \"N/A\") + \"\\n\" +\n\"Correo: \" + ($json.body.metadatos.correo || \"N/A\") + \"\\n\\n\" +\n\"=== PONDERACIONES POR SECTOR ===\\n\" +\n\"ISO 27090/27091 (Ciberseguridad): \" + ((($json.body.metadatos.ponderaciones || {}).ISO_27090_27091 || 0) * 100) + \"%\\n\" +\n\"ISO 23894 (IA Explicable): \" + ((($json.body.metadatos.ponderaciones || {}).ISO_23894 || 0) * 100) + \"%\\n\" +\n\"NIS2/AI Act (Regulación UE): \" + ((($json.body.metadatos.ponderaciones || {}).NIS2_AI_Act || 0) * 100) + \"%\\n\" +\n\"ISO 42001-42005 (Gestión IA): \" + ((($json.body.metadatos.ponderaciones || {}).ISO_42001_42005 || 0) * 100) + \"%\\n\" +\n\"CONPES 4144 (Marco Nacional): \" + ((($json.body.metadatos.ponderaciones || {}).CONPES_4144 || 0) * 100) + \"%\\n\\n\" +\n\"=== RESULTADOS DE LAS 30 PREGUNTAS ===\\n\" +\n\"Formato: pregunta → valor (0 = 0%, 0.25 = 25%, 0.5 = 50%, 1 = 100%)\\n\\n\" +\nJSON.stringify($json.body.respuestas || {}, null, 2) + \"\\n\\n\" +\n\"=== ARCHIVOS DE APOYO / EVIDENCIAS RECIBIDAS ===\\n\" +\n($json.documentos_texto_combinado || \"No se proporcionaron documentos para análisis\") + \"\\n\\n\" +\n\"=== PROMPT PERSONALIZADO ===\\n\" +\n($json.body.metadatos.prompt_ia || \"Analiza esta evaluación de gobernanza de IA\") + \"\\n\\n\" +\n\"=== INSTRUCCIONES FINALES ===\\n\" +\n\"Genera el informe HTML completo según la estructura obligatoria especificada en el system_prompt.\\n\\n\" +\n\"El HTML debe incluir:\\n\" +\n\"1. Portada con nombre de empresa, sector, fecha y descripción\\n\" +\n\"2. Resumen ejecutivo con propósito, contexto y resultados globales\\n\" +\n\"3. Análisis de resultados con tabla de las 30 preguntas, fortalezas, debilidades, nivel de madurez y riesgos\\n\" +\n\"4. Gráficas Chart.js (barras y radar) con explicaciones\\n\" +\n\"5. Recomendaciones estratégicas con plan de mejora escalonado\\n\" +\n\"6. Estilo ejecutivo con CSS embebido\\n\\n\" +\n\"IMPORTANTE: Solo HTML válido, sin comentarios, sin texto adicional, sin markdown, sin bloques ```.\"\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        656,
+        -176
+      ],
+      "id": "b8d84b2b-8918-4222-b563-894b38aca1a1",
+      "name": "Set prompts"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar respuesta de OpenAI y extraer el HTML\n// Para OpenAI, la estructura es: choices[0].message.content\nconst aiResponse = $input.first().json.candidates[0].content.parts[0].text;\n\n// Limpiar el HTML (remover posibles bloques de código markdown si los hay)\nlet html = aiResponse.trim();\n\n// Remover bloques de código markdown si existen\nhtml = html.replace(/^l\\n?/gi, '');\nhtml = html.replace(/^```\\n?/gi, '');\nhtml = html.replace(/\\n?```$/gi, '');\nhtml = html.trim();\n\n// Validar que es HTML válido\nif (!html.startsWith('<!DOCTYPE') && !html.startsWith('<html')) {\n  console.warn('La respuesta no parece ser HTML válido, pero se procesará de todas formas');\n}\n\n// Obtener metadatos del nodo Set anterior (forma correcta en N8N)\nlet idEvaluacion = null;\ntry {\n  // Intentar obtener desde el nodo Edit Fields1\n  const editFieldsNode = $('Adicionar prompts');\n  if (editFieldsNode && editFieldsNode.item) {\n    idEvaluacion = editFieldsNode.item.json.id_evaluacion;\n  }\n} catch (e) {\n  console.log('No se pudo obtener id_evaluacion del nodo Edit Fields1');\n}\n\n// Si no se encontró, intentar desde otros nodos\nif (!idEvaluacion) {\n  try {\n    const setNode = $('Set');\n    if (setNode && setNode.item) {\n      idEvaluacion = setNode.item.json.id_evaluacion;\n    }\n  } catch (e) {\n    console.log('No se pudo obtener id_evaluacion del nodo Set');\n  }\n}\n\n// Retornar HTML + metadatos para el siguiente paso\nreturn {\n  json: {\n    html: html,\n    id_evaluacion: $('Set prompts').first().json.id_evaluacion,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        -176
+      ],
+      "id": "3ccf012a-e3b5-4458-999a-bd8b9b81eef5",
+      "name": "Recuperar html"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1279dffb-4e6f-407d-a38a-80a7d7eed1b8",
+              "name": "html",
+              "value": "={{ $json.html }}",
+              "type": "string"
+            },
+            {
+              "id": "2d22ee72-7921-41cc-bf9a-a246066c9b2a",
+              "name": "Id_evaluacion",
+              "value": "={{ $('Arreglar estructura').item.json.body.id_evaluacion }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1520,
+        -176
+      ],
+      "id": "efc14fa7-8a34-4484-a5b9-e44980bddc93",
+      "name": "Set datos ia"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer respuesta de OpenAI (puede venir en diferentes formatos según el modelo)\nlet aiResponse = '';\nconst inputData = $input.first().json;\n\n// Intentar diferentes formatos de respuesta de OpenAI\nif (inputData.candidates && inputData.candidates[0] && inputData.candidates[0].content && inputData.candidates[0].content.parts) {\n  // Formato Gemini/Google AI\n  aiResponse = inputData.candidates[0].content.parts[0].text || '';\n} else if (inputData.choices && inputData.choices[0] && inputData.choices[0].message) {\n  // Formato OpenAI estándar\n  aiResponse = inputData.choices[0].message.content || '';\n} else if (inputData.text) {\n  // Formato alternativo\n  aiResponse = inputData.text || '';\n} else if (typeof inputData === 'string') {\n  // Si viene directamente como string\n  aiResponse = inputData;\n} else {\n  // Último recurso: convertir todo el objeto a string\n  aiResponse = JSON.stringify(inputData);\n}\n\n// Limpiar prefijos comunes (como \"json\\n\")\naiResponse = aiResponse.trim();\nif (aiResponse.startsWith('json\\n')) {\n  aiResponse = aiResponse.substring(5).trim();\n}\nif (aiResponse.startsWith('```json')) {\n  aiResponse = aiResponse.replace(/^```json\\s*/i, '').replace(/```\\s*$/i, '').trim();\n}\nif (aiResponse.startsWith('```')) {\n  aiResponse = aiResponse.replace(/^```\\s*/i, '').replace(/```\\s*$/i, '').trim();\n}\n\n  // Intentar parsear como JSON\nlet jsonParsed = null;\ntry {\n  jsonParsed = JSON.parse(aiResponse);\n} catch (e) {\n  // Si falla, intentar extraer JSON del string\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      jsonParsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      console.warn('No se pudo parsear como JSON, usando respuesta completa como HTML');\n    }\n  }\n}\n\n// Extraer HTML del campo 'analisis' si existe\nlet html = '';\nif (jsonParsed && jsonParsed.analisis) {\n  html = jsonParsed.analisis;\n} else if (jsonParsed && jsonParsed.html) {\n  html = jsonParsed.html;\n} else if (!jsonParsed && (aiResponse.includes('<!DOCTYPE') || aiResponse.includes('<html'))) {\n  // Si no es JSON pero parece HTML directo\n  html = aiResponse;\n} else {\n  // Último recurso: usar toda la respuesta\n  html = aiResponse;\n}\n\n// Limpiar caracteres de escape y caracteres raros\n// Reemplazar secuencias de escape comunes\nhtml = html.replace(/\\\\n/g, '\\n');\nhtml = html.replace(/\\\\t/g, '\\t');\nhtml = html.replace(/\\\\r/g, '\\r');\nhtml = html.replace(/\\\\\"/g, '\"');\nhtml = html.replace(/\\\\'/g, \"'\");\nhtml = html.replace(/\\\\\\\\/g, '\\\\');\n\n// Remover caracteres de control no deseados (excepto saltos de línea y tabs)\nhtml = html.replace(/[\\x00-\\x08\\x0B-\\x0C\\x0E-\\x1F\\x7F]/g, '');\n\n// Limpiar espacios en blanco al inicio y final\nhtml = html.trim();\n\n// Validar que es HTML válido\nif (!html.startsWith('<!DOCTYPE') && !html.startsWith('<html')) {\n  console.warn('Advertencia: El HTML no tiene la estructura válida esperada');\n  // Intentar encontrar el HTML dentro del string\n  const htmlMatch = html.match(/<!DOCTYPE[\\s\\S]*<\\/html>/i);\n  if (htmlMatch) {\n    html = htmlMatch[0];\n  }\n}\n\n// Obtener id_evaluacion del nodo anterior\nlet idEvaluacion = null;\ntry {\n  // Intentar obtener del nodo Set anterior\n  const setNode = $('Set').first().json;\n  idEvaluacion = setNode.id_evaluacion || null;\n} catch (e) {\n  // Si no se encuentra, intentar del webhook inicial\n  try {\n    const webhookData = $('Webhook').first().json;\n    idEvaluacion = webhookData.body?.id_evaluacion || webhookData.id_evaluacion || null;\n  } catch (e2) {\n    console.warn('No se pudo obtener id_evaluacion');\n  }\n}\n\n// Calcular puntuación si no viene en la respuesta de la IA\nlet puntuacion = null;\nif (jsonParsed && jsonParsed.puntuacion !== undefined) {\n  puntuacion = parseFloat(jsonParsed.puntuacion);\n} else {\n  // Calcular puntuación basándose en las respuestas del webhook inicial\n  try {\n    const respuestas = $('Webhook').first().json.body?.respuestas || \n                       $('Webhook').first().json.respuestas || {};\n    const valores = Object.values(respuestas);\n    if (valores.length > 0) {\n      const suma = valores.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);\n      puntuacion = (suma / valores.length) * 100;\n      puntuacion = Math.round(puntuacion * 100) / 100; // Redondear a 2 decimales\n    }\n  } catch (e) {\n    console.warn('No se pudo calcular la puntuación automáticamente');\n  }\n}\n\n// Retornar HTML limpio + metadatos\nreturn {\n  json: {\n    html: html,\n    id_evaluacion: idEvaluacion,\n    timestamp: new Date().toISOString(),\n    puntuacion: puntuacion,\n    score: puntuacion, // Alias para compatibilidad\n    recomendaciones: jsonParsed?.recomendaciones || null\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        -176
+      ],
+      "id": "e584807e-5b0a-4fb6-a76c-e615fa193cbc",
+      "name": "Arreglar datos para envio"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9041ba1b-0c67-4c2b-85cb-d386e107ffa0",
+              "name": "id_evaluacion",
+              "value": "={{ $json.id_evaluacion }}",
+              "type": "string"
+            },
+            {
+              "id": "30494343-d23a-4669-b64d-5ac3bccdbd4a",
+              "name": "html",
+              "value": "={{ $json.html }}",
+              "type": "string"
+            },
+            {
+              "id": "1b6e6a07-3936-4d8e-ad68-39eee6fb1859",
+              "name": "puntuacion",
+              "value": "={{ $json.puntuacion }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2032,
+        -176
+      ],
+      "id": "51c757c5-decd-4b86-84db-d3da44b82c26",
+      "name": "Datos a enviar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nodo: Code in JavaScript (Procesar Documentos)\n// Mode: \"Run Once for All Items\"\n\n// Obtener los documentos del body\nconst body = $json.body || $json;\nconst documentos = body.documentos || [];\n\nif (!documentos || documentos.length === 0) {\n  // Si no hay documentos, retornar solo metadatos\n  return {\n    json: {\n      metadatos: body.metadatos,\n      respuestas: body.respuestas,\n      id_evaluacion: body.id_evaluacion || $json.id_evaluacion,\n      tiene_documentos: false\n    }\n  };\n}\n\n// Procesar cada documento: Base64 → Buffer → Binary para N8N\nconst items = documentos.map((documento, index) => {\n  // Validar documento\n  if (!documento.contenido_base64 || typeof documento.contenido_base64 !== 'string') {\n    console.warn(`Documento ${index} inválido:`, documento.nombre);\n    return null;\n  }\n\n  try {\n    // PASO 1: Base64 → Buffer\n    const buffer = Buffer.from(documento.contenido_base64, 'base64');\n    \n    if (!buffer || buffer.length === 0) {\n      return null;\n    }\n\n    // PASO 2: Buffer → Binary (formato que N8N necesita)\n    return {\n      json: {\n        nombre: documento.nombre || `documento_${index}.pdf`,\n        indice: documento.indice || index,\n        mime_type: documento.mime_type || 'application/pdf',\n        tiene_contenido: true,\n        // Agregar metadatos y respuestas para que estén disponibles en siguientes nodos\n        metadatos: body.metadatos,\n        respuestas: body.respuestas,\n        id_evaluacion: body.id_evaluacion || $json.id_evaluacion\n      },\n      binary: {\n        documento_buffer: {\n          data: buffer.toString('base64'), // N8N necesita string base64 en binary.data\n          mimeType: documento.mime_type || 'application/pdf',\n          fileName: documento.nombre || `documento_${index}.pdf`\n        }\n      }\n    };\n  } catch (e) {\n    console.error(`Error procesando documento ${index}:`, e.message);\n    return null;\n  }\n}).filter(item => item !== null);\n\n// Si hay documentos, retornar múltiples items (uno por documento)\nif (items.length > 0) {\n  return items;\n}\n\n// Si no hay documentos válidos, retornar estructura sin documentos\nreturn {\n  json: {\n    metadatos: body.metadatos,\n    respuestas: body.respuestas,\n    id_evaluacion: body.id_evaluacion || $json.id_evaluacion,\n    tiene_documentos: false\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        -368
+      ],
+      "id": "d4d5f252-91ea-410c-860c-180e8828f252",
+      "name": "Convertir documentos"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "=documento_buffer",
+        "options": {
+          "joinPages": false
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        656,
+        -368
+      ],
+      "id": "75b383b2-bc6d-4944-af28-b58bdf8841f1",
+      "name": "Extraer datos documentos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Combinar todos los textos extraídos de los documentos\n// Mode: \"Run Once for All Items\"\n\n// Obtener todos los items con texto extraído\nconst items = $input.all();\n\n// Combinar textos de todos los documentos\nconst textos = items.map(item => {\n  // El texto puede venir como string o como array\n  let texto = item.json.text || '';\n  \n  // Si viene como array, unirlo\n  if (Array.isArray(texto)) {\n    texto = texto.join('\\n');\n  }\n  \n  // Obtener nombre del documento\n  const nombre = item.json.nombre || \n                 item.json.fileName || \n                 item.json.documento_nombre || \n                 'documento.pdf';\n  \n  return texto.length > 0 ? `--- Documento: ${nombre} ---\\n${texto}` : '';\n}).filter(text => text.length > 0);\n\n// Obtener metadatos y respuestas del nodo anterior (el que procesa documentos)\n// Necesitas pasar estos datos desde el nodo que procesa documentos\nlet metadatos = null;\nlet respuestas = null;\nlet id_evaluacion = null;\n\n// Intentar obtener desde el nodo anterior que procesa documentos\ntry {\n  const nodoAnterior = $('Convertir documentos');\n  if (nodoAnterior && nodoAnterior.item) {\n    const datosAnteriores = nodoAnterior.item.json;\n    metadatos = datosAnteriores.metadatos || datosAnteriores.body?.metadatos;\n    respuestas = datosAnteriores.respuestas || datosAnteriores.body?.respuestas;\n    id_evaluacion = datosAnteriores.id_evaluacion || datosAnteriores.body?.id_evaluacion;\n  }\n} catch (e) {\n  console.log('No se pudieron obtener metadatos del nodo anterior');\n}\n\n// Retornar texto combinado + metadatos\nreturn {\n  json: {\n    documentos_texto_combinado: textos.join('\\n\\n'),\n    total_documentos: textos.length,\n    tiene_documentos: textos.length > 0,\n    metadatos: metadatos,\n    respuestas: respuestas,\n    id_evaluacion: id_evaluacion\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        -368
+      ],
+      "id": "a8103c93-a531-4e14-b301-7c4463fb1594",
+      "name": "Combinar textos"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0dc62f5a-9359-4710-b6a0-f629a9306e2b",
+              "name": "system_prompt",
+              "value": "Quiero que generes únicamente código HTML, sin comentarios, sin texto fuera del documento, sin explicaciones y sin usar bloques ```. La salida será usada automáticamente por Laravel y n8n para generar un archivo PDF, por lo que debe ser estrictamente HTML válido.  ⚠️ REGLA CRÍTICA: El documento DEBE estar COMPLETO. NO puedes cortar contenido ni dejar secciones incompletas. Si el contenido es largo, genera TODO el HTML completo sin importar la longitud.  Contexto obligatorio de la arquitectura (NO OMITAS ESTO EN LA RESPUESTA)  El sistema trabaja con una arquitectura de 4 capas:  Frontend – React Donde el usuario completa la evaluación de gobernanza y descarga el PDF generado.  Backend – Laravel Maneja la lógica del negocio, seguridad, validaciones, comunicación con servicios externos y conexión con la base de datos.  Servicios Externos – N8N, SMS, SMTP N8N automatiza procesos y envía las respuestas a una IA para generar este informe. SMS/SMTP se usa para autenticación 2FA, no relevante para el informe. N8N devuelve tu HTML a Laravel para convertirlo en PDF.  Base de Datos – SQL Server Donde se guardan resultados, configuraciones y toda la trazabilidad.  Flujo donde entra este prompt  React envía las respuestas del formulario a Laravel. Laravel las envía a N8N. N8N llama a esta IA con tu prompt. La IA debe devolver solo HTML limpio, que será transformado directamente en PDF. Laravel recibe ese HTML, guarda datos y envía al frontend para descargar.  Por ese motivo:  ✔ NO puedes devolver texto adicional. ✔ NO puedes explicar nada fuera del HTML. ✔ Solo puedes devolver el archivo HTML listo para PDF. ✔ El HTML DEBE estar COMPLETO desde <!DOCTYPE html> hasta </html> sin cortes.  Datos para el informe  Empresa: {NOMBRE_EMPRESA} Sector: {SECTOR} Resultados de las 30 preguntas (pregunta → valor): {LISTA_PREGUNTAS_Y_VALORES} Ponderaciones por sector: {PONDERACIONES} Archivos de apoyo / evidencias recibidas: {LISTA_ARCHIVOS_APOYO}  ESTRUCTURA OBLIGATORIA Y COMPLETA DEL HTML  El HTML debe ser un informe ejecutivo profesional y COMPLETO. DEBES incluir TODAS las siguientes secciones sin excepción:  1. PORTADA (OBLIGATORIA)  Debe incluir EXACTAMENTE: - Título principal: \"Informe de Evaluación de Gobernanza de IA\" o \"Informe de Gobernanza de Inteligencia Artificial\" - Nombre de la empresa (usar el valor de {NOMBRE_EMPRESA}) - Sector (usar el valor de {SECTOR}) - Fecha actual (generar usando JavaScript: new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })) - Descripción breve del propósito del documento (2-3 líneas)  2. RESUMEN EJECUTIVO (OBLIGATORIA Y COMPLETA)  DEBES incluir TODAS estas subsecciones:  2.1. Propósito del Informe - Explicación clara del objetivo del informe (2-3 párrafos)  2.2. Contexto de la Evaluación - Mencionar los marcos evaluados: ISO 27090/27091, ISO 23894, NIS2/AI Act, ISO 42001-42005, CONPES 4144 - Explicar que la evaluación consta de 30 preguntas  2.3. Nivel de Implementación y su Interpretación - Explicar la escala: 0 = 0%, 0.25 = 25%, 0.5 = 50%, 1 = 100% - Explicar qué significa cada nivel de implementación  2.4. Importancia de las Evaluaciones de Gobernanza de IA - Explicar por qué son importantes (1-2 párrafos)  2.5. Resultados Globales Consolidados - Calcular y mostrar la puntuación global (promedio de todas las respuestas * 100) - Mostrar el puntaje en formato: \"El puntaje global consolidado es del X%\" - Incluir una caja destacada con la puntuación  3. ANÁLISIS DE RESULTADOS (OBLIGATORIA Y COMPLETA)  DEBES incluir TODAS estas subsecciones en este orden:  3.1. Tabla de Preguntas y Valores - Tabla HTML estilizada con TODAS las 30 preguntas - Columnas: Número, Pregunta, Valor (mostrar como porcentaje) - NO omitas ninguna pregunta  3.2. Explicación de Valores - Párrafo explicando qué representa cada valor (0%, 25%, 50%, 100%)  3.3. Interpretación Ejecutiva del Puntaje General - Párrafo analizando el significado del puntaje obtenido - Mencionar el nivel de riesgo asociado - Importancia de abordar las deficiencias  3.4. Identificación de Fortalezas - Título: \"Fortalezas\" o \"Identificación de Fortalezas\" - Si el puntaje es bajo (0-30%), mencionar que no se identifican fortalezas significativas y explicar por qué - Si el puntaje es medio/alto, listar las fortalezas identificadas - NO dejes esta sección incompleta  3.5. Identificación de Debilidades - Título: \"Debilidades\" o \"Identificación de Debilidades\" - Listar TODAS las áreas críticas que representan debilidades - Ser específico: mencionar categorías (Ciberseguridad, IA Explicable, Regulación, Gestión, Marco Nacional) - Incluir explicación del impacto de cada debilidad - NO cortes esta sección  3.6. Nivel de Madurez en Gobernanza de IA - Título: \"Nivel de Madurez en Gobernanza de IA\" o similar - DEBES clasificar el nivel según el puntaje:   * Inicial (0-20%): No hay procesos definidos, gobernanza ad-hoc o inexistente   * Básico (21-40%): Se reconocen necesidades, se inician algunas políticas y roles   * Intermedio (41-60%): Procesos definidos, controles básicos, monitoreo parcial   * Avanzado (61-80%): Procesos maduros, controles robustos, monitoreo proactivo   * Óptimo (81-100%): Gobernanza integrada, proactiva, innovadora - Explicar en qué nivel se encuentra la empresa según el puntaje - Explicar qué significa ese nivel en detalle  3.7. Riesgos y Oportunidades - Título: \"Riesgos y Oportunidades\" - Subsección \"Riesgos\" con lista de riesgos identificados:   * Riesgo Regulatorio y Legal   * Riesgo Ético y Reputacional   * Riesgos de Ciberseguridad   * Riesgos Operacionales   * Pérdida de Ventaja Competitiva - Subsección \"Oportunidades\" con lista de oportunidades:   * Establecer Fundamentos Sólidos   * Generar Confianza   * Optimizar la Innovación   * Asegurar el Cumplimiento   * Mejorar la Eficiencia Operacional - Para cada riesgo y oportunidad, incluir explicación del impacto  4. GRÁFICAS (OBLIGATORIO Y CRÍTICO)  DEBES incluir EXACTAMENTE dos gráficas:  4.1. Gráfica de Barras - Nivel de Implementación por Pilar - Título: \"Nivel de Implementación por Pilar de Gobernanza (Puntuación Ponderada)\" o similar - Mostrar los 5 pilares:   1. Ciberseguridad (ISO 27090/27091)   2. IA Explicable (ISO 23894)   3. Regulación UE (NIS2/AI Act)   4. Gestión IA (ISO 42001-42005)   5. Marco Nacional (CONPES 4144) - Calcular el promedio ponderado para cada pilar basándose en las respuestas - Canvas ID: \"barChart\" - Dimensiones: width=\"600\" height=\"400\" - Incluir explicación debajo de la gráfica sobre qué representa y cómo interpretarla  4.2. Gráfica Radar - Ponderación Relativa de las Áreas - Título: \"Ponderación Relativa de las Áreas de Gobernanza\" o \"Madurez en Gobernanza de IA por Pilar (Gráfica Radar)\" - Mostrar las ponderaciones proporcionadas en {PONDERACIONES} - Canvas ID: \"radarChart\" - Dimensiones: width=\"600\" height=\"400\" - Incluir explicación debajo de la gráfica sobre qué representa y cómo interpretarla  REQUISITOS TÉCNICOS PARA GRÁFICAS: - Script Chart.js desde CDN: <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script> - Scripts de inicialización DENTRO de <script> tags antes de </body> - Cada gráfica debe tener un contenedor div con clase \"chart-container\" - Incluir código JavaScript COMPLETO y FUNCIONAL para ambas gráficas - Usar datos reales de las respuestas y ponderaciones proporcionadas  5. RECOMENDACIONES ESTRATÉGICAS (OBLIGATORIA Y COMPLETA)  DEBES incluir TODAS estas subsecciones:  5.1. Introducción a las Recomendaciones - Párrafo explicando cómo se construyen las recomendaciones (basándose en puntaje, fortalezas, debilidades)  5.2. Acciones Críticas Priorizadas - Lista numerada con al menos 5 acciones críticas - Cada acción debe incluir:   * Título descriptivo   * Descripción del qué y por qué  5.3. Plan de Mejora Escalonado - Subsección \"Corto Plazo (0-6 meses)\":   * Lista con al menos 4 acciones concretas   * Ejemplos: Creación de comité, inventario, políticas fundamentales, documentación mínima - Subsección \"Mediano Plazo (6-18 meses)\":   * Lista con al menos 4 acciones   * Ejemplos: Estandarización, herramientas de monitoreo, capacitación, explicabilidad - Subsección \"Largo Plazo (18+ meses)\":   * Lista con al menos 4 acciones   * Ejemplos: Optimización continua, explicabilidad externa, participación en ecosistemas, cultura organizacional  5.4. Impacto en Gobernanza, Riesgo y Madurez - Explicar cómo las recomendaciones impactan en:   * Gobernanza: Establecimiento de marco robusto   * Riesgo: Reducción de riesgos   * Madurez: Evolución hacia niveles avanzados  6. ESTILO Y FORMATO PARA PDF (CRÍTICO)  REGLAS OBLIGATORIAS:  CSS @page: @page {   size: A4;   margin: 2cm; }  Reglas page-break: - h1, h2, h3: page-break-after: avoid; - .section, .container: page-break-inside: avoid; - Tablas: page-break-inside: avoid; - Gráficas: page-break-inside: avoid;  CSS General: - body: margin: 0; padding: 0; font-family: Arial, sans-serif; - Contenedor principal: max-width: 100%; padding: 20px; - Títulos: color corporativo (#004d99 o similar), margin apropiados - Tablas: border-collapse: collapse; width: 100%; estilizadas - Cajas destacadas: background-color suave; padding; border-left  Estructura HTML Requerida (COMPLETA):  <!DOCTYPE html> <html lang=\"es\"> <head>   <meta charset=\"UTF-8\">   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">   <title>Informe de Gobernanza de IA - {NOMBRE_EMPRESA}</title>   <style>     /* TODO el CSS aquí con @page y todas las reglas */   </style>   <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script> </head> <body>   <div class=\"container\">     <!-- 1. PORTADA -->     <div class=\"cover-page\">       <!-- Contenido completo de portada -->     </div>          <!-- 2. RESUMEN EJECUTIVO -->     <section class=\"executive-summary\">       <!-- TODAS las subsecciones 2.1 a 2.5 -->     </section>          <!-- 3. ANÁLISIS DE RESULTADOS -->     <section class=\"results-analysis\">       <!-- TODAS las subsecciones 3.1 a 3.7 SIN CORTAR -->     </section>          <!-- 4. GRÁFICAS -->     <section class=\"charts-section\">       <!-- Ambas gráficas con explicaciones -->     </section>          <!-- 5. RECOMENDACIONES -->     <section class=\"recommendations\">       <!-- TODAS las subsecciones 5.1 a 5.4 COMPLETAS -->     </section>          <!-- Pie de página opcional -->     <div class=\"footer\">       <p>&copy; {AÑO} {NOMBRE_EMPRESA}. Todos los derechos reservados.</p>     </div>   </div>      <script>     // Inicialización COMPLETA de ambas gráficas Chart.js     // NO omitas el código JavaScript   </script> </body> </html>  REGLAS ANTI-ERRORES CRÍTICAS  ⚠️ EL DOCUMENTO DEBE ESTAR COMPLETO: - NO cortes el contenido a mitad de una sección - NO omitas subsecciones obligatorias - NO dejes secciones incompletas - TODAS las 30 preguntas deben estar en la tabla - TODAS las secciones 3.1 a 3.7 deben estar completas - TODAS las secciones 5.1 a 5.4 deben estar completas - Las gráficas DEBEN tener código JavaScript funcional completo  La salida debe ser SOLO el HTML completo desde <!DOCTYPE html> hasta </html>. Sin comentarios HTML. Sin texto antes o después del HTML. No inventes datos si falta información. No uses markdown. No uses ``` nunca. NO dejes secciones vacías. NO uses divs vacíos. El HTML DEBE estar completo sin importar su longitud.",
+              "type": "string"
+            },
+            {
+              "id": "31724a89-30ca-416b-9b9c-40ff3b955fb9",
+              "name": "user_context",
+              "value": "=={{ JSON.stringify($('Obtener datos').first().json.body.respuestas || {}, null, 2) }}",
+              "type": "string"
+            },
+            {
+              "id": "6f229e2e-c8e1-4b43-b003-56f41113546e",
+              "name": "documentos_texto",
+              "value": "={{ $json.documentos_texto_combinado }}",
+              "type": "string"
+            },
+            {
+              "id": "a29bcff7-43e2-4fb1-961e-12e951a91b13",
+              "name": "ponderaciones",
+              "value": "=={{ JSON.stringify($('Obtener datos').first().json.body.metadatos.ponderaciones, null, 2) }}",
+              "type": "string"
+            },
+            {
+              "id": "80856b05-0677-4c74-b99e-1e89090cdc22",
+              "name": "full_prompt",
+              "value": "=={{ \n\"Datos para el informe:\\n\\n\" +\n\"=== INFORMACIÓN DE LA EMPRESA ===\\n\" +\n\"Empresa: \" + ($json.body.metadatos.empresa || \"N/A\") + \"\\n\" +\n\"Sector: \" + ($json.body.metadatos.sector || \"N/A\") + \"\\n\" +\n\"Usuario: \" + ($json.body.metadatos.nombre_usuario || \"N/A\") + \"\\n\" +\n\"Correo: \" + ($json.body.metadatos.correo || \"N/A\") + \"\\n\\n\" +\n\"=== PONDERACIONES POR SECTOR ===\\n\" +\n\"ISO 27090/27091 (Ciberseguridad): \" + ((($json.body.metadatos.ponderaciones || {}).ISO_27090_27091 || 0) * 100) + \"%\\n\" +\n\"ISO 23894 (IA Explicable): \" + ((($json.body.metadatos.ponderaciones || {}).ISO_23894 || 0) * 100) + \"%\\n\" +\n\"NIS2/AI Act (Regulación UE): \" + ((($json.body.metadatos.ponderaciones || {}).NIS2_AI_Act || 0) * 100) + \"%\\n\" +\n\"ISO 42001-42005 (Gestión IA): \" + ((($json.body.metadatos.ponderaciones || {}).ISO_42001_42005 || 0) * 100) + \"%\\n\" +\n\"CONPES 4144 (Marco Nacional): \" + ((($json.body.metadatos.ponderaciones || {}).CONPES_4144 || 0) * 100) + \"%\\n\\n\" +\n\"=== RESULTADOS DE LAS 30 PREGUNTAS ===\\n\" +\n\"Formato: pregunta → valor (0 = 0%, 0.25 = 25%, 0.5 = 50%, 1 = 100%)\\n\\n\" +\nJSON.stringify($json.body.respuestas || {}, null, 2) + \"\\n\\n\" +\n\"=== ARCHIVOS DE APOYO / EVIDENCIAS RECIBIDAS ===\\n\" +\n($json.documentos_texto_combinado || \"No se proporcionaron documentos para análisis\") + \"\\n\\n\" +\n\"=== PROMPT PERSONALIZADO ===\\n\" +\n($json.body.metadatos.prompt_ia || \"Analiza esta evaluación de gobernanza de IA\") + \"\\n\\n\" +\n\"=== INSTRUCCIONES FINALES ===\\n\" +\n\"Genera el informe HTML completo según la estructura obligatoria especificada en el system_prompt.\\n\\n\" +\n\"El HTML debe incluir:\\n\" +\n\"1. Portada con nombre de empresa, sector, fecha y descripción\\n\" +\n\"2. Resumen ejecutivo con propósito, contexto y resultados globales\\n\" +\n\"3. Análisis de resultados con tabla de las 30 preguntas, fortalezas, debilidades, nivel de madurez y riesgos\\n\" +\n\"4. Gráficas Chart.js (barras y radar) con explicaciones\\n\" +\n\"5. Recomendaciones estratégicas con plan de mejora escalonado\\n\" +\n\"6. Estilo ejecutivo con CSS embebido\\n\\n\" +\n\"IMPORTANTE: Solo HTML válido, sin comentarios, sin texto adicional, sin markdown, sin bloques ```.\"\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1232,
+        -368
+      ],
+      "id": "42a49371-b73d-4c2f-b615-671801b4f418",
+      "name": "Adicionar prompts"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar respuesta de OpenAI y extraer el HTML\n// Para OpenAI, la estructura es: choices[0].message.content\nconst aiResponse = $input.first().json.candidates[0].content.parts[0].text;\n\n// Limpiar el HTML (remover posibles bloques de código markdown si los hay)\nlet html = aiResponse.trim();\n\n// Remover bloques de código markdown si existen\nhtml = html.replace(/^l\\n?/gi, '');\nhtml = html.replace(/^```\\n?/gi, '');\nhtml = html.replace(/\\n?```$/gi, '');\nhtml = html.trim();\n\n// Validar que es HTML válido\nif (!html.startsWith('<!DOCTYPE') && !html.startsWith('<html')) {\n  console.warn('La respuesta no parece ser HTML válido, pero se procesará de todas formas');\n}\n\n// Obtener metadatos del nodo Set anterior (forma correcta en N8N)\nlet idEvaluacion = null;\ntry {\n  // Intentar obtener desde el nodo Edit Fields1\n  const editFieldsNode = $('Adicionar prompts');\n  if (editFieldsNode && editFieldsNode.item) {\n    idEvaluacion = editFieldsNode.item.json.id_evaluacion;\n  }\n} catch (e) {\n  console.log('No se pudo obtener id_evaluacion del nodo Edit Fields1');\n}\n\n// Si no se encontró, intentar desde otros nodos\nif (!idEvaluacion) {\n  try {\n    const setNode = $('Set');\n    if (setNode && setNode.item) {\n      idEvaluacion = setNode.item.json.id_evaluacion;\n    }\n  } catch (e) {\n    console.log('No se pudo obtener id_evaluacion del nodo Set');\n  }\n}\n\n// Retornar HTML + metadatos para el siguiente paso\nreturn {\n  json: {\n    html: html,\n    id_evaluacion: $('Combinar textos').first().json.id_evaluacion,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        -368
+      ],
+      "id": "57a00508-47ab-4059-a071-38d586ff76bf",
+      "name": "Recuperar HTML"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1279dffb-4e6f-407d-a38a-80a7d7eed1b8",
+              "name": "html",
+              "value": "={{ $json.html }}",
+              "type": "string"
+            },
+            {
+              "id": "2d22ee72-7921-41cc-bf9a-a246066c9b2a",
+              "name": "Id_evaluacion",
+              "value": "={{ $json.id_evaluacion }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2032,
+        -368
+      ],
+      "id": "bec4f687-188b-4bbf-abff-c57989645781",
+      "name": "set datos ia"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer respuesta de OpenAI (puede venir en diferentes formatos según el modelo)\nlet aiResponse = '';\nconst inputData = $input.first().json;\n\n// Intentar diferentes formatos de respuesta de OpenAI\nif (inputData.candidates && inputData.candidates[0] && inputData.candidates[0].content && inputData.candidates[0].content.parts) {\n  // Formato Gemini/Google AI\n  aiResponse = inputData.candidates[0].content.parts[0].text || '';\n} else if (inputData.choices && inputData.choices[0] && inputData.choices[0].message) {\n  // Formato OpenAI estándar\n  aiResponse = inputData.choices[0].message.content || '';\n} else if (inputData.text) {\n  // Formato alternativo\n  aiResponse = inputData.text || '';\n} else if (typeof inputData === 'string') {\n  // Si viene directamente como string\n  aiResponse = inputData;\n} else {\n  // Último recurso: convertir todo el objeto a string\n  aiResponse = JSON.stringify(inputData);\n}\n\n// Limpiar prefijos comunes (como \"json\\n\")\naiResponse = aiResponse.trim();\nif (aiResponse.startsWith('json\\n')) {\n  aiResponse = aiResponse.substring(5).trim();\n}\nif (aiResponse.startsWith('```json')) {\n  aiResponse = aiResponse.replace(/^```json\\s*/i, '').replace(/```\\s*$/i, '').trim();\n}\nif (aiResponse.startsWith('```')) {\n  aiResponse = aiResponse.replace(/^```\\s*/i, '').replace(/```\\s*$/i, '').trim();\n}\n\n  // Intentar parsear como JSON\nlet jsonParsed = null;\ntry {\n  jsonParsed = JSON.parse(aiResponse);\n} catch (e) {\n  // Si falla, intentar extraer JSON del string\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      jsonParsed = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      console.warn('No se pudo parsear como JSON, usando respuesta completa como HTML');\n    }\n  }\n}\n\n// Extraer HTML del campo 'analisis' si existe\nlet html = '';\nif (jsonParsed && jsonParsed.analisis) {\n  html = jsonParsed.analisis;\n} else if (jsonParsed && jsonParsed.html) {\n  html = jsonParsed.html;\n} else if (!jsonParsed && (aiResponse.includes('<!DOCTYPE') || aiResponse.includes('<html'))) {\n  // Si no es JSON pero parece HTML directo\n  html = aiResponse;\n} else {\n  // Último recurso: usar toda la respuesta\n  html = aiResponse;\n}\n\n// Limpiar caracteres de escape y caracteres raros\n// Reemplazar secuencias de escape comunes\nhtml = html.replace(/\\\\n/g, '\\n');\nhtml = html.replace(/\\\\t/g, '\\t');\nhtml = html.replace(/\\\\r/g, '\\r');\nhtml = html.replace(/\\\\\"/g, '\"');\nhtml = html.replace(/\\\\'/g, \"'\");\nhtml = html.replace(/\\\\\\\\/g, '\\\\');\n\n// Remover caracteres de control no deseados (excepto saltos de línea y tabs)\nhtml = html.replace(/[\\x00-\\x08\\x0B-\\x0C\\x0E-\\x1F\\x7F]/g, '');\n\n// Limpiar espacios en blanco al inicio y final\nhtml = html.trim();\n\n// Validar que es HTML válido\nif (!html.startsWith('<!DOCTYPE') && !html.startsWith('<html')) {\n  console.warn('Advertencia: El HTML no tiene la estructura válida esperada');\n  // Intentar encontrar el HTML dentro del string\n  const htmlMatch = html.match(/<!DOCTYPE[\\s\\S]*<\\/html>/i);\n  if (htmlMatch) {\n    html = htmlMatch[0];\n  }\n}\n\n// Obtener id_evaluacion del nodo anterior\nlet idEvaluacion = null;\ntry {\n  // Intentar obtener del nodo Set anterior\n  const setNode = $('Set').first().json;\n  idEvaluacion = setNode.id_evaluacion || null;\n} catch (e) {\n  // Si no se encuentra, intentar del webhook inicial\n  try {\n    const webhookData = $('Webhook').first().json;\n    idEvaluacion = webhookData.body?.id_evaluacion || webhookData.id_evaluacion || null;\n  } catch (e2) {\n    console.warn('No se pudo obtener id_evaluacion');\n  }\n}\n\n// Calcular puntuación si no viene en la respuesta de la IA\nlet puntuacion = null;\nif (jsonParsed && jsonParsed.puntuacion !== undefined) {\n  puntuacion = parseFloat(jsonParsed.puntuacion);\n} else {\n  // Calcular puntuación basándose en las respuestas del webhook inicial\n  try {\n    const respuestas = $('Webhook').first().json.body?.respuestas || \n                       $('Webhook').first().json.respuestas || {};\n    const valores = Object.values(respuestas);\n    if (valores.length > 0) {\n      const suma = valores.reduce((acc, val) => acc + (parseFloat(val) || 0), 0);\n      puntuacion = (suma / valores.length) * 100;\n      puntuacion = Math.round(puntuacion * 100) / 100; // Redondear a 2 decimales\n    }\n  } catch (e) {\n    console.warn('No se pudo calcular la puntuación automáticamente');\n  }\n}\n\n// Retornar HTML limpio + metadatos\nreturn {\n  json: {\n    html: html,\n    id_evaluacion: idEvaluacion,\n    timestamp: new Date().toISOString(),\n    puntuacion: puntuacion,\n    score: puntuacion, // Alias para compatibilidad\n    recomendaciones: jsonParsed?.recomendaciones || null\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        -368
+      ],
+      "id": "ab3bef5d-09d3-48b2-8d78-98a7b5717d1a",
+      "name": "Arreglar datos para envio1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9041ba1b-0c67-4c2b-85cb-d386e107ffa0",
+              "name": "id_evaluacion",
+              "value": "={{ $json.id_evaluacion }}",
+              "type": "string"
+            },
+            {
+              "id": "30494343-d23a-4669-b64d-5ac3bccdbd4a",
+              "name": "html",
+              "value": "={{ $json.html }}",
+              "type": "string"
+            },
+            {
+              "id": "1b6e6a07-3936-4d8e-ad68-39eee6fb1859",
+              "name": "puntuacion",
+              "value": "={{ $json.puntuacion }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2480,
+        -368
+      ],
+      "id": "de9179de-51ed-4e39-9457-cca20b26394a",
+      "name": "Datos a enviar1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Obtener datos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Recuperar HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model1": {
+      "main": [
+        [
+          {
+            "node": "Recuperar html",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener datos": {
+      "main": [
+        [
+          {
+            "node": "If Verificar documentos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Verificar documentos": {
+      "main": [
+        [
+          {
+            "node": "Convertir documentos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Arreglar estructura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arreglar estructura": {
+      "main": [
+        [
+          {
+            "node": "Set prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set prompts": {
+      "main": [
+        [
+          {
+            "node": "Message a model1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperar html": {
+      "main": [
+        [
+          {
+            "node": "Set datos ia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set datos ia": {
+      "main": [
+        [
+          {
+            "node": "Arreglar datos para envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arreglar datos para envio": {
+      "main": [
+        [
+          {
+            "node": "Datos a enviar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos a enviar": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convertir documentos": {
+      "main": [
+        [
+          {
+            "node": "Extraer datos documentos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer datos documentos": {
+      "main": [
+        [
+          {
+            "node": "Combinar textos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combinar textos": {
+      "main": [
+        [
+          {
+            "node": "Adicionar prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adicionar prompts": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperar HTML": {
+      "main": [
+        [
+          {
+            "node": "set datos ia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set datos ia": {
+      "main": [
+        [
+          {
+            "node": "Arreglar datos para envio1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arreglar datos para envio1": {
+      "main": [
+        [
+          {
+            "node": "Datos a enviar1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Datos a enviar1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "17e33e30-8577-4832-8288-9060d325fedb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c2ed3fc26650437b18fe86dbb83416bf7b103f0473179b09a5fe42b4271b109c"
+  },
+  "id": "nz8AY3bPdlkPGDkW",
+  "tags": []
+}
