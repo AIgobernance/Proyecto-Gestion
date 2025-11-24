@@ -4,8 +4,7 @@
 
 Pasos para la intalación de N8N para obtener hoja de ruta personalizada.
 
-&#x20; 1\. Abrir el buscador de windows y buscar "Terminal".
-
+1. Abrir el buscador de windows y buscar "Terminal".
 2. Al abrir la terminal escribir el comando `npm install n8n -g`
 3. Epperas unos segundos y debe verse asi:
 

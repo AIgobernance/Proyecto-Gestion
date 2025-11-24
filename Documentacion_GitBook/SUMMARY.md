@@ -2,6 +2,7 @@
 
 * [Introducción](README.md)
 * [Arquitectura](arquitectura.md)
+* [Stakeholders y Ponderaciones de la Evaluación](stakeholders-y-ponderaciones-de-la-evaluacion.md)
 * [Secciones Principales](secciones-principales.md)
 * [Controladores](controladores.md)
 * [Flujo de Evaluación con IA](flujo-de-evaluacion-con-ia.md)
