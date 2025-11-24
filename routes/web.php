@@ -34,6 +34,8 @@ Route::middleware(['web'])->group(function () {
     Route::post('/login/resend-2fa', [LoginController::class, 'resend2FA']);
     Route::post('/logout', [LoginController::class, 'logout']);
     Route::get('/auth/check', [LoginController::class, 'check']);
+    Route::post('/password/reset/initiate', [PasswordResetController::class, 'initiatePasswordReset']);
+    Route::post('/password/reset/send-code', [PasswordResetController::class, 'sendPasswordResetCode']);
     Route::post('/password/reset', [PasswordResetController::class, 'resetPassword']);
     
     // Ruta para verificar email de activación (puede ser GET para link en email)

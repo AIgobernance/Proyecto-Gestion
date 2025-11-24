@@ -497,7 +497,7 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      } else {
+    } else {
         alert('Error al descargar el PDF. Por favor, intenta más tarde.');
       }
     }

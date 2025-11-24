@@ -8,10 +8,10 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from "../ui/dialog";
 import { Alert, AlertDescription } from "../ui/alert";
 import { Separator } from "../ui/separator";
-import { ArrowLeft, Lock, User, AlertCircle } from "lucide-react";
+import { ArrowLeft, Lock, User, AlertCircle, Mail, Shield, KeyRound } from "lucide-react";
 
 // Configurar axios
 const token = document.head?.querySelector('meta[name="csrf-token"]');
@@ -98,6 +98,9 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
 
   // Estados para restablecer contraseña
   const [resetEmail, setResetEmail] = useState("");
+  const [resetUserId, setResetUserId] = useState(null);
+  const [resetMethod, setResetMethod] = useState("email"); // 'email' | 'sms'
+  const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetError, setResetError] = useState("");
@@ -428,9 +431,11 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
 
   // Reset contraseña
   const handleResetPassword = () => setVerificationStep("resetPassword");
-  const handleAcceptResetPassword = async () => {
-    if (!resetEmail || !newPassword || !confirmPassword) {
-      setResetError("Por favor, complete todos los campos");
+  
+  // Paso 1: Validar email y mostrar selección de método
+  const handleInitiatePasswordReset = async () => {
+    if (!resetEmail) {
+      setResetError("Por favor, ingrese su correo electrónico");
       return;
     }
     
@@ -438,6 +443,127 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(resetEmail)) {
       setResetError("Por favor, ingrese un correo electrónico válido");
+      return;
+    }
+
+    setResetError("");
+    setIsSubmitting(true);
+
+    try {
+      // Configurar token CSRF
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      // Enviar petición al backend para validar email
+      const axiosClient = window.axios || axios;
+      const response = await axiosClient.post('/password/reset/initiate', {
+        email: resetEmail,
+      });
+
+      if (response.status === 200) {
+        // Guardar user_id y avanzar al paso de selección de método
+        setResetUserId(response.data.user_id);
+        setVerificationStep("resetSelectMethod");
+      }
+    } catch (error) {
+      console.error('Error al iniciar restablecimiento de contraseña:', error);
+      
+      if (error.response && error.response.data) {
+        const responseData = error.response.data;
+        
+        if (responseData.errors) {
+          const backendErrors = responseData.errors;
+          const errorMessage = backendErrors.email 
+            ? (Array.isArray(backendErrors.email) ? backendErrors.email[0] : backendErrors.email)
+            : backendErrors.general
+            ? (Array.isArray(backendErrors.general) ? backendErrors.general[0] : backendErrors.general)
+            : responseData.message || "Error al iniciar el restablecimiento";
+          setResetError(errorMessage);
+        } else {
+          setResetError(responseData.message || "Error al iniciar el restablecimiento. Verifica los datos e intenta nuevamente.");
+        }
+      } else {
+        setResetError("Error de conexión. Verifica tu conexión a internet.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Seleccionar método de verificación para restablecimiento
+  const handleSelectResetEmail = async () => {
+    setResetMethod("email");
+    setResetError("");
+    setIsSubmitting(true);
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const response = await axios.post('/password/reset/send-code', {
+        email: resetEmail,
+        method: 'email'
+      });
+
+      if (response.status === 200) {
+        setVerificationStep("resetEnterCode");
+      }
+    } catch (error) {
+      console.error('Error al enviar código:', error);
+      if (error.response?.data?.message) {
+        setResetError(error.response.data.message);
+      } else {
+        setResetError("Error al enviar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSelectResetPhone = async () => {
+    setResetMethod("sms");
+    setResetError("");
+    setIsSubmitting(true);
+
+    try {
+      const token = document.head?.querySelector('meta[name="csrf-token"]');
+      if (token) {
+        axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+      }
+
+      const response = await axios.post('/password/reset/send-code', {
+        email: resetEmail,
+        method: 'sms'
+      });
+
+      if (response.status === 200) {
+        setVerificationStep("resetEnterCode");
+      }
+    } catch (error) {
+      console.error('Error al enviar código SMS:', error);
+      if (error.response?.data?.message) {
+        setResetError(error.response.data.message);
+      } else {
+        setResetError("Error al enviar el código. Por favor, intenta nuevamente.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Paso 2: Verificar código y cambiar contraseña
+  const handleAcceptResetPassword = async () => {
+    if (!resetCode || !newPassword || !confirmPassword) {
+      setResetError("Por favor, complete todos los campos");
+      return;
+    }
+    
+    if (resetCode.length !== 6) {
+      setResetError("El código debe tener 6 dígitos");
       return;
     }
     
@@ -464,6 +590,7 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
       const axiosClient = window.axios || axios;
       const response = await axiosClient.post('/password/reset', {
         email: resetEmail,
+        code: resetCode,
         newPassword: newPassword,
         confirmPassword: confirmPassword,
       });
@@ -480,7 +607,9 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
         
         if (responseData.errors) {
           const backendErrors = responseData.errors;
-          const errorMessage = backendErrors.email 
+          const errorMessage = backendErrors.code 
+            ? (Array.isArray(backendErrors.code) ? backendErrors.code[0] : backendErrors.code)
+            : backendErrors.email 
             ? (Array.isArray(backendErrors.email) ? backendErrors.email[0] : backendErrors.email)
             : backendErrors.general
             ? (Array.isArray(backendErrors.general) ? backendErrors.general[0] : backendErrors.general)
@@ -496,8 +625,16 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
       setIsSubmitting(false);
     }
   };
+  
   const handleCancelResetPassword = () => {
-    setResetEmail(""); setNewPassword(""); setConfirmPassword(""); setResetError(""); setVerificationStep("login");
+    setResetEmail(""); 
+    setResetUserId(null);
+    setResetMethod("email");
+    setResetCode("");
+    setNewPassword(""); 
+    setConfirmPassword(""); 
+    setResetError(""); 
+    setVerificationStep("login");
   };
   const handleResetSuccessContinue = () => { handleCancelResetPassword(); };
 
@@ -597,77 +734,326 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
         </div>
 
         {/* === Modales de flujo === */}
-        {/* Cambiar contraseña (dialog nativo) */}
+        {/* Paso 1: Solicitar email para restablecer contraseña */}
         <Dialog
           open={verificationStep === "resetPassword"}
           onOpenChange={(open) => !open && handleCancelResetPassword()}
         >
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle style={{color: "#0b1324", fontSize: 22, fontWeight: 800, margin: 0, marginBottom: 4}}>Restablecer Contraseña</DialogTitle>
-              <p style={{color: "#334155", fontSize: 14, margin: 0, marginTop: 4}}>Ingresa tu correo electrónico y nueva contraseña</p>
-            </DialogHeader>
+          <DialogContent className="p-0 overflow-hidden" style={{ maxWidth: "520px" }}>
+            <DialogClose data-slot="dialog-close" aria-label="Cerrar">
+              <span aria-hidden="true"></span>
+              <span className="sr-only">Cerrar</span>
+            </DialogClose>
 
-            <div className="space-y-4 py-2">
-              {resetError && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{resetError}</AlertDescription>
-                </Alert>
-              )}
+            <Card style={{ border: "none", boxShadow: "none", padding: 0 }}>
+              <CardContent className="p-8" style={{ padding: "32px" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+                  {/* Badge/ícono */}
+                  <div
+                    className="relative"
+                    style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: "20px",
+                      background: "linear-gradient(135deg, #4d82bc 0%, #5a8fc9 100%)",
+                      display: "grid",
+                      placeItems: "center",
+                      boxShadow: "0 8px 24px rgba(77, 130, 188, 0.25)",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <KeyRound className="h-8 w-8 text-white" strokeWidth={2.5} />
+                  </div>
 
-              <div className="field">
-                <Label htmlFor="reset-email" style={{color: "#0b1324", fontWeight: 700}}>Correo Electrónico</Label>
-                <Input
-                  id="reset-email"
-                  type="email"
-                  placeholder="Ingresa tu correo electrónico"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                />
-              </div>
+                  {/* Título y descripción */}
+                  <div style={{ textAlign: "center", margin: 0 }}>
+                    <h3 style={{ 
+                      display: "block", 
+                      fontSize: 24, 
+                      fontWeight: 700, 
+                      color: "#0b1324", 
+                      margin: 0, 
+                      marginBottom: 8,
+                      letterSpacing: "-0.02em"
+                    }}>
+                      Restablecer Contraseña
+                    </h3>
+                    <p style={{ 
+                      display: "block", 
+                      fontSize: 15, 
+                      color: "#64748b", 
+                      margin: 0,
+                      lineHeight: 1.5
+                    }}>
+                      Ingresa tu correo electrónico para continuar
+                    </p>
+                  </div>
 
-              <div className="field">
-                <Label htmlFor="new-password" style={{color: "#0b1324", fontWeight: 700}}>Nueva contraseña</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  placeholder="Ingresa tu nueva contraseña"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                />
-              </div>
+                  {/* Error */}
+                  {resetError && (
+                    <Alert variant="destructive" style={{ width: "100%", borderRadius: "12px" }}>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{resetError}</AlertDescription>
+                    </Alert>
+                  )}
 
-              <div className="field">
-                <Label htmlFor="confirm-password" style={{color: "#0b1324", fontWeight: 700}}>Confirmar contraseña</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  placeholder="Confirma tu nueva contraseña"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                />
-              </div>
+                  {/* Campo de email */}
+                  <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
+                    <Label htmlFor="reset-email" style={{
+                      color: "#0b1324", 
+                      fontWeight: 600,
+                      fontSize: 14
+                    }}>
+                      Correo Electrónico
+                    </Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="tu@correo.com"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      disabled={isSubmitting}
+                      style={{
+                        borderRadius: "12px",
+                        padding: "12px 16px",
+                        border: "2px solid #e2e8f0",
+                        fontSize: 15,
+                        transition: "all 0.2s ease"
+                      }}
+                    />
+                  </div>
 
-              <div style={{ display:"flex", gap:10, marginTop:6 }}>
-                <Button 
-                  className="btn-primary btn-pill" 
-                  style={{ flex:1 }} 
-                  onClick={handleAcceptResetPassword}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Procesando..." : "Aceptar"}
-                </Button>
-                <Button 
-                  className="btn-pill" 
-                  style={{ flex:1 }} 
-                  onClick={handleCancelResetPassword}
-                  disabled={isSubmitting}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
+                  {/* Botones */}
+                  <div style={{ width: "100%", display: "flex", gap: 12, marginTop: 8 }}>
+                    <Button 
+                      className="btn-primary btn-pill" 
+                      style={{ 
+                        flex: 1,
+                        borderRadius: "12px",
+                        padding: "14px 24px",
+                        fontWeight: 600,
+                        fontSize: 15
+                      }} 
+                      onClick={handleInitiatePasswordReset}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Enviando códigos..." : "Enviar Códigos"}
+                    </Button>
+                    <Button 
+                      className="btn-pill" 
+                      style={{ 
+                        flex: 1,
+                        borderRadius: "12px",
+                        padding: "14px 24px",
+                        fontWeight: 600,
+                        fontSize: 15,
+                        background: "#f8fafc",
+                        color: "#64748b",
+                        border: "2px solid #e2e8f0"
+                      }} 
+                      onClick={handleCancelResetPassword}
+                      disabled={isSubmitting}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de selección de método para restablecimiento */}
+        {verificationStep === "resetSelectMethod" && (
+          <VerificationMethodModal
+            onSelectEmail={handleSelectResetEmail}
+            onSelectPhone={handleSelectResetPhone}
+            onClose={handleCancelResetPassword}
+          />
+        )}
+
+        {/* Paso 2: Ingresar código y nueva contraseña */}
+        <Dialog
+          open={verificationStep === "resetEnterCode"}
+          onOpenChange={(open) => !open && handleCancelResetPassword()}
+        >
+          <DialogContent className="p-0 overflow-hidden" style={{ maxWidth: "520px" }}>
+            <DialogClose data-slot="dialog-close" aria-label="Cerrar">
+              <span aria-hidden="true"></span>
+              <span className="sr-only">Cerrar</span>
+            </DialogClose>
+
+            <Card style={{ border: "none", boxShadow: "none", padding: 0 }}>
+              <CardContent className="p-8" style={{ padding: "32px" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+                  {/* Badge/ícono */}
+                  <div
+                    className="relative"
+                    style={{
+                      width: 72,
+                      height: 72,
+                      borderRadius: "20px",
+                      background: "linear-gradient(135deg, #4d82bc 0%, #5a8fc9 100%)",
+                      display: "grid",
+                      placeItems: "center",
+                      boxShadow: "0 8px 24px rgba(77, 130, 188, 0.25)",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <Shield className="h-8 w-8 text-white" strokeWidth={2.5} />
+                  </div>
+
+                  {/* Título y descripción */}
+                  <div style={{ textAlign: "center", margin: 0 }}>
+                    <h3 style={{ 
+                      display: "block", 
+                      fontSize: 24, 
+                      fontWeight: 700, 
+                      color: "#0b1324", 
+                      margin: 0, 
+                      marginBottom: 8,
+                      letterSpacing: "-0.02em"
+                    }}>
+                      Verificar y Restablecer
+                    </h3>
+                    <p style={{ 
+                      display: "block", 
+                      fontSize: 15, 
+                      color: "#64748b", 
+                      margin: 0,
+                      lineHeight: 1.5
+                    }}>
+                      Ingresa el código recibido por {resetMethod === "email" ? "email" : "SMS"} y tu nueva contraseña
+                    </p>
+                  </div>
+
+                  {/* Error */}
+                  {resetError && (
+                    <Alert variant="destructive" style={{ width: "100%", borderRadius: "12px" }}>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{resetError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Campos */}
+                  <div style={{ width: "100%", display: "grid", gap: 16 }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <Label htmlFor="reset-code" style={{
+                        color: "#0b1324", 
+                        fontWeight: 600,
+                        fontSize: 14
+                      }}>
+                        Código de Verificación (6 dígitos)
+                      </Label>
+                      <Input
+                        id="reset-code"
+                        type="text"
+                        placeholder="000000"
+                        value={resetCode}
+                        onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        maxLength={6}
+                        disabled={isSubmitting}
+                        style={{
+                          borderRadius: "12px",
+                          padding: "12px 16px",
+                          border: "2px solid #e2e8f0",
+                          fontSize: 15,
+                          textAlign: "center",
+                          letterSpacing: "0.1em",
+                          fontFamily: "monospace",
+                          transition: "all 0.2s ease"
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <Label htmlFor="new-password" style={{
+                        color: "#0b1324", 
+                        fontWeight: 600,
+                        fontSize: 14
+                      }}>
+                        Nueva contraseña
+                      </Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        placeholder="Ingresa tu nueva contraseña"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        disabled={isSubmitting}
+                        style={{
+                          borderRadius: "12px",
+                          padding: "12px 16px",
+                          border: "2px solid #e2e8f0",
+                          fontSize: 15,
+                          transition: "all 0.2s ease"
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      <Label htmlFor="confirm-password" style={{
+                        color: "#0b1324", 
+                        fontWeight: 600,
+                        fontSize: 14
+                      }}>
+                        Confirmar contraseña
+                      </Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="Confirma tu nueva contraseña"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={isSubmitting}
+                        style={{
+                          borderRadius: "12px",
+                          padding: "12px 16px",
+                          border: "2px solid #e2e8f0",
+                          fontSize: 15,
+                          transition: "all 0.2s ease"
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Botones */}
+                  <div style={{ width: "100%", display: "flex", gap: 12, marginTop: 8 }}>
+                    <Button 
+                      className="btn-primary btn-pill" 
+                      style={{ 
+                        flex: 1,
+                        borderRadius: "12px",
+                        padding: "14px 24px",
+                        fontWeight: 600,
+                        fontSize: 15
+                      }} 
+                      onClick={handleAcceptResetPassword}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Procesando..." : "Restablecer"}
+                    </Button>
+                    <Button 
+                      className="btn-pill" 
+                      style={{ 
+                        flex: 1,
+                        borderRadius: "12px",
+                        padding: "14px 24px",
+                        fontWeight: 600,
+                        fontSize: 15,
+                        background: "#f8fafc",
+                        color: "#64748b",
+                        border: "2px solid #e2e8f0"
+                      }} 
+                      onClick={handleCancelResetPassword}
+                      disabled={isSubmitting}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </DialogContent>
         </Dialog>
 
