@@ -925,11 +925,18 @@ class EvaluationController extends Controller
         set_time_limit(120); // 2 minutos
         
         try {
-            // Log de lo que llega (para debugging)
+            // Aumentar límites de memoria para procesar HTML grande
+            ini_set('memory_limit', '512M');
+            ini_set('max_execution_time', '300'); // 5 minutos
+            
+            // Log de lo que llega (sin incluir HTML completo para evitar problemas de memoria)
             Log::info('Recibiendo petición de N8N', [
-                'all_input' => $request->all(),
-                'headers' => $request->headers->all(),
+                'has_body' => $request->has('body'),
+                'has_html' => $request->has('html'),
+                'has_id_evaluacion' => $request->has('id_evaluacion'),
+                'has_puntuacion' => $request->has('puntuacion'),
                 'content_type' => $request->header('Content-Type'),
+                'content_length' => $request->header('Content-Length'),
             ]);
 
             // Extraer datos (pueden venir directamente o envueltos en 'body')
@@ -960,7 +967,10 @@ class EvaluationController extends Controller
             if ($validator->fails()) {
                 Log::error('Error de validación en datos de N8N', [
                     'errors' => $validator->errors(),
-                    'datos_recibidos' => $request->all()
+                    'id_evaluacion' => $idEvaluacion,
+                    'tiene_html' => !empty($html),
+                    'longitud_html' => strlen($html ?? ''),
+                    'tiene_puntuacion' => $puntuacion !== null,
                 ]);
                 return response()->json([
                     'error' => 'Datos inválidos',
@@ -985,11 +995,12 @@ class EvaluationController extends Controller
             if (empty($html) && $puntuacion === null) {
                 Log::warning('N8N envió datos sin HTML ni puntuación', [
                     'id_evaluacion' => $idEvaluacion,
-                    'datos_recibidos' => $request->all()
+                    'tiene_html' => !empty($html),
+                    'tiene_puntuacion' => $puntuacion !== null,
                 ]);
                 return response()->json([
                     'error' => 'Se requiere al menos HTML o puntuación',
-                    'datos_recibidos' => $request->all()
+                    'id_evaluacion' => $idEvaluacion,
                 ], 422);
             }
 
@@ -1010,9 +1021,17 @@ class EvaluationController extends Controller
             
             if ($html) {
                 try {
+                    // Validar que el HTML no esté vacío después de trim
+                    $html = trim($html);
+                    if (empty($html)) {
+                        throw new \Exception('El HTML recibido está vacío después de trim');
+                    }
+                    
                     Log::info('Iniciando conversión de HTML a PDF con Browsershot', [
                         'id_evaluacion' => $idEvaluacion,
-                        'tamaño_html' => strlen($html)
+                        'tamaño_html' => strlen($html),
+                        'inicio_html' => substr($html, 0, 50),
+                        'fin_html' => substr($html, -50)
                     ]);
 
                     // Generar nombre único para el PDF
@@ -1022,8 +1041,10 @@ class EvaluationController extends Controller
                     
                     // Crear directorio si no existe
                     $pdfDirectory = dirname($fullPdfPath);
-                    if (!file_exists($pdfDirectory)) {
-                        mkdir($pdfDirectory, 0755, true);
+                    if (!is_dir($pdfDirectory)) {
+                        if (!mkdir($pdfDirectory, 0755, true)) {
+                            throw new \Exception("No se pudo crear el directorio para el PDF: {$pdfDirectory}");
+                        }
                     }
 
                     // Usar Browsershot para renderizar HTML con JavaScript ejecutado
@@ -1156,33 +1177,32 @@ class EvaluationController extends Controller
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
+            $idEvaluacionReceived = $request->input('body.id_evaluacion') ?? $request->input('id_evaluacion');
+            
             Log::error('Error de validación al recibir resultados de N8N', [
                 'errors' => $e->errors(),
-                'datos_recibidos' => $request->all(),
-                'id_evaluacion_recibido' => $request->input('id_evaluacion'),
-                'tiene_html' => $request->has('html'),
-                'html_vacio' => empty($request->input('html'))
+                'id_evaluacion' => $idEvaluacionReceived,
+                'tiene_html' => $request->has('html') || $request->has('body.html'),
+                'html_vacio' => empty($request->input('html') ?? $request->input('body.html')),
+                'longitud_html' => strlen($request->input('html') ?? $request->input('body.html') ?? ''),
             ]);
             
             return response()->json([
                 'error' => 'Datos inválidos',
                 'errors' => $e->errors(),
-                'datos_recibidos' => [
-                    'id_evaluacion' => $request->input('id_evaluacion'),
-                    'tiene_html' => $request->has('html'),
-                    'html_no_vacio' => !empty($request->input('html')),
-                    'longitud_html' => strlen($request->input('html') ?? ''),
-                    'puntuacion' => $request->input('puntuacion'),
-                    'score' => $request->input('score'),
-                ]
             ], 422);
         } catch (\Exception $e) {
+            $idEvaluacionReceived = $request->input('body.id_evaluacion') ?? $request->input('id_evaluacion');
+            
             Log::error('Error al recibir resultados de N8N', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString(),
-                'datos_recibidos' => $request->all()
+                'id_evaluacion' => $idEvaluacionReceived,
+                'tiene_html' => $request->has('html') || $request->has('body.html'),
+                'longitud_html' => strlen($request->input('html') ?? $request->input('body.html') ?? ''),
+                'tiene_puntuacion' => $request->has('puntuacion') || $request->has('body.puntuacion'),
+                'trace' => config('app.debug') ? $e->getTraceAsString() : 'trace_disabled',
             ]);
 
             return response()->json([
