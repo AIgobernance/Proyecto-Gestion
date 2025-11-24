@@ -3,7 +3,6 @@ import axios from "axios";
 import {
   ArrowLeft,
   ArrowRight,
-  Pause,
   CheckCircle,
   Clock,
   Info,
@@ -992,16 +991,6 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
           >
             <ArrowLeft size={16} />
             Volver
-          </button>
-
-          {/* Botón pausar */}
-          <button
-            className="btn-pill btn-warning"
-            type="button"
-            onClick={onPause}
-          >
-            <Pause size={16} />
-            Pausar
           </button>
         </div>
       </header>

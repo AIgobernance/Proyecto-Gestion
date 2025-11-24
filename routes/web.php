@@ -62,6 +62,7 @@ Route::middleware(['web'])->group(function () {
     Route::get('/api/evaluation/{id}/load', [EvaluationController::class, 'loadEvaluation']);
     Route::get('/api/evaluation/{id}/pdf-status', [EvaluationController::class, 'checkPdfStatus']);
     Route::get('/api/evaluation/{id}/download-pdf', [EvaluationController::class, 'downloadPdf']);
+    Route::post('/api/evaluation/{id}/regenerate-pdf', [EvaluationController::class, 'regeneratePdf']);
     Route::get('/api/evaluation/{id}/chart-data', [EvaluationController::class, 'getChartData']);
     Route::post('/api/evaluation/save-progress', [EvaluationController::class, 'saveProgress']);
     Route::post('/api/evaluation/submit', [EvaluationController::class, 'submitEvaluation']);

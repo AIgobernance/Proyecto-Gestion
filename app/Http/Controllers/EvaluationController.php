@@ -556,13 +556,54 @@ class EvaluationController extends Controller
             // Verificar si el archivo PDF existe físicamente
             $pdfExists = false;
             $pdfUrl = null;
+            $puedeRegenerar = false;
             
             if ($pdfPath) {
                 $fullPath = storage_path('app/public/' . $pdfPath);
                 $pdfExists = file_exists($fullPath);
                 
-                if ($pdfExists) {
-                    // Generar URL pública del PDF
+                // Si el PDF no existe físicamente, buscar PDFs alternativos (rápido, sin bloqueo)
+                if (!$pdfExists) {
+                    // Buscar cualquier PDF que coincida con el patrón de esta evaluación
+                    $pdfDirectory = storage_path('app/public/evaluations/pdf');
+                    $alternativePdfs = glob($pdfDirectory . '/' . $idEvaluacion . '_*.pdf');
+                    
+                    if (!empty($alternativePdfs)) {
+                        // Ordenar por fecha de modificación (más reciente primero)
+                        usort($alternativePdfs, function($a, $b) {
+                            return filemtime($b) - filemtime($a);
+                        });
+                        
+                        $alternativePdf = $alternativePdfs[0];
+                        $relativePath = str_replace(storage_path('app/public/'), '', $alternativePdf);
+                        
+                        // Actualizar PDF_Path en BD con el PDF encontrado
+                        $this->resultadosRepository->guardarResultado($idEvaluacion, [
+                            'PDF_Path' => $relativePath,
+                            'puntuacion' => $resultados['Puntuacion'] ?? null
+                        ]);
+                        
+                        $pdfPath = $relativePath;
+                        $fullPath = $alternativePdf;
+                        $pdfExists = true;
+                        
+                        Log::info('PDF alternativo encontrado y actualizado en BD', [
+                            'id_evaluacion' => $idEvaluacion,
+                            'pdf_path_original' => $resultados['PDF_Path'] ?? null,
+                            'pdf_path_nuevo' => $relativePath
+                        ]);
+                    } else {
+                        // Verificar si hay HTML guardado (solo verificar, no regenerar aquí)
+                        $htmlDirectory = storage_path('app/public/evaluations/html');
+                        $htmlFiles = glob($htmlDirectory . '/' . $idEvaluacion . '_*.html');
+                        $puedeRegenerar = !empty($htmlFiles);
+                    }
+                }
+                
+                // Si hay PDF_Path en BD, considerar que el PDF está disponible
+                // La regeneración ocurrirá solo cuando se intente descargar (no bloquea checkPdfStatus)
+                if ($pdfPath) {
+                    $pdfExists = true; // Marcar como disponible si hay PDF_Path en BD
                     $pdfUrl = asset('storage/' . $pdfPath);
                 }
             }
@@ -607,9 +648,10 @@ class EvaluationController extends Controller
                 'success' => true,
                 'data' => [
                     'id_evaluacion' => $idEvaluacion,
-                    'pdf_ready' => $pdfExists,
+                    'pdf_ready' => $pdfExists, // true si hay PDF_Path en BD (aunque no exista físicamente)
                     'pdf_path' => $pdfPath,
                     'pdf_url' => $pdfUrl,
+                    'puede_regenerar' => $puedeRegenerar,
                     'puntuacion' => $puntuacion,
                     'estado' => $evaluacion['Estado'] ?? 'En proceso',
                     'tiempo' => $tiempo, // Tiempo en minutos
@@ -680,15 +722,130 @@ class EvaluationController extends Controller
             
             // Verificar que el archivo existe
             if (!file_exists($fullPath)) {
-                Log::warning('PDF no encontrado físicamente', [
+                Log::warning('PDF no encontrado físicamente, intentando regenerar desde HTML', [
                     'id_evaluacion' => $idEvaluacion,
                     'pdf_path' => $pdfPath,
                     'full_path' => $fullPath
                 ]);
                 
-                return response()->json([
-                    'error' => 'El archivo PDF no se encuentra en el servidor'
-                ], 404);
+                // Intentar regenerar el PDF desde HTML guardado
+                $htmlDirectory = storage_path('app/public/evaluations/html');
+                $htmlFiles = glob($htmlDirectory . '/' . $idEvaluacion . '_*.html');
+                
+                if (!empty($htmlFiles)) {
+                    // Ordenar por fecha de modificación (más reciente primero)
+                    usort($htmlFiles, function($a, $b) {
+                        return filemtime($b) - filemtime($a);
+                    });
+                    
+                    $htmlPath = $htmlFiles[0];
+                    $html = file_get_contents($htmlPath);
+                    
+                    if (!empty($html)) {
+                        Log::info('Regenerando PDF desde HTML guardado', [
+                            'id_evaluacion' => $idEvaluacion,
+                            'html_path' => $htmlPath
+                        ]);
+                        
+                        try {
+                            // Regenerar PDF
+                            set_time_limit(120);
+                            ini_set('memory_limit', '512M');
+                            
+                            $timestamp = time();
+                            $newPdfPath = 'evaluations/pdf/' . $idEvaluacion . '_' . $timestamp . '.pdf';
+                            $newFullPath = storage_path('app/public/' . $newPdfPath);
+                            
+                            // Crear directorio si no existe
+                            $pdfDirectory = dirname($newFullPath);
+                            if (!is_dir($pdfDirectory)) {
+                                mkdir($pdfDirectory, 0755, true);
+                            }
+                            
+                            // Configurar Chrome/Chromium
+                            $chromePath = null;
+                            if (PHP_OS_FAMILY === 'Windows') {
+                                $puppeteerCache = getenv('USERPROFILE') . '\.cache\puppeteer\chrome';
+                                if (is_dir($puppeteerCache)) {
+                                    $chromeDirs = glob($puppeteerCache . '\win64-*\chrome-win64\chrome.exe');
+                                    if (!empty($chromeDirs)) {
+                                        $chromePath = $chromeDirs[0];
+                                    }
+                                }
+                                
+                                if (!$chromePath) {
+                                    $possiblePaths = [
+                                        'C:\Program Files\Google\Chrome\Application\chrome.exe',
+                                        'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+                                        env('CHROME_PATH'),
+                                    ];
+                                    
+                                    foreach ($possiblePaths as $path) {
+                                        if ($path && file_exists($path)) {
+                                            $chromePath = $path;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            $browsershot = Browsershot::html($html);
+                            
+                            if ($chromePath) {
+                                $browsershot->setChromePath($chromePath);
+                            }
+                            
+                            $browsershot->setOption('args', [
+                                    '--no-sandbox',
+                                    '--disable-setuid-sandbox',
+                                    '--disable-dev-shm-usage',
+                                    '--disable-gpu'
+                                ])
+                                ->waitUntilNetworkIdle(false)
+                                ->timeout(120)
+                                ->delay(3000)
+                                ->format('A4')
+                                ->margins(20, 20, 20, 20, 'mm')
+                                ->showBackground()
+                                ->save($newFullPath);
+                            
+                            // Actualizar PDF_Path en la BD
+                            $this->resultadosRepository->guardarResultado($idEvaluacion, [
+                                'PDF_Path' => $newPdfPath,
+                                'puntuacion' => $resultados['Puntuacion'] ?? null
+                            ]);
+                            
+                            // Usar el nuevo PDF
+                            $fullPath = $newFullPath;
+                            $pdfPath = $newPdfPath;
+                            
+                            Log::info('PDF regenerado exitosamente durante descarga', [
+                                'id_evaluacion' => $idEvaluacion,
+                                'nuevo_pdf_path' => $newPdfPath
+                            ]);
+                            
+                        } catch (\Exception $regenerateError) {
+                            Log::error('Error al regenerar PDF durante descarga', [
+                                'id_evaluacion' => $idEvaluacion,
+                                'error' => $regenerateError->getMessage()
+                            ]);
+                            
+                            return response()->json([
+                                'error' => 'El archivo PDF no se encuentra en el servidor y no se pudo regenerar automáticamente',
+                                'sugerencia' => 'Puedes intentar regenerar el PDF manualmente usando el endpoint de regeneración'
+                            ], 404);
+                        }
+                    } else {
+                        return response()->json([
+                            'error' => 'El archivo PDF no se encuentra en el servidor y el HTML guardado está vacío'
+                        ], 404);
+                    }
+                } else {
+                    return response()->json([
+                        'error' => 'El archivo PDF no se encuentra en el servidor y no hay HTML guardado para regenerarlo',
+                        'sugerencia' => 'Puedes intentar regenerar el PDF desde el endpoint de regeneración si tienes los datos de la evaluación'
+                    ], 404);
+                }
             }
 
             // Verificar que es un archivo válido
@@ -1251,6 +1408,187 @@ class EvaluationController extends Controller
                 'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor',
                 'file' => config('app.debug') ? $e->getFile() : null,
                 'line' => config('app.debug') ? $e->getLine() : null,
+            ], 500);
+        }
+    }
+
+    /**
+     * Regenera el PDF de una evaluación desde HTML guardado o datos existentes
+     *
+     * @param Request $request
+     * @param int $idEvaluacion
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function regeneratePdf(Request $request, int $idEvaluacion)
+    {
+        try {
+            $userId = SessionHelper::getUserId($request);
+            
+            if (!$userId) {
+                return response()->json([
+                    'error' => 'Usuario no autenticado'
+                ], 401);
+            }
+
+            // Verificar que la evaluación existe y pertenece al usuario
+            $evaluacion = $this->evaluacionRepository->obtenerPorId($idEvaluacion);
+            
+            if (!$evaluacion) {
+                return response()->json([
+                    'error' => 'Evaluación no encontrada'
+                ], 404);
+            }
+
+            if ($evaluacion['Id_Usuario'] != $userId) {
+                return response()->json([
+                    'error' => 'No tienes permiso para acceder a esta evaluación'
+                ], 403);
+            }
+
+            // Buscar HTML guardado para esta evaluación
+            $htmlDirectory = storage_path('app/public/evaluations/html');
+            $htmlFiles = glob($htmlDirectory . '/' . $idEvaluacion . '_*.html');
+            
+            $html = null;
+            $htmlPath = null;
+            
+            if (!empty($htmlFiles)) {
+                // Ordenar por fecha de modificación (más reciente primero)
+                usort($htmlFiles, function($a, $b) {
+                    return filemtime($b) - filemtime($a);
+                });
+                
+                $htmlPath = $htmlFiles[0];
+                $html = file_get_contents($htmlPath);
+                
+                Log::info('HTML encontrado para regenerar PDF', [
+                    'id_evaluacion' => $idEvaluacion,
+                    'html_path' => $htmlPath,
+                    'tamaño_html' => strlen($html)
+                ]);
+            } else {
+                // No hay HTML guardado, intentar regenerar desde datos
+                Log::warning('No se encontró HTML guardado para regenerar PDF', [
+                    'id_evaluacion' => $idEvaluacion
+                ]);
+                
+                return response()->json([
+                    'error' => 'No se encontró HTML guardado para esta evaluación. El PDF no se puede regenerar automáticamente.',
+                    'sugerencia' => 'La evaluación necesita ser reprocesada por N8N para generar el HTML nuevamente.'
+                ], 404);
+            }
+
+            if (empty($html)) {
+                return response()->json([
+                    'error' => 'El archivo HTML está vacío'
+                ], 400);
+            }
+
+            // Generar PDF desde el HTML
+            set_time_limit(120);
+            ini_set('memory_limit', '512M');
+
+            $timestamp = time();
+            $pdfPath = 'evaluations/pdf/' . $idEvaluacion . '_' . $timestamp . '.pdf';
+            $fullPdfPath = storage_path('app/public/' . $pdfPath);
+            
+            // Crear directorio si no existe
+            $pdfDirectory = dirname($fullPdfPath);
+            if (!is_dir($pdfDirectory)) {
+                if (!mkdir($pdfDirectory, 0755, true)) {
+                    throw new \Exception("No se pudo crear el directorio para el PDF: {$pdfDirectory}");
+                }
+            }
+
+            // Configurar Chrome/Chromium
+            $chromePath = null;
+            if (PHP_OS_FAMILY === 'Windows') {
+                $puppeteerCache = getenv('USERPROFILE') . '\.cache\puppeteer\chrome';
+                if (is_dir($puppeteerCache)) {
+                    $chromeDirs = glob($puppeteerCache . '\win64-*\chrome-win64\chrome.exe');
+                    if (!empty($chromeDirs)) {
+                        $chromePath = $chromeDirs[0];
+                    }
+                }
+                
+                if (!$chromePath) {
+                    $possiblePaths = [
+                        'C:\Program Files\Google\Chrome\Application\chrome.exe',
+                        'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+                        env('CHROME_PATH'),
+                    ];
+                    
+                    foreach ($possiblePaths as $path) {
+                        if ($path && file_exists($path)) {
+                            $chromePath = $path;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            $browsershot = Browsershot::html($html);
+            
+            if ($chromePath) {
+                $browsershot->setChromePath($chromePath);
+            }
+            
+            $browsershot->setOption('args', [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu'
+                ])
+                ->waitUntilNetworkIdle(false)
+                ->timeout(120)
+                ->delay(3000)
+                ->format('A4')
+                ->margins(20, 20, 20, 20, 'mm')
+                ->showBackground()
+                ->save($fullPdfPath);
+            
+            // Actualizar PDF_Path en la base de datos
+            $resultados = $this->resultadosRepository->obtenerPorEvaluacion($idEvaluacion);
+            if ($resultados) {
+                $this->resultadosRepository->guardarResultado($idEvaluacion, [
+                    'PDF_Path' => $pdfPath,
+                    'puntuacion' => $resultados['Puntuacion'] ?? null
+                ]);
+            } else {
+                // Si no hay resultados, crear uno nuevo
+                $this->resultadosRepository->guardarResultado($idEvaluacion, [
+                    'PDF_Path' => $pdfPath,
+                    'puntuacion' => $evaluacion['Puntuacion'] ?? null
+                ]);
+            }
+
+            Log::info('PDF regenerado exitosamente', [
+                'id_evaluacion' => $idEvaluacion,
+                'pdf_path' => $pdfPath,
+                'tamaño_archivo' => filesize($fullPdfPath) . ' bytes'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'PDF regenerado exitosamente',
+                'data' => [
+                    'id_evaluacion' => $idEvaluacion,
+                    'pdf_path' => $pdfPath,
+                    'pdf_url' => asset('storage/' . $pdfPath),
+                    'tamaño_archivo' => filesize($fullPdfPath)
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
+            Log::error('Error al regenerar PDF', [
+                'id_evaluacion' => $idEvaluacion,
+                'error' => $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTraceAsString() : 'trace_disabled'
+            ]);
+
+            return response()->json([
+                'error' => 'Error al regenerar el PDF',
+                'message' => config('app.debug') ? $e->getMessage() : 'Error interno del servidor'
             ], 500);
         }
     }
