@@ -790,12 +790,12 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
                   </div>
 
                   {/* Error */}
-                  {resetError && (
+              {resetError && (
                     <Alert variant="destructive" style={{ width: "100%", borderRadius: "12px" }}>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{resetError}</AlertDescription>
-                    </Alert>
-                  )}
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{resetError}</AlertDescription>
+                </Alert>
+              )}
 
                   {/* Campo de email */}
                   <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
@@ -806,12 +806,12 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
                     }}>
                       Correo Electrónico
                     </Label>
-                    <Input
-                      id="reset-email"
-                      type="email"
+                <Input
+                  id="reset-email"
+                  type="email"
                       placeholder="tu@correo.com"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
                       disabled={isSubmitting}
                       style={{
                         borderRadius: "12px",
@@ -820,8 +820,8 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
                         fontSize: 15,
                         transition: "all 0.2s ease"
                       }}
-                    />
-                  </div>
+                />
+              </div>
 
                   {/* Botones */}
                   <div style={{ width: "100%", display: "flex", gap: 12, marginTop: 8 }}>
@@ -974,12 +974,12 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
                       }}>
                         Nueva contraseña
                       </Label>
-                      <Input
-                        id="new-password"
-                        type="password"
-                        placeholder="Ingresa tu nueva contraseña"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
+                <Input
+                  id="new-password"
+                  type="password"
+                  placeholder="Ingresa tu nueva contraseña"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
                         disabled={isSubmitting}
                         style={{
                           borderRadius: "12px",
@@ -988,8 +988,8 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
                           fontSize: 15,
                           transition: "all 0.2s ease"
                         }}
-                      />
-                    </div>
+                />
+              </div>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       <Label htmlFor="confirm-password" style={{
@@ -999,12 +999,12 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
                       }}>
                         Confirmar contraseña
                       </Label>
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        placeholder="Confirma tu nueva contraseña"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
+                <Input
+                  id="confirm-password"
+                  type="password"
+                  placeholder="Confirma tu nueva contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                         disabled={isSubmitting}
                         style={{
                           borderRadius: "12px",
@@ -1013,14 +1013,14 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
                           fontSize: 15,
                           transition: "all 0.2s ease"
                         }}
-                      />
+                />
                     </div>
-                  </div>
+              </div>
 
                   {/* Botones */}
                   <div style={{ width: "100%", display: "flex", gap: 12, marginTop: 8 }}>
-                    <Button 
-                      className="btn-primary btn-pill" 
+                <Button 
+                  className="btn-primary btn-pill" 
                       style={{ 
                         flex: 1,
                         borderRadius: "12px",
@@ -1028,13 +1028,13 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
                         fontWeight: 600,
                         fontSize: 15
                       }} 
-                      onClick={handleAcceptResetPassword}
-                      disabled={isSubmitting}
-                    >
+                  onClick={handleAcceptResetPassword}
+                  disabled={isSubmitting}
+                >
                       {isSubmitting ? "Procesando..." : "Restablecer"}
-                    </Button>
-                    <Button 
-                      className="btn-pill" 
+                </Button>
+                <Button 
+                  className="btn-pill" 
                       style={{ 
                         flex: 1,
                         borderRadius: "12px",
@@ -1045,13 +1045,13 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
                         color: "#64748b",
                         border: "2px solid #e2e8f0"
                       }} 
-                      onClick={handleCancelResetPassword}
-                      disabled={isSubmitting}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
+                  onClick={handleCancelResetPassword}
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
               </CardContent>
             </Card>
           </DialogContent>
