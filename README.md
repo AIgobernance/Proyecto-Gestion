@@ -1,5 +1,14 @@
 # Sistema de Evaluación de Gobernanza de IA
 
+- Juan Esteban Marin (Ejecucion y desarrollador)
+- Gloria Paola Castillo (Cierre / Diseño)
+- Andres Felipe Mejia (Planeador / Pruebas)
+- Maria Jose Barrera (Monitoreo y control / Analista) 
+- Miguel Angel Lucio (Inicio / Analista y desarrollador)
+- Juan David Ledezma (Planeacion / Desarrollador)
+
+- Jair Sanclemente (Propietario del proyecto)
+  
 Sistema web para evaluar y monitorear el nivel de gobernanza de la inteligencia artificial (IA) en las empresas. Permite a las organizaciones completar evaluaciones, generar hojas de ruta automáticas y monitorear el cumplimiento ético y técnico de sus sistemas de IA.
 
 ## 🎯 Objetivo Principal
@@ -57,12 +66,6 @@ Proporcionar a las organizaciones una plataforma digital que facilite la evaluac
    ```bash
    composer install
    ```
-
-3. **Configurar variables de entorno**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
    
    Editar el archivo `.env` con tus configuraciones:
    - Base de datos
@@ -70,17 +73,13 @@ Proporcionar a las organizaciones una plataforma digital que facilite la evaluac
    - Credenciales de Twilio (para SMS)
    - URL de N8N
 
-4. **Ejecutar migraciones**
-   ```bash
-   php artisan migrate
-   ```
 
-5. **Instalar dependencias de Node.js**
+3. **Instalar dependencias de Node.js**
    ```bash
    npm install
    ```
 
-6. **Compilar assets**
+4. **Compilar assets**
    ```bash
    npm run build
    ```
@@ -161,19 +160,6 @@ La documentación completa del proyecto se encuentra en la carpeta `Documentacio
 - **Manual de Usuario**: Guía de uso de la aplicación
 - **Pruebas**: Estrategia de testing
 
-## 🧪 Testing
-
-```bash
-composer test
-```
-
-## 📝 Scripts Disponibles
-
-- `composer setup` - Configuración inicial del proyecto
-- `composer dev` - Ejecutar en modo desarrollo
-- `composer test` - Ejecutar tests
-- `npm run build` - Compilar assets para producción
-- `npm run dev` - Modo desarrollo con hot reload
 
 ## 🔄 Integración con N8N
 
@@ -194,8 +180,6 @@ El sistema requiere configuración SMTP para:
 - Envío de códigos 2FA
 - Notificaciones
 
-Ver `config/README_SMTP.md` para más detalles.
-
 ## 📱 Configuración de SMS (Twilio)
 
 Para habilitar el envío de SMS, configura tus credenciales de Twilio en `.env`:
@@ -211,29 +195,3 @@ TWILIO_PHONE_NUMBER=tu_numero
 - **Usuario Normal**: Puede completar evaluaciones y ver sus resultados
 - **Administrador**: Gestión completa de usuarios y acceso a analytics
 
-## 🐛 Solución de Problemas
-
-Si encuentras problemas, revisa:
-- Los logs en `storage/logs/laravel.log`
-- La configuración en `.env`
-- La documentación en `Documentacion_GitBook/`
-
-## 📄 Licencia
-
-Este proyecto es de uso privado.
-
-## 👨‍💻 Desarrollo
-
-Para contribuir al proyecto:
-1. Crear una rama desde `main`
-2. Realizar cambios
-3. Crear un Pull Request
-
-## 📞 Soporte
-
-Para soporte técnico o consultas, contacta al equipo de desarrollo.
-
----
-
-**Versión**: 1.0.0  
-**Última actualización**: 2024
