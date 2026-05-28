@@ -94,7 +94,7 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
   const [userData, setUserData] = useState(null); // Guardar datos del usuario después del login
 
   // Flujo de recuperación
-  const [resetUsername, setResetUsername] = useState("");
+  const [resetEmail, setResetEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [resetError, setResetError] = useState("");
@@ -119,33 +119,17 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
         password: password,
       });
 
-      if (response.status === 200) {
-        // Flujo actualizado del backend: primero selecciona método 2FA
-        if (response.data.requires_2fa && response.data.user_id) {
-          setUserData({
-            id: response.data.user_id,
-            nombre: username,
-          });
-          setVerificationStep("selectMethod");
+      if (response.status === 200 && response.data.user) {
+        const role = response.data.user.rol || response.data.user.role || "usuario";
+        if (role !== "admin") {
+          setError("Este usuario no tiene permisos de administrador");
+          await axios.post("/logout").catch(() => {});
           return;
         }
 
-        // Compatibilidad si el backend devuelve los datos completos
-        if (response.data.user) {
-          const role = response.data.user.rol || response.data.user.role || "usuario";
-          if (role !== "admin") {
-            setError("Este usuario no tiene permisos de administrador");
-            return;
-          }
-          setUserData({
-            id: response.data.user.id,
-            nombre: response.data.user.nombre || response.data.user.username || username,
-          });
-          setVerificationStep("selectMethod");
-          return;
+        if (onLoginSuccess) {
+          onLoginSuccess(response.data.user.nombre || username, response.data.user);
         }
-
-        setError("No fue posible iniciar sesión. Intente nuevamente.");
       }
     } catch (error) {
       console.error("Error al iniciar sesión:", error);
@@ -386,21 +370,65 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
 
   // --- Recuperar contraseña ---
   const handleResetPassword = () => setVerificationStep("resetPassword");
-  const handleAcceptResetPassword = () => {
-    if (!resetUsername || !newPassword || !confirmPassword) return setResetError("Por favor, complete todos los campos");
-    if (newPassword !== confirmPassword) return setResetError("Las contraseñas no coinciden");
-    if (newPassword.length < 6) return setResetError("La contraseña debe tener al menos 6 caracteres");
-    setResetError(""); setVerificationStep("resetSelectMethod");
+
+  const handleAcceptResetPassword = async () => {
+    if (!resetEmail || !newPassword || !confirmPassword) {
+      setResetError("Por favor, complete todos los campos");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError("Las contraseñas no coinciden");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setResetError("La contraseña debe tener al menos 8 caracteres");
+      return;
+    }
+
+    setResetError("");
+    setIsSubmitting(true);
+
+    try {
+      const tokenMeta = document.head?.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta) {
+        axios.defaults.headers.common["X-CSRF-TOKEN"] = tokenMeta.content;
+      }
+
+      const response = await axios.post("/password/reset", {
+        email: resetEmail,
+        newPassword,
+        confirmPassword,
+      });
+
+      if (response.status === 200) {
+        setVerificationStep("resetSuccess");
+      }
+    } catch (error) {
+      console.error("Error al restablecer contraseña:", error);
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        const errorMessage = backendErrors.email
+          ? (Array.isArray(backendErrors.email) ? backendErrors.email[0] : backendErrors.email)
+          : backendErrors.general
+          ? (Array.isArray(backendErrors.general) ? backendErrors.general[0] : backendErrors.general)
+          : error.response.data.message || "Error al restablecer la contraseña";
+        setResetError(errorMessage);
+      } else {
+        setResetError(error.response?.data?.message || "Error al restablecer la contraseña.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
   const handleCancelResetPassword = () => {
-    setResetUsername(""); setNewPassword(""); setConfirmPassword("");
-    setResetError(""); setVerificationStep("login");
+    setResetEmail("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setResetError("");
+    setVerificationStep("login");
   };
-  const handleSelectEmailForReset = () => { setVerificationMethod("email"); setVerificationStep("resetEnterCode"); };
-  const handleSelectPhoneForReset = () => { setVerificationMethod("phone"); setVerificationStep("resetEnterCode"); };
-  const handleVerifyResetCode = () => setVerificationStep("resetSuccess");
   const handleResetSuccessContinue = () => { handleCancelResetPassword(); };
-  const handleBackToResetMethod = () => setVerificationStep("resetSelectMethod");
 
   return (
     <div className="page">
@@ -523,7 +551,7 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
                 Restablecer Contraseña
               </h3>
               <p style={{ fontSize: 14, color: "#334155", margin: 0, marginBottom: 12 }}>
-                Ingresa tu usuario y nueva contraseña
+                Ingresa tu correo o usuario y la nueva contraseña
               </p>
 
               <div className="space-y-4 py-2">
@@ -544,13 +572,13 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
                 )}
 
                 <div className="field">
-                  <Label htmlFor="reset-username">Usuario</Label>
+                  <Label htmlFor="reset-email">Correo o usuario</Label>
                   <Input
-                    id="reset-username"
+                    id="reset-email"
                     type="text"
-                    placeholder="Ingresa tu usuario"
-                    value={resetUsername}
-                    onChange={(e) => setResetUsername(e.target.value)}
+                    placeholder="Correo o nombre de usuario"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
                   />
                 </div>
 
@@ -581,8 +609,9 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
                     className="btn-primary"
                     style={{ flex: 1 }}
                     onClick={handleAcceptResetPassword}
+                    disabled={isSubmitting}
                   >
-                    Aceptar
+                    {isSubmitting ? "Procesando..." : "Restablecer"}
                   </Button>
                   <Button
                     className="btn-ghost"
@@ -596,22 +625,6 @@ export function AdminLoginPage({ onBack, onLoginSuccess }) {
             </div>
           </DialogContent>
         </Dialog>
-
-        {verificationStep === "resetSelectMethod" && (
-          <VerificationMethodModal
-            onSelectEmail={handleSelectEmailForReset}
-            onSelectPhone={handleSelectPhoneForReset}
-            onClose={handleCancelResetPassword}
-          />
-        )}
-
-        {verificationStep === "resetEnterCode" && (
-          <CodeVerificationModal
-            method={verificationMethod}
-            onVerify={handleVerifyResetCode}
-            onBack={handleBackToResetMethod}
-          />
-        )}
 
         {verificationStep === "resetSuccess" && (
           <PasswordResetSuccessModal onContinue={handleResetSuccessContinue} />

@@ -60,30 +60,6 @@ class LoginController extends Controller
             // Verificar intentos fallidos previos
             $attempts = Cache::get($cacheKey, 0);
             
-            // Si el usuario existe, verificar si está activo
-            if ($usuarioBD) {
-                $activateValue = $usuarioBD->Activate ?? 1;
-                
-                // Normalizar el valor para determinar si está activo
-                $isActive = false;
-                if (is_string($activateValue)) {
-                    // Si es string, verificar si es 'True' (case-insensitive)
-                    $isActive = (strtolower(trim($activateValue)) === 'true' || $activateValue === '1');
-                } elseif (is_bool($activateValue)) {
-                    $isActive = $activateValue;
-                } elseif (is_numeric($activateValue)) {
-                    $isActive = ((int)$activateValue == 1);
-                }
-                
-                if (!$isActive) {
-                    return response()->json([
-                        'message' => 'Usuario desactivado',
-                        'errors' => ['username' => ['Su cuenta ha sido desactivada. Por favor, contacte con soporte para más información.']],
-                        'deactivated' => true
-                    ], 403); // 403 Forbidden para usuario desactivado
-                }
-            }
-            
             // Intentar autenticar al usuario usando Factory Method
             // Pasar $usuarioBD para evitar consulta duplicada
             $usuario = $this->usuarioRepository->autenticar(
@@ -104,30 +80,10 @@ class LoginController extends Controller
                 if ($attempts == 1) {
                     $errorMessage = 'Contraseña incorrecta';
                 } elseif ($attempts == 2) {
-                    $errorMessage = 'Contraseña incorrecta. Al tercer intento fallido, su cuenta será bloqueada';
+                    $errorMessage = 'Contraseña incorrecta. Al tercer intento fallido deberás esperar unos minutos.';
                 } elseif ($attempts >= 3) {
-                    $errorMessage = 'Su cuenta ha sido bloqueada debido a múltiples intentos fallidos. Por favor, contacte con soporte para más información.';
+                    $errorMessage = 'Demasiados intentos fallidos. Espera unos minutos e inténtalo de nuevo.';
                     $shouldBlock = true;
-                    
-                    // Bloquear la cuenta si existe el usuario
-                    if ($usuarioBD && isset($usuarioBD->Id)) {
-                        try {
-                            $this->usuarioRepository->actualizar($usuarioBD->Id, [
-                                'Activate' => 0 // Bloquear cuenta
-                            ]);
-                            
-                            Log::warning('Cuenta bloqueada por intentos fallidos', [
-                                'user_id' => $usuarioBD->Id,
-                                'identifier' => $identifier,
-                                'attempts' => $attempts
-                            ]);
-                        } catch (\Exception $e) {
-                            Log::error('Error al bloquear cuenta después de intentos fallidos', [
-                                'user_id' => $usuarioBD->Id ?? 'NO_ID',
-                                'error' => $e->getMessage()
-                            ]);
-                        }
-                    }
                 }
                 
                 return response()->json([
@@ -157,38 +113,31 @@ class LoginController extends Controller
                 }
             }
 
-            // Actualizar la fecha de última conexión
+            // Asegurar cuenta activa y actualizar última conexión
             if (isset($userData['id']) && $userData['id'] !== null) {
                 try {
                     $this->usuarioRepository->actualizar($userData['id'], [
-                        'Fecha_Ultima_Conexion' => now()
-                    ]);
-                    Log::info('Fecha de última conexión actualizada', [
-                        'user_id' => $userData['id']
+                        'Activate' => 1,
+                        'Fecha_Ultima_Conexion' => now(),
                     ]);
                 } catch (\Exception $e) {
-                    // No fallar el login si no se puede actualizar la fecha
-                    Log::warning('No se pudo actualizar la fecha de última conexión', [
+                    Log::warning('No se pudo actualizar estado/fecha de conexión del usuario', [
                         'user_id' => $userData['id'] ?? 'NO_ID',
                         'error' => $e->getMessage()
                     ]);
                 }
             }
 
-            // NO guardar el usuario en sesión todavía - esperar verificación 2FA
-            // Guardar temporalmente los datos del usuario en sesión para el proceso 2FA
-            $request->session()->put('pending_2fa_user', $userData);
+            $request->session()->put('user', $userData);
             $request->session()->save();
-            
-            Log::info('Login exitoso, requiere selección de método 2FA', [
+
+            Log::info('Login exitoso', [
                 'user_id' => $userData['id'] ?? 'NO_ID'
             ]);
 
-            // Retornar respuesta indicando que se requiere selección de método 2FA
             return response()->json([
-                'message' => 'Selecciona un método de verificación',
-                'requires_2fa' => true,
-                'user_id' => $userData['id']
+                'message' => 'Inicio de sesión exitoso',
+                'user' => $userData,
             ], 200);
 
         } catch (\Exception $e) {

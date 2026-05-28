@@ -364,40 +364,6 @@ class UsuarioRepository
             'rol' => $rol
         ]);
         
-        // Verificar si el usuario está activo antes de autenticar
-        // El campo Activate puede ser: 'True'/'False' (string), 1/0 (int), true/false (bool)
-        $activateValue = $usuarioBD->Activate ?? 1;
-        
-        // Normalizar el valor para determinar si está activo
-        $isActive = false;
-        if (is_string($activateValue)) {
-            // Si es string, verificar si es 'True' (case-insensitive)
-            $isActive = (strtolower(trim($activateValue)) === 'true' || $activateValue === '1');
-        } elseif (is_bool($activateValue)) {
-            $isActive = $activateValue;
-        } elseif (is_numeric($activateValue)) {
-            $isActive = ((int)$activateValue == 1);
-        }
-        
-        Log::info('Verificación de estado Activate', [
-            'correo' => $usuarioBD->Correo ?? 'NO_CORREO',
-            'activate_raw' => $activateValue,
-            'activate_type' => gettype($activateValue),
-            'isActive' => $isActive
-        ]);
-        
-        if (!$isActive) {
-            Log::warning('Intento de login de usuario desactivado', [
-                'correo' => $usuarioBD->Correo ?? 'NO_CORREO',
-                'nombre' => $usuarioBD->Nombre_Usuario ?? 'NO_NOMBRE',
-                'activate_raw' => $activateValue,
-                'activate_type' => gettype($activateValue)
-            ]);
-            // Retornar null para indicar que el usuario está desactivado
-            // El LoginController manejará este caso específicamente
-            return null;
-        }
-        
         // Crear instancia del usuario usando Factory Method
         $usuario = UsuarioFactoryManager::crearUsuario($datosUsuario, $rol);
         

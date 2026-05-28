@@ -214,7 +214,7 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
       });
 
       if (response.status === 201) {
-        setShowActivation(true);
+        setShowSuccess(true);
       }
     } catch (error) {
       console.error('Error al registrar:', error);
@@ -253,7 +253,7 @@ export function RegisterPage({ onBack, onLoginRedirect }) {
             });
             
             if (retryResponse.status === 201) {
-              setShowActivation(true);
+              setShowSuccess(true);
             }
             return;
           }

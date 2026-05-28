@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use App\Observer\ObserverManager;
-use App\Services\JwtService;
-use App\Services\EmailService;
 
 class RegisterController extends Controller
 {
@@ -62,8 +60,7 @@ class RegisterController extends Controller
         }
 
         try {
-            // Preparar los datos para el repositorio
-            // Crear usuario INACTIVO (activate = 0) para requerir activación por email
+            // Preparar los datos para el repositorio (cuenta activa de inmediato)
             $datosUsuario = [
                 'usuario' => $request->usuario,
                 'empresa' => $request->empresa,
@@ -76,7 +73,7 @@ class RegisterController extends Controller
                 'telefono' => $request->telefono,
                 'contrasena' => $request->contrasena,
                 'rol' => 'usuario', // Por defecto es usuario
-                'activate' => 0, // Usuario inactivo hasta que active su cuenta por email
+                'activate' => 1,
             ];
 
             // Crear el usuario usando el repositorio
@@ -87,31 +84,6 @@ class RegisterController extends Controller
 
             // Ocultar la contraseña en la respuesta
             unset($usuario->Contrasena);
-
-            // Generar token JWT para activación
-            try {
-                $activationToken = JwtService::generateActivationToken($userId, $request->correo);
-                
-                // Transformar datos del frontend al formato necesario para el email
-                $emailData = EmailService::transformRegistrationData($request->all());
-                
-                // Enviar email de activación
-                $emailSent = EmailService::sendActivationEmail($request->correo, $emailData, $activationToken);
-                
-                if (!$emailSent) {
-                    Log::warning('No se pudo enviar el email de activación, pero el usuario fue creado', [
-                        'user_id' => $userId,
-                        'email' => $request->correo
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::error('Error al generar token o enviar email de activación', [
-                    'user_id' => $userId,
-                    'email' => $request->correo,
-                    'error' => $e->getMessage()
-                ]);
-                // No fallar el registro si hay error en el email, pero loguear el error
-            }
 
             // Disparar notificación de usuario registrado (Patrón Observer)
             $notificador = ObserverManager::obtenerNotificador('usuario_registrado');
@@ -124,9 +96,8 @@ class RegisterController extends Controller
             }
 
             return response()->json([
-                'message' => 'Usuario registrado correctamente. Por favor, revisa tu correo electrónico para activar tu cuenta.',
+                'message' => 'Usuario registrado correctamente. Ya puedes iniciar sesión.',
                 'user' => $usuario,
-                'requires_activation' => true
             ], 201);
 
         } catch (\Exception $e) {
