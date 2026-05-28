@@ -175,7 +175,12 @@ export function LoginPage({ onBack, onRegister, onLoginSuccess }) {
       // Otros errores
       else if (error.response && error.response.data) {
         const responseData = error.response.data;
-        if (responseData.errors) {
+        if (responseData.setup_required && responseData.errors?.general) {
+          const setupMsg = Array.isArray(responseData.errors.general)
+            ? responseData.errors.general[0]
+            : responseData.errors.general;
+          setError(setupMsg);
+        } else if (responseData.errors) {
           const backendErrors = responseData.errors;
           const errorMessage = backendErrors.username 
             ? (Array.isArray(backendErrors.username) ? backendErrors.username[0] : backendErrors.username)

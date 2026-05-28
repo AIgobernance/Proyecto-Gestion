@@ -20,7 +20,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Inicializar el sistema de Observers
         ObserverManager::inicializar();
     }
 }

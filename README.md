@@ -54,11 +54,29 @@ Proporcionar a las organizaciones una plataforma digital que facilite la evaluac
 
 ## 📋 Requisitos Previos
 
-- PHP 8.2 o superior
+- PHP 8.2 o superior (64 bits)
 - Composer
 - Node.js 18+ y npm
-- Base de datos (MySQL o SQL Server)
-- Servidor web (Apache/Nginx) o PHP built-in server
+- Base de datos SQL Server (Site4Now u otro)
+- **Windows:** Microsoft ODBC Driver 18 for SQL Server + extensiones PHP `sqlsrv` y `pdo_sqlsrv`
+
+### Windows: evitar error IMSSP / ODBC
+
+Si al registrarte o iniciar sesión aparece un error sobre **ODBC Driver for SQL Server**, ejecuta **una vez** en PowerShell **como administrador** (desde la carpeta del proyecto):
+
+```powershell
+composer run setup:windows
+```
+
+Eso instala el driver ODBC. Tras `composer install`, el proyecto también intenta instalarlo automáticamente.
+
+Si faltan las extensiones PHP, descárgalas para tu versión de PHP (x64): [Drivers PHP para SQL Server](https://learn.microsoft.com/sql/connect/php/download-drivers-php-sql-server)
+
+Comprobar estado:
+
+```bash
+composer run check-db
+```
 
 ## 🔧 Instalación
 

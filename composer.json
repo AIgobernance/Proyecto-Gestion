@@ -40,6 +40,12 @@
         }
     },
     "scripts": {
+        "setup:windows": [
+            "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-sqlserver-windows.ps1"
+        ],
+        "check-db": [
+            "@php scripts/check-sqlserver.php"
+        ],
         "setup": [
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
@@ -62,7 +68,8 @@
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
+            "@php artisan package:discover --ansi",
+            "@php scripts/check-sqlserver.php"
         ],
         "post-update-cmd": [
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
