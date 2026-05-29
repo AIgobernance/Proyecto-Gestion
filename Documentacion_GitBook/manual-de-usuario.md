@@ -50,10 +50,20 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 <figure><img src=".gitbook/assets/image (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 5. Entrar al link que proporciona la terminal.
-6. Seleccionar una de las siguientes opciones:
-   * **Iniciar sesión** (si ya tiene cuenta).
-   * **Registrarse** (si es la primera vez que accede).
-7. Seleccionar rol (Administrador o Usuario).
+6. En caso de presentar este error durante el registro:
+
+<figure><img src=".gitbook/assets/WhatsApp Image 2026-05-28 at 7.03.50 PM.jpeg" alt=""><figcaption></figcaption></figure>
+
+Ejecutar este comando `composer run setup:windows` en la terminal como administrador en la carpeta del proyecto y debe salir este mensaje:
+
+<figure><img src=".gitbook/assets/image (22).png" alt=""><figcaption></figcaption></figure>
+
+7. Seleccionar una de las siguientes opciones:
+
+* **Iniciar sesión** (si ya tiene cuenta).
+* **Registrarse** (si es la primera vez que accede).
+
+Seleccionar rol (Administrador o Usuario).
 
 <figure><img src=".gitbook/assets/image (11) (1).png" alt=""><figcaption></figcaption></figure>
 
@@ -130,7 +140,7 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 #### Historial de Evaluaciones
 
-<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 134954.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (12) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Actualización Perfil Empresarial
 
@@ -144,7 +154,7 @@ En esta sección se visualizan los marcos y se selecciona la acción a seguir.
 
 Para el restablecimiento de contraseña desde el inicio de sesión seguir los pasos a continuación.
 
-<figure><img src=".gitbook/assets/circu (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/circu.png" alt=""><figcaption></figcaption></figure>
 
 #### Datos para Restablecimiento
 
@@ -152,7 +162,7 @@ Para el restablecimiento de contraseña desde el inicio de sesión seguir los pa
 
 #### Verificación de Doble Factor (2FA)
 
-<figure><img src=".gitbook/assets/image (22).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (21).png" alt=""><figcaption></figcaption></figure>
 
 #### Código de Restablecimiento
 
@@ -183,7 +193,7 @@ Permite crear una cuenta de usuario y validar la identidad mediante el sistema d
 * Campos requeridos: nombre que se visualiza en la plataforma, empresa que desea hacer la evaluación, NIT de la empresa, tipo de documento de la persona que va a crear la cuenta, numero de documento, el sector se refiere a la ubicación de la empresa, país donde se ubica la empresa, tamaño organizacional, correo donde se mandara la verificación, teléfono que utilizara la verificación, contraseña que usara para iniciar sesión.
 * Activación de cuenta mediante un servicio externo de correo (SMTP).
 
-<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 132203.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (3) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Módulo de Inicio de Sesión
 
@@ -192,7 +202,7 @@ Permite acceder a la plataforma una vez el usuario está registrado y verificado
 * Permite acceso con credenciales (Usuario que se creo en el registro y su contraseña).
 * Autenticación 2FA (código de autenticación).
 
-<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 133154.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (8) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Módulo de Evaluación
 
@@ -202,7 +212,7 @@ Es el núcleo del sistema.
 * Permite subir documentos de respaldo (PDF) con un máximo de 2MB, estos documentos son si aplican gobernanza en las organizaciones.
 * Al finalizar, los datos se envían al backend Laravel → n8n → IA.
 
-<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-15 180836 (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-15 180836.png" alt=""><figcaption></figcaption></figure>
 
 #### Módulo de Documentación
 
@@ -220,7 +230,7 @@ Muestra el resultado analizado por la IA, incluyendo:
 * Puntaje de gobernanza general, porcentaje de cumplimiento de los marcos.
 * Gráficas y visualizaciones interactivas.
 
-<figure><img src=".gitbook/assets/image (10) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (9) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Módulo de Hoja de Ruta
 
@@ -230,7 +240,7 @@ Muestra el resultado analizado por la IA, incluyendo:
 
 <figure><img src=".gitbook/assets/hojade ruta.png" alt=""><figcaption></figcaption></figure>
 
-<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-23 115051.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (16).png" alt=""><figcaption></figcaption></figure>
 
 #### Modulo de Historial de Evaluaciones
 
@@ -242,13 +252,13 @@ Muestra las evaluaciones completadas, las pendientes, cuantas evaluaciones ha re
 
 En este modulo podremos actualizar la información del perfil empresarial, las opciones que tiene este modelo son el nombre del usuario, el correo, el teléfono, además de restablecimiento de contraseña.
 
-<figure><img src=".gitbook/assets/image (26).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (25).png" alt=""><figcaption></figcaption></figure>
 
 #### Modulo de Restablecimiento
 
 Este modulo se enfoca en aquellos usuarios que olvidaron su contraseña. El restablecimiento pide el usuario y verifica la identidad con una confirmación por medio de un codigo enviado por SMS o SMTP.
 
-<figure><img src=".gitbook/assets/image (28).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (27).png" alt=""><figcaption></figcaption></figure>
 
 ***
 
@@ -315,7 +325,7 @@ Al iniciar sesión, el Administrador accede a un **panel de control** con acceso
 
 #### Administración de Usuarios
 
-<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-13 095809.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Creación de Nuevo Usuario
 
@@ -327,7 +337,7 @@ Al iniciar sesión, el Administrador accede a un **panel de control** con acceso
 
 #### Dashboard General
 
-<figure><img src=".gitbook/assets/Imagen de WhatsApp 2025-11-23 a las 13.05.27_a5aa2bc4 (1).jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/Imagen de WhatsApp 2025-11-23 a las 13.05.27_a5aa2bc4.jpg" alt=""><figcaption></figcaption></figure>
 
 ### Restablecimiento de Contraseña
 
@@ -367,7 +377,7 @@ Permite crear una cuenta de usuario y validar la identidad mediante el sistema d
 * Campos requeridos: nombre que se visualiza en la plataforma, tipo de documento de la persona que va a crear la cuenta, numero de documento, correo donde se mandara la activación, teléfono que utilizara la verificación, contraseña que usara para iniciar sesión.
 * Activación de cuenta mediante un servicio externo de correo (SMTP).
 
-<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-09 140338.png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/image (14) (1).png" alt=""><figcaption></figcaption></figure>
 
 #### Modulo de Inicio de Sesión
 

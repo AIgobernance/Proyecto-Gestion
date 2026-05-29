@@ -8,7 +8,7 @@ Pasos para la intalación de N8N para obtener hoja de ruta personalizada.
 2. Al abrir la terminal escribir el comando `npm install n8n -g`
 3. Epperas unos segundos y debe verse asi:
 
-<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-23 182505 (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src=".gitbook/assets/Captura de pantalla 2025-11-23 182505.png" alt=""><figcaption></figcaption></figure>
 
 4. Escribe "`o`" en la terminal o accede al localhost que muestra en pantalla metiendo la url al navegador.
 5. Llena los datos que te piden y crea una cuenta en n8n.
@@ -22,7 +22,7 @@ Pasos para la intalación de N8N para obtener hoja de ruta personalizada.
 
 8. Ahora debes descargar el archivo que se encuentra disponible para descargar.
 
-{% file src=".gitbook/assets/Proyecto (1) (1).json" %}
+{% file src=".gitbook/assets/Proyecto (1).json" %}
 
 9. Presiona el botón "Import from File" y selecciona el archivo que descargaste, referencia:
 
