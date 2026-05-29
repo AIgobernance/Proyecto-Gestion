@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import {
   CheckCircle2,
@@ -67,6 +67,54 @@ const styles = `
   width:100%;
 }
 .btn-secondary:hover{background:rgba(255,255,255,.25)}
+.btn-secondary:disabled{opacity:.75;cursor:not-allowed}
+
+.download-progress{
+  margin-top:12px;
+  background:rgba(255,255,255,.12);
+  border-radius:14px;
+  padding:14px 16px;
+  border:1px solid rgba(255,255,255,.2);
+}
+.download-progress__track{
+  width:100%;
+  height:10px;
+  background:rgba(15,23,42,.25);
+  border-radius:999px;
+  overflow:hidden;
+  margin-bottom:10px;
+}
+.download-progress__bar{
+  height:100%;
+  background:linear-gradient(90deg,#86efac,#22c55e);
+  border-radius:999px;
+  transition:width .35s ease;
+  min-width:0;
+}
+.download-progress__bar--indeterminate{
+  width:40% !important;
+  animation:download-indeterminate 1.4s ease-in-out infinite;
+}
+@keyframes download-indeterminate{
+  0%{ transform:translateX(-120%); }
+  100%{ transform:translateX(320%); }
+}
+.download-progress__meta{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  color:rgba(255,255,255,.92);
+  font-size:13px;
+  font-weight:600;
+}
+.download-progress__label{
+  flex:1;
+  line-height:1.4;
+}
+.download-progress__pct{
+  flex-shrink:0;
+  font-variant-numeric:tabular-nums;
+}
 
 /* Footer note */
 .note{color:#e2e8f0;text-align:center;font-size:13px;margin-top:16px}
@@ -92,8 +140,33 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
   const [puntuacion, setPuntuacion] = useState(null);
   const [error, setError] = useState(null);
   const [chartData, setChartData] = useState(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadStatus, setDownloadStatus] = useState("");
+  const [downloadIndeterminate, setDownloadIndeterminate] = useState(false);
+  const downloadProgressTimer = useRef(null);
   
-  // Estado para datos de la evaluación
+  const stopDownloadProgressTimer = () => {
+    if (downloadProgressTimer.current) {
+      clearInterval(downloadProgressTimer.current);
+      downloadProgressTimer.current = null;
+    }
+  };
+
+  const startSimulatedProgress = (from, to, label) => {
+    stopDownloadProgressTimer();
+    setDownloadStatus(label);
+    setDownloadIndeterminate(false);
+    setDownloadProgress(from);
+    downloadProgressTimer.current = setInterval(() => {
+      setDownloadProgress((prev) => {
+        if (prev >= to - 1) return prev;
+        return prev + 1;
+      });
+    }, 700);
+  };
+
+  useEffect(() => () => stopDownloadProgressTimer(), []);
   const [evaluationData, setEvaluationData] = useState({
     questionsAnswered: 30,
     timeSpent: "Calculando...",
@@ -452,10 +525,15 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
   }, [chartData, pdfReady]);
 
   const handleDownloadPdf = async () => {
-    if (!id) {
-      console.error('No hay ID de evaluación para descargar');
+    if (!id || isDownloadingPdf) {
+      if (!id) console.error('No hay ID de evaluación para descargar');
       return;
     }
+
+    setIsDownloadingPdf(true);
+    setDownloadProgress(0);
+    setDownloadIndeterminate(false);
+    startSimulatedProgress(8, 42, "Preparando informe PDF...");
 
     try {
       const token = document.head?.querySelector('meta[name="csrf-token"]');
@@ -465,41 +543,68 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
 
       const axiosClient = window.axios || axios;
 
-      // Intentar regenerar PDF con puntuación oficial (si hay HTML guardado)
       try {
         await axiosClient.post(`/api/evaluation/${id}/regenerate-pdf`, {}, { timeout: 180000 });
       } catch (regenErr) {
         if (regenErr.response?.status === 404) {
+          stopDownloadProgressTimer();
+          setIsDownloadingPdf(false);
+          setDownloadProgress(0);
+          setDownloadStatus("");
           await axiosClient.post(`/api/evaluation/${id}/resend-n8n`, {}, { timeout: 60000 });
           alert('El informe se está regenerando con la puntuación correcta. Espera 1-3 minutos y vuelve a descargar.');
           return;
         }
       }
-      
+
+      stopDownloadProgressTimer();
+      setDownloadProgress(45);
+      setDownloadStatus("Descargando PDF...");
+      setDownloadIndeterminate(true);
+
       const response = await axiosClient.get(`/api/evaluation/${id}/download-pdf`, {
         responseType: 'blob',
         timeout: 180000,
+        onDownloadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            setDownloadIndeterminate(false);
+            const pct = 45 + Math.round((progressEvent.loaded * 55) / progressEvent.total);
+            setDownloadProgress(Math.min(pct, 99));
+          }
+        },
       });
 
-      // Crear un blob del PDF descargado
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      
-      // Crear un enlace temporal para descargar el PDF
+
       const link = document.createElement('a');
       link.href = url;
       link.download = `evaluacion-${id || 'resultados'}.pdf`;
       document.body.appendChild(link);
       link.click();
-      
-      // Limpiar
+
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+
+      setDownloadIndeterminate(false);
+      setDownloadProgress(100);
+      setDownloadStatus("Descarga completada");
+
+      if (onDownloadPdf) onDownloadPdf();
+
+      setTimeout(() => {
+        setIsDownloadingPdf(false);
+        setDownloadProgress(0);
+        setDownloadStatus("");
+      }, 1800);
     } catch (err) {
+      stopDownloadProgressTimer();
       console.error('Error al descargar PDF:', err);
-      
-      // Fallback: intentar usar la URL directa si el endpoint falla
+
       if (pdfUrl) {
+        setDownloadStatus("Abriendo enlace alternativo...");
+        setDownloadProgress(100);
+        setDownloadIndeterminate(false);
         const link = document.createElement('a');
         link.href = pdfUrl;
         link.download = `evaluacion-${id || 'resultados'}.pdf`;
@@ -507,7 +612,15 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    } else {
+        setTimeout(() => {
+          setIsDownloadingPdf(false);
+          setDownloadProgress(0);
+          setDownloadStatus("");
+        }, 1200);
+      } else {
+        setIsDownloadingPdf(false);
+        setDownloadProgress(0);
+        setDownloadStatus("");
         alert('Error al descargar el PDF. Por favor, intenta más tarde.');
       }
     }
@@ -641,10 +754,42 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
                 </ul>
               </div>
 
-              {/* ÚNICO botón: Descargar PDF */}
-              <button className="btn-secondary" onClick={handleDownloadPdf}>
-                <Download size={18} /> Descargar PDF
+              {/* Botón Descargar PDF */}
+              <button
+                className="btn-secondary"
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+              >
+                {isDownloadingPdf ? (
+                  <>
+                    <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+                    {downloadStatus || "Descargando..."}
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} /> Descargar PDF
+                  </>
+                )}
               </button>
+
+              {isDownloadingPdf && (
+                <div className="download-progress" role="status" aria-live="polite">
+                  <div className="download-progress__track">
+                    <div
+                      className={`download-progress__bar ${downloadIndeterminate ? "download-progress__bar--indeterminate" : ""}`}
+                      style={downloadIndeterminate ? undefined : { width: `${downloadProgress}%` }}
+                    />
+                  </div>
+                  <div className="download-progress__meta">
+                    <span className="download-progress__label">{downloadStatus}</span>
+                    <span className="download-progress__pct">
+                      {downloadIndeterminate && downloadProgress < 99
+                        ? "En progreso..."
+                        : `${downloadProgress}%`}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Gráficas */}
               {chartData && chartData.categories && (
