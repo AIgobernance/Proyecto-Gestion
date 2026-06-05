@@ -1,6 +1,6 @@
 FROM php:8.2-cli
 
-# Install system dependencies
+# Install system dependencies (including Chromium for PDF generation)
 RUN apt-get update && apt-get install -y \
     gnupg2 \
     curl \
@@ -10,7 +10,14 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libxml2-dev \
     git \
-    unixodbc-dev
+    unixodbc-dev \
+    chromium \
+    fonts-liberation \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libgtk-3-0
 
 # Install Microsoft ODBC Driver 18 for SQL Server
 RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
@@ -26,12 +33,14 @@ RUN pecl install sqlsrv-5.11.1 pdo_sqlsrv-5.11.1 \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Node.js (for Vite build)
+# Install Node.js and Puppeteer (for Vite build and PDF Browsershot)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
+    && apt-get install -y nodejs \
+    && npm install -g puppeteer
 
-# Configure Railway dynamic PORT
+# Configure Railway dynamic PORT and Chrome Path
 ENV PORT=8080
+ENV CHROME_PATH=/usr/bin/chromium
 
 # Set working directory
 WORKDIR /var/www/html
