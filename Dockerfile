@@ -20,7 +20,7 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor
 
 # Install PHP extensions
 RUN docker-php-ext-install bcmath gd zip dom
-RUN pecl install sqlsrv pdo_sqlsrv \
+RUN pecl install sqlsrv-5.11.1 pdo_sqlsrv-5.11.1 \
     && docker-php-ext-enable sqlsrv pdo_sqlsrv
 
 # Install Composer
