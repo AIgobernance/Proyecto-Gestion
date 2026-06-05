@@ -39,9 +39,10 @@ RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
 ENV PORT=80
 RUN sed -i 's/80/${PORT}/g' /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf
 
-# Enable Apache mod_rewrite and fix MPM issue
-RUN a2dismod mpm_event mpm_worker || true \
-    && a2enmod rewrite mpm_prefork
+# Enable Apache mod_rewrite and fix MPM issue physically
+RUN a2enmod rewrite mpm_prefork \
+    && rm -f /etc/apache2/mods-enabled/mpm_event.load /etc/apache2/mods-enabled/mpm_worker.load \
+    && rm -f /etc/apache2/mods-available/mpm_event.load /etc/apache2/mods-available/mpm_worker.load
 
 # Set working directory
 WORKDIR /var/www/html
