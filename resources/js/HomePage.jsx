@@ -149,13 +149,10 @@ a{color:inherit;text-decoration:none}
 .footer a:hover{color:#ffffff}
 .footer-links{display:grid;gap:8px}
 .cta{display:flex;align-items:center;gap:10px}
-.social{display:flex;gap:12px;margin-top:12px}
-.social a{display:inline-flex;height:36px;width:36px;border-radius:50%;background:#21409a;align-items:center;justify-content:center;color:#fff;transition:.15s}
-.social a:hover{transform:translateY(-1px);background:#2b51c2}
 .footer-bottom{border-top:1px solid #162a62;padding:14px 0;text-align:center;font-size:13px}
 .footer-grid > div:last-child {text-align: center;}
 .footer-grid > div:last-child .cta {justify-content: center;}
-.footer-grid > div:last-child .social {justify-content: center;}
+.footer-grid > div:last-child .cta a{text-decoration:none;display:inline-flex;align-items:center}
 
 /* Responsive */
 @media (max-width: 1100px){
@@ -296,12 +293,9 @@ export default function HomePage() {
             <div>
               <h5>Contacto</h5>
               <div className="cta">
-                <Button className="btn-outline">✉️ Enviar Mensaje</Button>
-              </div>
-              <div className="social">
-                <a href="#" aria-label="LinkedIn">in</a>
-                <a href="#" aria-label="Twitter">𝕏</a>
-                <a href="#" aria-label="Facebook">f</a>
+                <a href="mailto:pgestionti@gmail.com" className="btn btn-outline">
+                  ✉️ Enviar Mensaje
+                </a>
               </div>
             </div>
           </div>
