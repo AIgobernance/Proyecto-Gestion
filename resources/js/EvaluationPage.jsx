@@ -669,96 +669,6 @@ const styles = `
   font-size:11px;
   color:#6b7280;
 }
-.n8n-confirm-overlay{
-  position:fixed;
-  inset:0;
-  z-index:100;
-  background:rgba(15,23,42,.55);
-  backdrop-filter:blur(3px);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:20px;
-}
-.n8n-confirm-modal{
-  width:100%;
-  max-width:460px;
-  background:#fff;
-  border-radius:20px;
-  box-shadow:0 20px 50px rgba(15,23,42,.18);
-  padding:28px;
-  border:1px solid #e5e7eb;
-}
-.n8n-confirm-modal h3{
-  margin:0 0 8px;
-  font-size:22px;
-  color:#0b1324;
-}
-.n8n-confirm-modal p{
-  margin:0 0 20px;
-  font-size:14px;
-  color:#64748b;
-  line-height:1.5;
-}
-.n8n-confirm-check{
-  display:flex;
-  align-items:flex-start;
-  gap:12px;
-  padding:14px 16px;
-  border:2px solid #e2e8f0;
-  border-radius:14px;
-  cursor:pointer;
-  margin-bottom:20px;
-  transition:border-color .2s, background .2s;
-}
-.n8n-confirm-check:hover{
-  border-color:#93c5fd;
-  background:#f8fafc;
-}
-.n8n-confirm-check--checked{
-  border-color:#4d82bc;
-  background:#eff6ff;
-}
-.n8n-confirm-check input{
-  width:18px;
-  height:18px;
-  margin-top:2px;
-  accent-color:#4d82bc;
-  cursor:pointer;
-  flex-shrink:0;
-}
-.n8n-confirm-check span{
-  font-size:15px;
-  font-weight:600;
-  color:#0b1324;
-  line-height:1.4;
-}
-.n8n-confirm-actions{
-  display:flex;
-  gap:10px;
-}
-.n8n-confirm-actions button{
-  flex:1;
-  border:none;
-  border-radius:999px;
-  padding:12px 18px;
-  font-weight:700;
-  font-size:14px;
-  cursor:pointer;
-}
-.n8n-confirm-actions .btn-cancel{
-  background:#f1f5f9;
-  color:#475569;
-  border:1px solid #cbd5e1;
-}
-.n8n-confirm-actions .btn-send{
-  background:linear-gradient(90deg,#4d82bc,#5a8fc9);
-  color:#fff;
-}
-.n8n-confirm-actions .btn-send:disabled{
-  opacity:.45;
-  cursor:not-allowed;
-}
 `;
 
 /* ===== Componente principal ===== */
@@ -771,9 +681,6 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
   const [submitError, setSubmitError] = useState(null);
   const [showRetry, setShowRetry] = useState(false);
   const [lastAnswers, setLastAnswers] = useState(null); // Guardar respuestas para reintentar
-  const [showN8nConfirm, setShowN8nConfirm] = useState(false);
-  const [n8nActivated, setN8nActivated] = useState(false);
-  const [pendingSubmitAnswers, setPendingSubmitAnswers] = useState(null);
   const [evaluationId, setEvaluationId] = useState(null); // ID de la evaluación actual
   const [savingProgress, setSavingProgress] = useState(false); // Guardando progreso
   
@@ -940,24 +847,10 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
     saveProgress(currentIndex, respuestaTexto); // Sin await
 
     if (currentIndex === TOTAL_QUESTIONS - 1) {
-      setPendingSubmitAnswers(newAnswers);
-      setN8nActivated(false);
-      setShowN8nConfirm(true);
+      handleSubmitEvaluation(newAnswers);
       return;
     }
     setCurrentIndex((i) => i + 1);
-  };
-
-  const handleConfirmN8nSubmit = () => {
-    if (!n8nActivated || !pendingSubmitAnswers) return;
-    setShowN8nConfirm(false);
-    handleSubmitEvaluation(pendingSubmitAnswers);
-  };
-
-  const handleCancelN8nConfirm = () => {
-    setShowN8nConfirm(false);
-    setN8nActivated(false);
-    setPendingSubmitAnswers(null);
   };
 
   const handleSubmitEvaluation = async (allAnswers, isRetry = false) => {
@@ -1404,43 +1297,6 @@ export function EvaluationPage({ onBack, onPause, onComplete }) {
           </section>
         </div>
       </main>
-
-      {showN8nConfirm && (
-        <div className="n8n-confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="n8n-confirm-title">
-          <div className="n8n-confirm-modal">
-            <h3 id="n8n-confirm-title">Antes de enviar</h3>
-            <p>
-              Asegúrate de tener activo tu flujo de N8N local antes de finalizar la evaluación.
-              Si aún no lo has hecho, actívalo en N8N y luego confirma aquí.
-            </p>
-
-            <label
-              className={`n8n-confirm-check ${n8nActivated ? "n8n-confirm-check--checked" : ""}`}
-            >
-              <input
-                type="checkbox"
-                checked={n8nActivated}
-                onChange={(e) => setN8nActivated(e.target.checked)}
-              />
-              <span>¿Ya activaste el flujo de N8N?</span>
-            </label>
-
-            <div className="n8n-confirm-actions">
-              <button type="button" className="btn-cancel" onClick={handleCancelN8nConfirm}>
-                Cancelar
-              </button>
-              <button
-                type="button"
-                className="btn-send"
-                onClick={handleConfirmN8nSubmit}
-                disabled={!n8nActivated}
-              >
-                Enviar evaluación
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
