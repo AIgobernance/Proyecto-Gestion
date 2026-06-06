@@ -25,10 +25,14 @@ class N8nService
 
     public function __construct()
     {
-        $this->webhookUrl = config('services.n8n.webhook_url', env('N8N_WEBHOOK_URL', ''));
-        
-        if (empty($this->webhookUrl)) {
-            Log::warning('N8N webhook URL no configurada. Usa N8N_WEBHOOK_URL en .env');
+        $this->webhookUrl = trim((string) config('services.n8n.webhook_url', env('N8N_WEBHOOK_URL', '')));
+
+        if ($this->webhookUrl === '') {
+            Log::warning('N8N webhook URL no configurada. Define N8N_WEBHOOK_URL en las variables de entorno (Railway/.env)');
+        } elseif (str_contains($this->webhookUrl, 'webhook-test')) {
+            Log::warning('N8N usa webhook-test (modo manual). Cambia a la Production URL: /webhook/Evaluacion', [
+                'webhook_url' => $this->webhookUrl,
+            ]);
         }
     }
 
