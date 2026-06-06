@@ -1,4 +1,8 @@
-# Flujo de Trabajo de N8N e Instalación
+---
+hidden: true
+---
+
+# Flujo de Trabajo de N8N
 
 ### Instalación
 

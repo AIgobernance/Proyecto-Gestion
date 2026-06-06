@@ -2,7 +2,7 @@
 
 ## Introducción
 
-El presente manual tiene como objetivo guiar al usuario en el uso del aplicativo web “Gobernanza de IA en las Empresas”, una herramienta digital que permite realizar evaluaciones sobre la gestión ética, legal y técnica de la inteligencia artificial dentro de una organización.
+El presente manual tiene como objetivo guiar al usuario en el uso del aplicativo web “[AI Governance Evaluator](https://aigovernancevaluator.up.railway.app/)”, una herramienta digital que permite realizar evaluaciones sobre la gestión ética, legal y técnica de la inteligencia artificial dentro de una organización.
 
 El sistema genera automáticamente una hoja de ruta personalizada con recomendaciones y acciones de mejora, basadas en los resultados de la evaluación y el análisis implementado con los marcos normativos.
 
@@ -31,37 +31,8 @@ El sistema cuenta con dos roles principales: Organizaciones y Administrador.
 
 #### Ingreso al Portal
 
-1. Descargar el repositorio en [https://github.com/AIgobernance/Proyecto-Gestion](https://github.com/AIgobernance/Proyecto-Gestion)
-2. Abrir el repositorio y desplegar terminal.
-3. Para ejecutar React se debe descargar npn, escribir en la terminal "npm install"
-
-<figure><img src=".gitbook/assets/image.png" alt=""><figcaption></figcaption></figure>
-
-4. En la terminal escribir "npm run dev"
-
-<figure><img src=".gitbook/assets/image (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
-
-5. Abrir otra pestañas en la terminal, para ejecutar el backend se necesita una descarga, escribir en la terminar "composer install"
-
-<figure><img src=".gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
-
-5. Escribir el comando "php artisan serve" en la terminal.
-
-<figure><img src=".gitbook/assets/image (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
-
-5. Entrar al link que proporciona la terminal.
-6. En caso de presentar este error durante el registro:
-
-<figure><img src=".gitbook/assets/WhatsApp Image 2026-05-28 at 7.03.50 PM.jpeg" alt=""><figcaption></figcaption></figure>
-
-Ejecutar este comando `composer run setup:windows` en la terminal como administrador en la carpeta del proyecto y debe salir este mensaje:
-
-<figure><img src=".gitbook/assets/image (22).png" alt=""><figcaption></figcaption></figure>
-
-7. Seleccionar una de las siguientes opciones:
-
-* **Iniciar sesión** (si ya tiene cuenta).
-* **Registrarse** (si es la primera vez que accede).
+Para acceder al aplicativo solo es necesario abrir este link:\
+[https://aigovernancevaluator.up.railway.app/](https://aigovernancevaluator.up.railway.app/)
 
 Seleccionar rol (Administrador o Usuario).
 
