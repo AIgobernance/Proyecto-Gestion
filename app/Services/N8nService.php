@@ -56,6 +56,7 @@ class N8nService
             ]);
 
             $response = Http::timeout($this->timeout)
+                ->asJson()
                 ->post($this->webhookUrl, $datos);
 
             if ($response->successful()) {
@@ -127,14 +128,23 @@ class N8nService
             // Ejecutar en un proceso separado o usar dispatch
             // Por ahora, ejecutamos con timeout largo pero sin esperar respuesta
             // Usar timeout de 60 segundos solo para la conexión inicial, no para procesar
-            Http::timeout(60) // Timeout más largo para envío de datos grandes
-                ->withoutVerifying() // No verificar SSL si es necesario
-                ->post($this->webhookUrl, $datos)
-                ->throw(); // Solo lanzar error si falla completamente (no por timeout)
+            $response = Http::timeout(60)
+                ->withoutVerifying()
+                ->asJson()
+                ->post($this->webhookUrl, $datos);
+
+            if ($response->failed()) {
+                Log::warning('N8N rechazó el webhook', [
+                    'id_evaluacion' => $datos['id_evaluacion'] ?? null,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return;
+            }
 
             Log::info('Evaluación enviada a N8N exitosamente (procesamiento asíncrono)', [
                 'id_evaluacion' => $datos['id_evaluacion'] ?? null,
-                'mensaje' => 'N8N procesará en segundo plano'
+                'status' => $response->status(),
             ]);
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
@@ -157,7 +167,8 @@ class N8nService
                 Log::warning('Error al enviar evaluación a N8N (asíncrono)', [
                     'error' => $e->getMessage(),
                     'id_evaluacion' => $datos['id_evaluacion'] ?? null,
-                    'status' => $e->response?->status()
+                    'status' => $e->response?->status(),
+                    'body' => $e->response?->body(),
                 ]);
             }
             // No lanzar excepción - permitir que continúe
