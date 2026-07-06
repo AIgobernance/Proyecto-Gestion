@@ -55,6 +55,8 @@ class RespuestasRepository
 
             $hasFechaCreacion = in_array('Fecha_Creacion', $columnasDisponibles);
 
+            $isSqlSrv = DB::getDriverName() === 'sqlsrv';
+
             // Insertar cada respuesta
             $insertadas = 0;
             foreach ($respuestas as $idPregunta => $respuesta) {
@@ -66,16 +68,21 @@ class RespuestasRepository
 
                 // Agregar Fecha_Creacion si existe
                 if ($hasFechaCreacion) {
-                    // Usar SQL directo para GETDATE() de SQL Server
-                    DB::statement("
-                        INSERT INTO [{$this->table}] 
-                        ([Id_Evaluacion], [Id_Pregunta], [Respuesta_Usuario], [Fecha_Creacion]) 
-                        VALUES (?, ?, ?, GETDATE())
-                    ", [
-                        $datosInsert['Id_Evaluacion'],
-                        $datosInsert['Id_Pregunta'],
-                        $datosInsert['Respuesta_Usuario']
-                    ]);
+                    if ($isSqlSrv) {
+                        // Usar SQL directo para GETDATE() de SQL Server
+                        DB::statement("
+                            INSERT INTO [{$this->table}] 
+                            ([Id_Evaluacion], [Id_Pregunta], [Respuesta_Usuario], [Fecha_Creacion]) 
+                            VALUES (?, ?, ?, GETDATE())
+                        ", [
+                            $datosInsert['Id_Evaluacion'],
+                            $datosInsert['Id_Pregunta'],
+                            $datosInsert['Respuesta_Usuario']
+                        ]);
+                    } else {
+                        $datosInsert['Fecha_Creacion'] = now();
+                        DB::table($this->table)->insert($datosInsert);
+                    }
                 } else {
                     DB::table($this->table)->insert($datosInsert);
                 }
@@ -162,59 +169,88 @@ class RespuestasRepository
             $hasFechaCreacion = self::$hasFechaCreacionCache;
             $hasFechaActualizacion = self::$hasFechaActualizacionCache;
 
-            // Construir MERGE optimizado según columnas disponibles
-            if ($hasFechaCreacion && $hasFechaActualizacion) {
-                // MERGE con ambas columnas de fecha
-                DB::statement("
-                    MERGE [{$this->table}] AS target
-                    USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
-                    ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
-                    WHEN MATCHED THEN
-                        UPDATE SET 
-                            Respuesta_Usuario = source.Respuesta_Usuario,
-                            Fecha_Actualizacion = GETDATE()
-                    WHEN NOT MATCHED THEN
-                        INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario, Fecha_Creacion)
-                        VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario, GETDATE());
-                ", [$idEvaluacion, $idPregunta, $respuesta]);
-            } elseif ($hasFechaCreacion) {
-                // MERGE solo con Fecha_Creacion
-                DB::statement("
-                    MERGE [{$this->table}] AS target
-                    USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
-                    ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
-                    WHEN MATCHED THEN
-                        UPDATE SET Respuesta_Usuario = source.Respuesta_Usuario
-                    WHEN NOT MATCHED THEN
-                        INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario, Fecha_Creacion)
-                        VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario, GETDATE());
-                ", [$idEvaluacion, $idPregunta, $respuesta]);
-            } elseif ($hasFechaActualizacion) {
-                // MERGE solo con Fecha_Actualizacion
-                DB::statement("
-                    MERGE [{$this->table}] AS target
-                    USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
-                    ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
-                    WHEN MATCHED THEN
-                        UPDATE SET 
-                            Respuesta_Usuario = source.Respuesta_Usuario,
-                            Fecha_Actualizacion = GETDATE()
-                    WHEN NOT MATCHED THEN
-                        INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario)
-                        VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario);
-                ", [$idEvaluacion, $idPregunta, $respuesta]);
+            if (DB::getDriverName() === 'sqlsrv') {
+                // Construir MERGE optimizado según columnas disponibles
+                if ($hasFechaCreacion && $hasFechaActualizacion) {
+                    // MERGE con ambas columnas de fecha
+                    DB::statement("
+                        MERGE [{$this->table}] AS target
+                        USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
+                        ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
+                        WHEN MATCHED THEN
+                            UPDATE SET 
+                                Respuesta_Usuario = source.Respuesta_Usuario,
+                                Fecha_Actualizacion = GETDATE()
+                        WHEN NOT MATCHED THEN
+                            INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario, Fecha_Creacion)
+                            VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario, GETDATE());
+                    ", [$idEvaluacion, $idPregunta, $respuesta]);
+                } elseif ($hasFechaCreacion) {
+                    // MERGE solo con Fecha_Creacion
+                    DB::statement("
+                        MERGE [{$this->table}] AS target
+                        USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
+                        ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
+                        WHEN MATCHED THEN
+                            UPDATE SET Respuesta_Usuario = source.Respuesta_Usuario
+                        WHEN NOT MATCHED THEN
+                            INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario, Fecha_Creacion)
+                            VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario, GETDATE());
+                    ", [$idEvaluacion, $idPregunta, $respuesta]);
+                } elseif ($hasFechaActualizacion) {
+                    // MERGE solo con Fecha_Actualizacion
+                    DB::statement("
+                        MERGE [{$this->table}] AS target
+                        USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
+                        ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
+                        WHEN MATCHED THEN
+                            UPDATE SET 
+                                Respuesta_Usuario = source.Respuesta_Usuario,
+                                Fecha_Actualizacion = GETDATE()
+                        WHEN NOT MATCHED THEN
+                            INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario)
+                            VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario);
+                    ", [$idEvaluacion, $idPregunta, $respuesta]);
+                } else {
+                    // MERGE sin columnas de fecha (más rápido)
+                    DB::statement("
+                        MERGE [{$this->table}] AS target
+                        USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
+                        ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
+                        WHEN MATCHED THEN
+                            UPDATE SET Respuesta_Usuario = source.Respuesta_Usuario
+                        WHEN NOT MATCHED THEN
+                            INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario)
+                            VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario);
+                    ", [$idEvaluacion, $idPregunta, $respuesta]);
+                }
             } else {
-                // MERGE sin columnas de fecha (más rápido)
-                DB::statement("
-                    MERGE [{$this->table}] AS target
-                    USING (SELECT ? AS Id_Evaluacion, ? AS Id_Pregunta, ? AS Respuesta_Usuario) AS source
-                    ON target.Id_Evaluacion = source.Id_Evaluacion AND target.Id_Pregunta = source.Id_Pregunta
-                    WHEN MATCHED THEN
-                        UPDATE SET Respuesta_Usuario = source.Respuesta_Usuario
-                    WHEN NOT MATCHED THEN
-                        INSERT (Id_Evaluacion, Id_Pregunta, Respuesta_Usuario)
-                        VALUES (source.Id_Evaluacion, source.Id_Pregunta, source.Respuesta_Usuario);
-                ", [$idEvaluacion, $idPregunta, $respuesta]);
+                // PostgreSQL / Genérico (Evitar sintaxis MERGE propietaria de SQL Server)
+                $exists = DB::table($this->table)
+                    ->where('Id_Evaluacion', $idEvaluacion)
+                    ->where('Id_Pregunta', $idPregunta)
+                    ->exists();
+
+                if ($exists) {
+                    $updateData = ['Respuesta_Usuario' => $respuesta];
+                    if ($hasFechaActualizacion) {
+                        $updateData['Fecha_Actualizacion'] = now();
+                    }
+                    DB::table($this->table)
+                        ->where('Id_Evaluacion', $idEvaluacion)
+                        ->where('Id_Pregunta', $idPregunta)
+                        ->update($updateData);
+                } else {
+                    $insertData = [
+                        'Id_Evaluacion' => $idEvaluacion,
+                        'Id_Pregunta' => $idPregunta,
+                        'Respuesta_Usuario' => $respuesta,
+                    ];
+                    if ($hasFechaCreacion) {
+                        $insertData['Fecha_Creacion'] = now();
+                    }
+                    DB::table($this->table)->insert($insertData);
+                }
             }
 
             return true;

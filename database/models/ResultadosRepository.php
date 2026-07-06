@@ -132,12 +132,10 @@ class ResultadosRepository
     public function obtenerPorEvaluacion(int $idEvaluacion): ?array
     {
         try {
-            // Usar SQL directo para mejor compatibilidad con SQL Server
-            $resultado = DB::selectOne("
-                SELECT * 
-                FROM [{$this->table}] 
-                WHERE [Id_Evaluacion] = ?
-            ", [$idEvaluacion]);
+            // Usar Laravel Query Builder (100% compatible con SQL Server y PostgreSQL/Neon)
+            $resultado = DB::table($this->table)
+                ->where('Id_Evaluacion', $idEvaluacion)
+                ->first();
 
             if (!$resultado) {
                 return null;

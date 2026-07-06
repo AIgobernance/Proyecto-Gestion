@@ -1,46 +1,34 @@
-FROM php:8.2-cli
+FROM php:8.2-apache
 
-# Install system dependencies (including Chromium for PDF generation)
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    gnupg2 \
     curl \
-    apt-transport-https \
     unzip \
     libpng-dev \
     libzip-dev \
     libxml2-dev \
+    libpq-dev \
     git \
-    unixodbc-dev \
-    chromium \
-    fonts-liberation \
-    libnss3 \
-    libxss1 \
-    libasound2 \
-    libatk-bridge2.0-0 \
-    libgtk-3-0
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Microsoft ODBC Driver 18 for SQL Server
-RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
-    && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y msodbcsql18
-
-# Install PHP extensions
-RUN docker-php-ext-install bcmath gd zip dom
-RUN pecl install sqlsrv-5.11.1 pdo_sqlsrv-5.11.1 \
-    && docker-php-ext-enable sqlsrv pdo_sqlsrv
+# Install PHP extensions (PostgreSQL instead of SQL Server)
+RUN docker-php-ext-install bcmath gd zip dom pdo pdo_pgsql pgsql
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Node.js and Puppeteer (for Vite build and PDF Browsershot)
+# Install Node.js (for Vite build)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g puppeteer
+    && rm -rf /var/lib/apt/lists/*
 
-# Configure Railway dynamic PORT and Chrome Path
-ENV PORT=8080
-ENV CHROME_PATH=/usr/bin/chromium
+# Configure Apache DocumentRoot
+ENV APACHE_DOCUMENT_ROOT /var/www/html/public
+RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
+RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
+
+# Enable Apache mod_rewrite
+RUN a2enmod rewrite
 
 # Set working directory
 WORKDIR /var/www/html
@@ -48,8 +36,9 @@ WORKDIR /var/www/html
 # Copy application files
 COPY . .
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install PHP dependencies (skip check-sqlserver script)
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
+    && php artisan package:discover --ansi
 
 # Install Node dependencies and build assets
 RUN npm install \
@@ -59,8 +48,8 @@ RUN npm install \
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Expose port (Railway sets this dynamically)
-EXPOSE ${PORT}
+# Expose port 80
+EXPOSE 80
 
-# Start using Laravel's built-in server (perfect for free trials and avoids Apache crashes)
-CMD php artisan serve --host=0.0.0.0 --port=${PORT}
+# Start Apache
+CMD ["apache2-foreground"]
