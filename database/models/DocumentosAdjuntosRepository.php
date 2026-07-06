@@ -55,30 +55,38 @@ class DocumentosAdjuntosRepository
 
             // Verificar si hay columna de fecha
             $hasFechaCreacion = in_array('Fecha_Creacion', $columnasDisponibles);
+            $isSqlSrv = DB::getDriverName() === 'sqlsrv';
 
             if ($hasFechaCreacion) {
-                // Usar SQL directo para GETDATE() de SQL Server
-                DB::statement("
-                    INSERT INTO [{$this->table}] 
-                    ([Id_Evaluacion], [Nombre_Archivo], [Tipo], [Fecha_Creacion]) 
-                    VALUES (?, ?, ?, GETDATE())
-                ", [
-                    $datosInsert['Id_Evaluacion'],
-                    $datosInsert['Nombre_Archivo'],
-                    $datosInsert['Tipo']
-                ]);
+                if ($isSqlSrv) {
+                    // Usar SQL directo para GETDATE() de SQL Server
+                    DB::statement("
+                        INSERT INTO [{$this->table}] 
+                        ([Id_Evaluacion], [Nombre_Archivo], [Tipo], [Fecha_Creacion]) 
+                        VALUES (?, ?, ?, GETDATE())
+                    ", [
+                        $datosInsert['Id_Evaluacion'],
+                        $datosInsert['Nombre_Archivo'],
+                        $datosInsert['Tipo']
+                    ]);
 
-                // Obtener el ID insertado
-                $resultado = DB::selectOne("
-                    SELECT TOP 1 Id_Documento 
-                    FROM [{$this->table}] 
-                    WHERE Id_Evaluacion = ? AND Nombre_Archivo = ?
-                    ORDER BY Id_Documento DESC
-                ", [$idEvaluacion, $nombreArchivo]);
+                    // Obtener el ID insertado
+                    $resultado = DB::selectOne("
+                        SELECT TOP 1 Id_Documento 
+                        FROM [{$this->table}] 
+                        WHERE Id_Evaluacion = ? AND Nombre_Archivo = ?
+                        ORDER BY Id_Documento DESC
+                    ", [$idEvaluacion, $nombreArchivo]);
 
-                $id = $resultado->Id_Documento ?? null;
+                    $id = $resultado->Id_Documento ?? null;
+                } else {
+                    // Para PostgreSQL/Neon, usar carbon now() y insertGetId
+                    $insertData = $datosInsert;
+                    $insertData['Fecha_Creacion'] = now();
+                    $id = DB::table($this->table)->insertGetId($insertData, 'Id_Documento');
+                }
             } else {
-                $id = DB::table($this->table)->insertGetId($datosInsert);
+                $id = DB::table($this->table)->insertGetId($datosInsert, 'Id_Documento');
             }
 
             Log::info('Documento adjunto guardado exitosamente', [

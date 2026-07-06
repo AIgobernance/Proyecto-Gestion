@@ -17,6 +17,11 @@ class DatabaseSetupHelper
 
     public static function isSqlServerDriverError(\Throwable $e): bool
     {
+        // Si no estamos usando SQL Server, nunca interceptar el error
+        if (!self::usesSqlServer()) {
+            return false;
+        }
+
         $message = $e->getMessage();
 
         if ($e instanceof QueryException && $e->getPrevious()) {

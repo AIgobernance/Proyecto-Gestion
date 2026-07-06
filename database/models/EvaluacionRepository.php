@@ -101,9 +101,11 @@ class EvaluacionRepository
 
             // Hacer LEFT JOIN con la tabla Resultados para obtener la puntuación real
             try {
+                $isSqlSrv = DB::getDriverName() === 'sqlsrv';
+                
                 // Construir SELECT con prefijo de tabla Evaluacion
-                $selectEvaluacion = array_map(function($col) {
-                    return "e.[{$col}]";
+                $selectEvaluacion = array_map(function($col) use ($isSqlSrv) {
+                    return $isSqlSrv ? "e.[{$col}]" : "e.\"{$col}\"";
                 }, $selectColumns);
                 
                 // Agregar puntuación de Resultados si existe la tabla
@@ -125,18 +127,26 @@ class EvaluacionRepository
                     
                     if ($columnaPuntuacionExiste && $columnaPuntuacionExiste->existe > 0) {
                         $tienePuntuacionResultados = true;
-                        $selectEvaluacion[] = 'r.[Puntuacion] as Puntuacion_Resultados';
+                        $selectEvaluacion[] = $isSqlSrv ? 'r.[Puntuacion] as Puntuacion_Resultados' : 'r."Puntuacion" as Puntuacion_Resultados';
                     }
                 }
                 
                 $selectSQL = implode(', ', $selectEvaluacion);
                 
                 // Construir SQL con LEFT JOIN a Resultados
-                $sql = "SELECT {$selectSQL} 
-                        FROM [{$this->table}] e
-                        LEFT JOIN [Resultados] r ON e.[Id_Evaluacion] = r.[Id_Evaluacion]
-                        WHERE e.[Id_Usuario] = ? 
-                        ORDER BY e.[Fecha] DESC";
+                if ($isSqlSrv) {
+                    $sql = "SELECT {$selectSQL} 
+                            FROM [{$this->table}] e
+                            LEFT JOIN [Resultados] r ON e.[Id_Evaluacion] = r.[Id_Evaluacion]
+                            WHERE e.[Id_Usuario] = ? 
+                            ORDER BY e.[Fecha] DESC";
+                } else {
+                    $sql = "SELECT {$selectSQL} 
+                            FROM \"{$this->table}\" e
+                            LEFT JOIN \"Resultados\" r ON e.\"Id_Evaluacion\" = r.\"Id_Evaluacion\"
+                            WHERE e.\"Id_Usuario\" = ? 
+                            ORDER BY e.\"Fecha\" DESC";
+                }
                 
                 $resultados = DB::select($sql, [$idUsuario]);
                 
@@ -152,11 +162,15 @@ class EvaluacionRepository
                 ]);
                 
                 try {
-                    $selectColumnsSQL = implode(', ', array_map(function($col) {
-                        return "e.[{$col}]";
+                    $selectColumnsSQL = implode(', ', array_map(function($col) use ($isSqlSrv) {
+                        return $isSqlSrv ? "e.[{$col}]" : "e.\"{$col}\"";
                     }, $selectColumns));
                     
-                    $sql = "SELECT {$selectColumnsSQL} FROM [{$this->table}] e WHERE e.[Id_Usuario] = ? ORDER BY e.[Fecha] DESC";
+                    if ($isSqlSrv) {
+                        $sql = "SELECT {$selectColumnsSQL} FROM [{$this->table}] e WHERE e.[Id_Usuario] = ? ORDER BY e.[Fecha] DESC";
+                    } else {
+                        $sql = "SELECT {$selectColumnsSQL} FROM \"{$this->table}\" e WHERE e.\"Id_Usuario\" = ? ORDER BY e.\"Fecha\" DESC";
+                    }
                     $resultados = DB::select($sql, [$idUsuario]);
                     $evaluaciones = collect($resultados);
                     $tienePuntuacionResultados = false;
@@ -173,12 +187,20 @@ class EvaluacionRepository
                 $tienePuntuacionResultados = false;
             }
             
-            // Verificar también con SQL directo cuántas evaluaciones hay
-            $totalDirecto = DB::selectOne("
-                SELECT COUNT(*) as total 
-                FROM [{$this->table}] 
-                WHERE [Id_Usuario] = ?
-            ", [$idUsuario]);
+            $isSqlSrv = DB::getDriverName() === 'sqlsrv';
+            if ($isSqlSrv) {
+                $totalDirecto = DB::selectOne("
+                    SELECT COUNT(*) as total 
+                    FROM [{$this->table}] 
+                    WHERE [Id_Usuario] = ?
+                ", [$idUsuario]);
+            } else {
+                $totalDirecto = DB::selectOne("
+                    SELECT COUNT(*) as total 
+                    FROM \"{$this->table}\" 
+                    WHERE \"Id_Usuario\" = ?
+                ", [$idUsuario]);
+            }
             
             $totalEnBD = $totalDirecto ? (int)$totalDirecto->total : 0;
             
@@ -465,27 +487,50 @@ class EvaluacionRepository
                         
                         $tienePuntuacionEvaluacion = ($columnaEvaluacionExiste && $columnaEvaluacionExiste->existe > 0);
                         
+                        $isSqlSrv = DB::getDriverName() === 'sqlsrv';
                         // Construir el SELECT según las columnas disponibles
                         if ($tienePuntuacionEvaluacion) {
                             // Ambas tablas tienen Puntuacion
-                            $sql = "
-                                SELECT 
-                                    COALESCE(r.[Puntuacion], e.[Puntuacion]) as PuntuacionFinal
-                                FROM [{$this->table}] e
-                                LEFT JOIN [Resultados] r ON e.[Id_Evaluacion] = r.[Id_Evaluacion]
-                                WHERE e.[Id_Usuario] = ?
-                                    AND COALESCE(r.[Puntuacion], e.[Puntuacion]) IS NOT NULL
-                            ";
+                            if ($isSqlSrv) {
+                                $sql = "
+                                    SELECT 
+                                        COALESCE(r.[Puntuacion], e.[Puntuacion]) as PuntuacionFinal
+                                    FROM [{$this->table}] e
+                                    LEFT JOIN [Resultados] r ON e.[Id_Evaluacion] = r.[Id_Evaluacion]
+                                    WHERE e.[Id_Usuario] = ?
+                                        AND COALESCE(r.[Puntuacion], e.[Puntuacion]) IS NOT NULL
+                                ";
+                            } else {
+                                $sql = "
+                                    SELECT 
+                                        COALESCE(r.\"Puntuacion\", e.\"Puntuacion\") as \"PuntuacionFinal\"
+                                    FROM \"{$this->table}\" e
+                                    LEFT JOIN \"Resultados\" r ON e.\"Id_Evaluacion\" = r.\"Id_Evaluacion\"
+                                    WHERE e.\"Id_Usuario\" = ?
+                                        AND COALESCE(r.\"Puntuacion\", e.\"Puntuacion\") IS NOT NULL
+                                ";
+                            }
                         } else {
                             // Solo Resultados tiene Puntuacion
-                            $sql = "
-                                SELECT 
-                                    r.[Puntuacion] as PuntuacionFinal
-                                FROM [{$this->table}] e
-                                LEFT JOIN [Resultados] r ON e.[Id_Evaluacion] = r.[Id_Evaluacion]
-                                WHERE e.[Id_Usuario] = ?
-                                    AND r.[Puntuacion] IS NOT NULL
-                            ";
+                            if ($isSqlSrv) {
+                                $sql = "
+                                    SELECT 
+                                        r.[Puntuacion] as PuntuacionFinal
+                                    FROM [{$this->table}] e
+                                    LEFT JOIN [Resultados] r ON e.[Id_Evaluacion] = r.[Id_Evaluacion]
+                                    WHERE e.[Id_Usuario] = ?
+                                        AND r.[Puntuacion] IS NOT NULL
+                                ";
+                            } else {
+                                $sql = "
+                                    SELECT 
+                                        r.\"Puntuacion\" as \"PuntuacionFinal\"
+                                    FROM \"{$this->table}\" e
+                                    LEFT JOIN \"Resultados\" r ON e.\"Id_Evaluacion\" = r.\"Id_Evaluacion\"
+                                    WHERE e.\"Id_Usuario\" = ?
+                                        AND r.\"Puntuacion\" IS NOT NULL
+                                ";
+                            }
                         }
                         
                         // Calcular promedio usando LEFT JOIN para obtener todas las evaluaciones
@@ -496,8 +541,9 @@ class EvaluacionRepository
                             $suma = 0;
                             $contador = 0;
                             foreach ($resultados as $row) {
-                                if (isset($row->PuntuacionFinal) && $row->PuntuacionFinal !== null) {
-                                    $valor = (float) $row->PuntuacionFinal;
+                                $pFinal = $row->PuntuacionFinal ?? $row->puntuacionfinal ?? $row->PUNTUACIONFINAL ?? null;
+                                if ($pFinal !== null) {
+                                    $valor = (float) $pFinal;
                                     if ($valor >= 0 && $valor <= 100) {
                                         $suma += $valor;
                                         $contador++;
@@ -733,22 +779,12 @@ class EvaluacionRepository
                 return $col->COLUMN_NAME;
             }, $columnas);
 
+            $isSqlSrv = DB::getDriverName() === 'sqlsrv';
+
             // Preparar datos para inserción
             $datosInsert = [
                 'Id_Usuario' => $datos['Id_Usuario'] ?? $datos['id_usuario'] ?? null,
             ];
-
-            // Fecha - usar GETDATE() de SQL Server si existe columna Fecha
-            $hasFecha = in_array('Fecha', $columnasDisponibles);
-            if ($hasFecha) {
-                // Usar SQL directo para GETDATE()
-                $sql = "INSERT INTO [{$this->table}] ([Id_Usuario], [Fecha]) VALUES (?, GETDATE())";
-                $params = [$datosInsert['Id_Usuario']];
-            } else {
-                $datosInsert['Fecha'] = $datos['Fecha'] ?? $datos['fecha'] ?? now();
-                $sql = null;
-                $params = null;
-            }
 
             // Agregar columnas opcionales si existen
             if (in_array('Tiempo', $columnasDisponibles) && isset($datos['Tiempo'])) {
@@ -770,27 +806,37 @@ class EvaluacionRepository
                 $datosInsert['Estado'] = $datos['Estado'] ?? 'En proceso';
             }
 
+            $hasFecha = in_array('Fecha', $columnasDisponibles);
+
             // Insertar en la base de datos
-            if ($hasFecha) {
-                // Si usamos SQL directo para Fecha, construir la consulta completa
-                $columnasSQL = ['[Id_Usuario]', '[Fecha]'];
-                $valoresSQL = ['?', 'GETDATE()'];
-                $paramsSQL = [$datosInsert['Id_Usuario']];
+            if ($isSqlSrv) {
+                if ($hasFecha) {
+                    // Si usamos SQL directo para Fecha, construir la consulta completa
+                    $columnasSQL = ['[Id_Usuario]', '[Fecha]'];
+                    $valoresSQL = ['?', 'GETDATE()'];
+                    $paramsSQL = [$datosInsert['Id_Usuario']];
 
-                foreach ($datosInsert as $campo => $valor) {
-                    if ($campo !== 'Id_Usuario' && $campo !== 'Fecha') {
-                        $columnasSQL[] = "[{$campo}]";
-                        $valoresSQL[] = '?';
-                        $paramsSQL[] = $valor;
+                    foreach ($datosInsert as $campo => $valor) {
+                        if ($campo !== 'Id_Usuario' && $campo !== 'Fecha') {
+                            $columnasSQL[] = "[{$campo}]";
+                            $valoresSQL[] = '?';
+                            $paramsSQL[] = $valor;
+                        }
                     }
-                }
 
-                // Usar OUTPUT INSERTED.Id para obtener el ID en SQL Server
-                $sql = "INSERT INTO [{$this->table}] (" . implode(', ', $columnasSQL) . ") OUTPUT INSERTED.Id_Evaluacion VALUES (" . implode(', ', $valoresSQL) . ")";
-                $result = DB::select($sql, $paramsSQL);
-                $id = $result[0]->Id_Evaluacion ?? null;
+                    // Usar OUTPUT INSERTED.Id para obtener el ID en SQL Server
+                    $sql = "INSERT INTO [{$this->table}] (" . implode(', ', $columnasSQL) . ") OUTPUT INSERTED.Id_Evaluacion VALUES (" . implode(', ', $valoresSQL) . ")";
+                    $result = DB::select($sql, $paramsSQL);
+                    $id = $result[0]->Id_Evaluacion ?? null;
+                } else {
+                    $id = DB::table($this->table)->insertGetId($datosInsert, 'Id_Evaluacion');
+                }
             } else {
-                $id = DB::table($this->table)->insertGetId($datosInsert);
+                // Para PostgreSQL/Neon, usar carbon now() y el Query builder de Laravel
+                if ($hasFecha) {
+                    $datosInsert['Fecha'] = $datos['Fecha'] ?? $datos['fecha'] ?? now();
+                }
+                $id = DB::table($this->table)->insertGetId($datosInsert, 'Id_Evaluacion');
             }
 
             Log::info('Evaluación creada exitosamente', [
@@ -860,23 +906,42 @@ class EvaluacionRepository
     public function obtenerIncompletaPorUsuario(int $idUsuario, int $totalPreguntas = 50): ?array
     {
         try {
+            $isSqlSrv = DB::getDriverName() === 'sqlsrv';
             // Optimización: Obtener evaluaciones con conteo de respuestas en una sola query
             // Usar LEFT JOIN para obtener el conteo de respuestas directamente
-            $evaluaciones = DB::select("
-                SELECT 
-                    e.Id_Evaluacion,
-                    e.Id_Usuario,
-                    e.Fecha,
-                    e.Estado,
-                    e.Tiempo,
-                    e.Puntuacion,
-                    COUNT(r.Id_Respuesta) as total_respuestas
-                FROM [{$this->table}] e
-                LEFT JOIN [Respuestas] r ON e.Id_Evaluacion = r.Id_Evaluacion
-                WHERE e.Id_Usuario = ?
-                GROUP BY e.Id_Evaluacion, e.Id_Usuario, e.Fecha, e.Estado, e.Tiempo, e.Puntuacion
-                ORDER BY e.Fecha DESC
-            ", [$idUsuario]);
+            if ($isSqlSrv) {
+                $evaluaciones = DB::select("
+                    SELECT 
+                        e.Id_Evaluacion,
+                        e.Id_Usuario,
+                        e.Fecha,
+                        e.Estado,
+                        e.Tiempo,
+                        e.Puntuacion,
+                        COUNT(r.Id_Respuesta) as total_respuestas
+                    FROM [{$this->table}] e
+                    LEFT JOIN [Respuestas] r ON e.Id_Evaluacion = r.Id_Evaluacion
+                    WHERE e.Id_Usuario = ?
+                    GROUP BY e.Id_Evaluacion, e.Id_Usuario, e.Fecha, e.Estado, e.Tiempo, e.Puntuacion
+                    ORDER BY e.Fecha DESC
+                ", [$idUsuario]);
+            } else {
+                $evaluaciones = DB::select("
+                    SELECT 
+                        e.\"Id_Evaluacion\",
+                        e.\"Id_Usuario\",
+                        e.\"Fecha\",
+                        e.\"Estado\",
+                        e.\"Tiempo\",
+                        e.\"Puntuacion\",
+                        COUNT(r.\"Id_Respuesta\") as total_respuestas
+                    FROM \"{$this->table}\" e
+                    LEFT JOIN \"Respuestas\" r ON e.\"Id_Evaluacion\" = r.\"Id_Evaluacion\"
+                    WHERE e.\"Id_Usuario\" = ?
+                    GROUP BY e.\"Id_Evaluacion\", e.\"Id_Usuario\", e.\"Fecha\", e.\"Estado\", e.\"Tiempo\", e.\"Puntuacion\"
+                    ORDER BY e.\"Fecha\" DESC
+                ", [$idUsuario]);
+            }
 
             if (empty($evaluaciones)) {
                 return null;
@@ -884,9 +949,9 @@ class EvaluacionRepository
 
             // Buscar la primera evaluación incompleta
             foreach ($evaluaciones as $evaluacion) {
-                $idEvaluacion = $evaluacion->Id_Evaluacion;
-                $totalRespuestas = (int) $evaluacion->total_respuestas;
-                $estado = $evaluacion->Estado ?? null;
+                $idEvaluacion = $evaluacion->Id_Evaluacion ?? $evaluacion->id_evaluacion ?? null;
+                $totalRespuestas = (int) ($evaluacion->total_respuestas ?? 0);
+                $estado = $evaluacion->Estado ?? $evaluacion->estado ?? null;
                 
                 // Verificar si el estado es "Completada" - si es así, no es incompleta
                 if ($estado === 'Completada' || $estado === 'Completado') {
@@ -908,11 +973,11 @@ class EvaluacionRepository
                 if ($totalRespuestas < $totalPreguntas) {
                     $evalArray = [
                         'Id_Evaluacion' => $idEvaluacion,
-                        'Id_Usuario' => $evaluacion->Id_Usuario,
-                        'Fecha' => $evaluacion->Fecha,
+                        'Id_Usuario' => $evaluacion->Id_Usuario ?? $evaluacion->id_usuario ?? null,
+                        'Fecha' => $evaluacion->Fecha ?? $evaluacion->fecha ?? null,
                         'Estado' => $estado,
-                        'Tiempo' => $evaluacion->Tiempo ?? null,
-                        'Puntuacion' => $evaluacion->Puntuacion ?? null,
+                        'Tiempo' => $evaluacion->Tiempo ?? $evaluacion->tiempo ?? null,
+                        'Puntuacion' => $evaluacion->Puntuacion ?? $evaluacion->puntuacion ?? null,
                         'total_respuestas' => $totalRespuestas,
                     ];
                     return $evalArray;

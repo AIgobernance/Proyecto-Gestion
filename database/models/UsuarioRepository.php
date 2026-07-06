@@ -153,51 +153,78 @@ class UsuarioRepository
             }
             $tieneFechaCreacion = self::$tieneFechaCreacionCache;
             
+            $isSqlSrv = DB::getDriverName() === 'sqlsrv';
+            
             foreach ($activateAttempts as $activateAttempt) {
                 try {
-                    // Construir la consulta SQL directa
-                    // Incluir FechaCrea solo si la columna existe
-                    if ($tieneFechaCreacion) {
-                        $sql = "INSERT INTO [{$this->table}] 
-                                ([Nombre_Usuario], [Empresa], [NIT], [Tipo_Documento], [Numero_Documento], 
-                                 [Sector], [Pais], [Correo], [Telefono], [Contrasena], [Rol], [Activate], [FechaCrea]) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
+                    if ($isSqlSrv) {
+                        // Construir la consulta SQL directa
+                        // Incluir FechaCrea solo si la columna existe
+                        if ($tieneFechaCreacion) {
+                            $sql = "INSERT INTO [{$this->table}] 
+                                    ([Nombre_Usuario], [Empresa], [NIT], [Tipo_Documento], [Numero_Documento], 
+                                     [Sector], [Pais], [Correo], [Telefono], [Contrasena], [Rol], [Activate], [FechaCrea]) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, GETDATE())";
+                        } else {
+                            $sql = "INSERT INTO [{$this->table}] 
+                                    ([Nombre_Usuario], [Empresa], [NIT], [Tipo_Documento], [Numero_Documento], 
+                                     [Sector], [Pais], [Correo], [Telefono], [Contrasena], [Rol], [Activate]) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                        }
+                        
+                        $params = [
+                            $datosInsert['Nombre_Usuario'],
+                            $datosInsert['Empresa'],
+                            $datosInsert['NIT'],
+                            $datosInsert['Tipo_Documento'],
+                            $datosInsert['Numero_Documento'],
+                            $datosInsert['Sector'],
+                            $datosInsert['Pais'],
+                            $datosInsert['Correo'],
+                            $datosInsert['Telefono'],
+                            $datosInsert['Contrasena'], // La contraseña ya viene hasheada del objeto usuario
+                            $datosInsert['Rol'],
+                            $activateAttempt
+                        ];
+                    
+                        DB::insert($sql, $params);
+                        
+                        // Obtener el último ID insertado
+                        $id = DB::selectOne("SELECT SCOPE_IDENTITY() as Id");
+                        $userId = $id && isset($id->Id) ? (int)$id->Id : null;
                     } else {
-                        $sql = "INSERT INTO [{$this->table}] 
-                                ([Nombre_Usuario], [Empresa], [NIT], [Tipo_Documento], [Numero_Documento], 
-                                 [Sector], [Pais], [Correo], [Telefono], [Contrasena], [Rol], [Activate]) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                        // Para PostgreSQL u otros motores, usar Query Builder de Laravel
+                        $insertData = [
+                            'Nombre_Usuario' => $datosInsert['Nombre_Usuario'],
+                            'Empresa' => $datosInsert['Empresa'],
+                            'NIT' => $datosInsert['NIT'],
+                            'Tipo_Documento' => $datosInsert['Tipo_Documento'],
+                            'Numero_Documento' => $datosInsert['Numero_Documento'],
+                            'Sector' => $datosInsert['Sector'],
+                            'Pais' => $datosInsert['Pais'],
+                            'Correo' => $datosInsert['Correo'],
+                            'Telefono' => $datosInsert['Telefono'],
+                            'Contrasena' => $datosInsert['Contrasena'],
+                            'Rol' => $datosInsert['Rol'],
+                            'Activate' => $activateAttempt
+                        ];
+                        
+                        if ($tieneFechaCreacion) {
+                            $insertData['FechaCrea'] = now();
+                        }
+                        
+                        $userId = DB::table($this->table)->insertGetId($insertData, 'Id');
                     }
                     
-                    $params = [
-                        $datosInsert['Nombre_Usuario'],
-                        $datosInsert['Empresa'],
-                        $datosInsert['NIT'],
-                        $datosInsert['Tipo_Documento'],
-                        $datosInsert['Numero_Documento'],
-                        $datosInsert['Sector'],
-                        $datosInsert['Pais'],
-                        $datosInsert['Correo'],
-                        $datosInsert['Telefono'],
-                        $datosInsert['Contrasena'], // La contraseña ya viene hasheada del objeto usuario
-                        $datosInsert['Rol'],
-                        $activateAttempt
-                    ];
-                
-                    DB::insert($sql, $params);
-                    
-                    // Obtener el último ID insertado
-                    $id = DB::selectOne("SELECT SCOPE_IDENTITY() as Id");
-                    
-                    if ($id && isset($id->Id)) {
+                    if ($userId) {
                         Log::info('Usuario creado exitosamente con valor Activate', [
                             'activate_value' => $activateAttempt,
-                            'user_id' => $id->Id
+                            'user_id' => $userId
                         ]);
-                        return (int) $id->Id;
+                        return (int) $userId;
                     }
                     
-                    // Si no funciona SCOPE_IDENTITY, intentar obtener por correo
+                    // Si no funciona, intentar obtener por correo
                     $usuario = $this->obtenerPorCorreo($datos['correo']);
                     if ($usuario && isset($usuario->Id)) {
                         return (int) $usuario->Id;
@@ -209,7 +236,7 @@ class UsuarioRepository
                     $lastError = $e;
                     
                     // Si es un error de constraint, continuar con el siguiente intento
-                    if (strpos($e->getMessage(), 'CHECK constraint') !== false) {
+                    if (strpos($e->getMessage(), 'CHECK constraint') !== false || strpos($e->getMessage(), 'constraint') !== false) {
                         Log::warning('Intento fallido con valor Activate', [
                             'activate_value' => $activateAttempt,
                             'error' => $e->getMessage()
@@ -440,6 +467,8 @@ class UsuarioRepository
         }
 
         try {
+            $isSqlSrv = DB::getDriverName() === 'sqlsrv';
+
             // Si se está actualizando el campo Activate, usar SQL directo para manejar el constraint
             if (isset($datosActualizar['Activate'])) {
                 $activateValue = $datosActualizar['Activate'];
@@ -467,11 +496,14 @@ class UsuarioRepository
                 
                 foreach ($attemptsToTry as $activateAttempt) {
                     try {
-                        // Construir la consulta SQL para actualizar Activate
-                        $sql = "UPDATE [{$this->table}] SET [Activate] = ? WHERE [Id] = ?";
-                        $params = [$activateAttempt, $id];
-                        
-                        DB::update($sql, $params);
+                        if ($isSqlSrv) {
+                            // Construir la consulta SQL para actualizar Activate
+                            $sql = "UPDATE [{$this->table}] SET [Activate] = ? WHERE [Id] = ?";
+                            $params = [$activateAttempt, $id];
+                            DB::update($sql, $params);
+                        } else {
+                            DB::table($this->table)->where('Id', $id)->update(['Activate' => $activateAttempt]);
+                        }
                         
                         Log::info('Campo Activate actualizado exitosamente', [
                             'usuario_id' => $id,
@@ -486,7 +518,7 @@ class UsuarioRepository
                         $lastError = $e;
                         
                         // Si es un error de constraint, continuar con el siguiente intento
-                        if (strpos($e->getMessage(), 'CHECK constraint') !== false) {
+                        if (strpos($e->getMessage(), 'CHECK constraint') !== false || strpos($e->getMessage(), 'constraint') !== false) {
                             Log::warning('Intento fallido al actualizar Activate', [
                                 'activate_value' => $activateAttempt,
                                 'error' => $e->getMessage()
@@ -515,23 +547,38 @@ class UsuarioRepository
                 $tieneFechas = isset($datosActualizar['Fecha_Actualizacion']) || isset($datosActualizar['Fecha_Ultima_Conexion']);
                 
                 if ($tieneFechas) {
-                    // Construir la consulta SQL con GETDATE() para las fechas
-                    $setParts = [];
-                    $params = [];
-                    
-                    foreach ($datosActualizar as $campo => $valor) {
-                        if ($campo === 'Fecha_Actualizacion' || $campo === 'Fecha_Ultima_Conexion') {
-                            $setParts[] = "[{$campo}] = GETDATE()";
-                        } else {
-                            $setParts[] = "[{$campo}] = ?";
-                            $params[] = $valor;
+                    if ($isSqlSrv) {
+                        // Construir la consulta SQL con GETDATE() para las fechas
+                        $setParts = [];
+                        $params = [];
+                        
+                        foreach ($datosActualizar as $campo => $valor) {
+                            if ($campo === 'Fecha_Actualizacion' || $campo === 'Fecha_Ultima_Conexion') {
+                                $setParts[] = "[{$campo}] = GETDATE()";
+                            } else {
+                                $setParts[] = "[{$campo}] = ?";
+                                $params[] = $valor;
+                            }
                         }
+                        
+                        $params[] = $id; // Para el WHERE
+                        $sql = "UPDATE [{$this->table}] SET " . implode(', ', $setParts) . " WHERE [Id] = ?";
+                        
+                        $filasAfectadas = DB::update($sql, $params);
+                    } else {
+                        // Usar Query Builder de Laravel (compatible con PostgreSQL)
+                        $updateData = [];
+                        foreach ($datosActualizar as $campo => $valor) {
+                            if ($campo === 'Fecha_Actualizacion' || $campo === 'Fecha_Ultima_Conexion') {
+                                $updateData[$campo] = now();
+                            } else {
+                                $updateData[$campo] = $valor;
+                            }
+                        }
+                        $filasAfectadas = DB::table($this->table)
+                            ->where('Id', $id)
+                            ->update($updateData);
                     }
-                    
-                    $params[] = $id; // Para el WHERE
-                    $sql = "UPDATE [{$this->table}] SET " . implode(', ', $setParts) . " WHERE [Id] = ?";
-                    
-                    $filasAfectadas = DB::update($sql, $params);
                 } else {
                     // Usar el método normal de Laravel para campos sin fechas
                     $filasAfectadas = DB::table($this->table)
