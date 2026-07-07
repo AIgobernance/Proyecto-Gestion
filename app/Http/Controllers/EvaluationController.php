@@ -809,7 +809,9 @@ class EvaluationController extends Controller
                                     '--disable-setuid-sandbox',
                                     '--disable-dev-shm-usage',
                                     '--disable-gpu',
-                                    '--user-data-dir=/tmp/chrome-user-data'
+                                    '--user-data-dir=/tmp/chrome-user-data',
+                                    '--disable-crash-reporter',
+                                    '--disable-crashpad'
                                 ])
                                 ->waitUntilNetworkIdle(false)
                                 ->timeout(120)
@@ -1261,7 +1263,9 @@ class EvaluationController extends Controller
                             '--disable-setuid-sandbox',
                             '--disable-dev-shm-usage',
                             '--disable-gpu',
-                            '--user-data-dir=/tmp/chrome-user-data'
+                            '--user-data-dir=/tmp/chrome-user-data',
+                            '--disable-crash-reporter',
+                            '--disable-crashpad'
                         ])
                         ->waitUntilNetworkIdle(false) // Esperar a que todas las peticiones de red terminen (false = no esperar indefinidamente)
                         ->timeout(120) // Timeout de 120 segundos
@@ -1529,7 +1533,9 @@ class EvaluationController extends Controller
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
-                    '--user-data-dir=/tmp/chrome-user-data'
+                    '--user-data-dir=/tmp/chrome-user-data',
+                    '--disable-crash-reporter',
+                    '--disable-crashpad'
                 ])
                 ->waitUntilNetworkIdle(false)
                 ->timeout(120)
@@ -1822,7 +1828,9 @@ class EvaluationController extends Controller
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
-                '--user-data-dir=/tmp/chrome-user-data'
+                '--user-data-dir=/tmp/chrome-user-data',
+                '--disable-crash-reporter',
+                '--disable-crashpad'
             ])
             ->waitUntilNetworkIdle(false)
             ->timeout(120)
