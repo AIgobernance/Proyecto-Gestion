@@ -9,7 +9,13 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libpq-dev \
     git \
+    chromium \
+    fonts-freefont-ttf \
+    --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
+
+# Configure Chrome path for Browsershot
+ENV CHROME_PATH=/usr/bin/chromium
 
 # Install PHP extensions (PostgreSQL instead of SQL Server)
 RUN docker-php-ext-install bcmath gd zip dom pdo pdo_pgsql pgsql

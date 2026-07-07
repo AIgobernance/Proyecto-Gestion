@@ -1320,6 +1320,7 @@ class EvaluationController extends Controller
                         'trace' => $e->getTraceAsString()
                     ]);
                     
+                    $pdfPath = null;
                     // Si falla la conversión a PDF, guardar HTML como fallback
                     try {
                         $htmlPath = 'evaluations/html/' . $idEvaluacion . '_' . time() . '.html';
