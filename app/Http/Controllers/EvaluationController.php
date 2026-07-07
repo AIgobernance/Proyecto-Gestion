@@ -1267,6 +1267,12 @@ class EvaluationController extends Controller
                     Log::error('Error al convertir HTML a PDF', [
                         'id_evaluacion' => $idEvaluacion,
                         'error' => $e->getMessage(),
+                        'os_family' => PHP_OS_FAMILY,
+                        'chrome_path_env' => getenv('CHROME_PATH'),
+                        'puppeteer_path_env' => getenv('PUPPETEER_EXECUTABLE_PATH'),
+                        'chrome_exists_usr_bin' => file_exists('/usr/bin/chromium') ? 'YES' : 'NO',
+                        'chrome_browser_exists' => file_exists('/usr/bin/chromium-browser') ? 'YES' : 'NO',
+                        'node_path' => shell_exec('which node 2>/dev/null') ?: 'NOT FOUND',
                         'trace' => $e->getTraceAsString()
                     ]);
                     
@@ -1708,10 +1714,31 @@ class EvaluationController extends Controller
 
     private function resolverChromePath(): ?string
     {
-        if (PHP_OS_FAMILY !== 'Windows') {
-            return env('CHROME_PATH') ?: null;
+        // Intentar leer variables de entorno del sistema (setadas en Dockerfile ENV o Railway env vars)
+        // getenv() lee variables del sistema; env() solo lee .env de Laravel
+        $chromePath = getenv('PUPPETEER_EXECUTABLE_PATH') ?: getenv('CHROME_PATH') ?: null;
+
+        if ($chromePath && file_exists($chromePath)) {
+            return $chromePath;
         }
 
+        if (PHP_OS_FAMILY !== 'Windows') {
+            // Rutas estándar de Chromium/Chrome en Linux/Debian
+            $linuxPaths = [
+                '/usr/bin/chromium',
+                '/usr/bin/chromium-browser',
+                '/usr/bin/google-chrome',
+                '/usr/bin/google-chrome-stable',
+            ];
+            foreach ($linuxPaths as $path) {
+                if (file_exists($path)) {
+                    return $path;
+                }
+            }
+            return null;
+        }
+
+        // Windows: buscar en caché de Puppeteer y rutas estándar
         $puppeteerCache = getenv('USERPROFILE') . '\.cache\puppeteer\chrome';
         if (is_dir($puppeteerCache)) {
             $chromeDirs = glob($puppeteerCache . '\win64-*\chrome-win64\chrome.exe');
@@ -1723,9 +1750,8 @@ class EvaluationController extends Controller
         foreach ([
             'C:\Program Files\Google\Chrome\Application\chrome.exe',
             'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
-            env('CHROME_PATH'),
         ] as $path) {
-            if ($path && file_exists($path)) {
+            if (file_exists($path)) {
                 return $path;
             }
         }

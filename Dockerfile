@@ -23,10 +23,15 @@ RUN docker-php-ext-install bcmath gd zip dom pdo pdo_pgsql pgsql
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Node.js (for Vite build)
+# Install Node.js (for Vite build) and Puppeteer (required by Browsershot)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g puppeteer --ignore-scripts
+
+# Tell Puppeteer to use the system Chromium instead of downloading its own
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Configure Apache DocumentRoot
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
