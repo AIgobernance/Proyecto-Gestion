@@ -32,6 +32,9 @@ RUN a2dismod mpm_event || true
 RUN a2dismod mpm_worker || true
 RUN a2enmod mpm_prefork
 
+# Configure Apache to listen on the port provided by Railway
+RUN sed -i 's/80/${PORT:-80}/g' /etc/apache2/sites-available/000-default.conf /etc/apache2/ports.conf
+
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
