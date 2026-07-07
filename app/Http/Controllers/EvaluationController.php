@@ -790,31 +790,7 @@ class EvaluationController extends Controller
                             }
                             
                             // Configurar Chrome/Chromium
-                            $chromePath = null;
-                            if (PHP_OS_FAMILY === 'Windows') {
-                                $puppeteerCache = getenv('USERPROFILE') . '\.cache\puppeteer\chrome';
-                                if (is_dir($puppeteerCache)) {
-                                    $chromeDirs = glob($puppeteerCache . '\win64-*\chrome-win64\chrome.exe');
-                                    if (!empty($chromeDirs)) {
-                                        $chromePath = $chromeDirs[0];
-                                    }
-                                }
-                                
-                                if (!$chromePath) {
-                                    $possiblePaths = [
-                                        'C:\Program Files\Google\Chrome\Application\chrome.exe',
-                                        'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
-                                        env('CHROME_PATH'),
-                                    ];
-                                    
-                                    foreach ($possiblePaths as $path) {
-                                        if ($path && file_exists($path)) {
-                                            $chromePath = $path;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
+                            $chromePath = $this->resolverChromePath();
                             
                             $browsershot = Browsershot::html($html);
                             
@@ -1250,34 +1226,8 @@ class EvaluationController extends Controller
                     // Usar Browsershot para renderizar HTML con JavaScript ejecutado
                     // Esto permite que Chart.js renderice las gráficas antes de convertir a PDF
                     
-                    // Configurar ruta de Chrome/Chromium para Windows
-                    $chromePath = null;
-                    if (PHP_OS_FAMILY === 'Windows') {
-                        // Prioridad 1: Chromium de Puppeteer (más confiable)
-                        $puppeteerCache = getenv('USERPROFILE') . '\.cache\puppeteer\chrome';
-                        if (is_dir($puppeteerCache)) {
-                            $chromeDirs = glob($puppeteerCache . '\win64-*\chrome-win64\chrome.exe');
-                            if (!empty($chromeDirs)) {
-                                $chromePath = $chromeDirs[0]; // Usar la versión más reciente
-                            }
-                        }
-                        
-                        // Prioridad 2: Chrome instalado en el sistema
-                        if (!$chromePath) {
-                            $possiblePaths = [
-                                'C:\Program Files\Google\Chrome\Application\chrome.exe',
-                                'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
-                                env('CHROME_PATH'), // Permitir configuración desde .env
-                            ];
-                            
-                            foreach ($possiblePaths as $path) {
-                                if ($path && file_exists($path)) {
-                                    $chromePath = $path;
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    // Configurar ruta de Chrome/Chromium
+                    $chromePath = $this->resolverChromePath();
                     
                     $browsershot = Browsershot::html($html);
                     
@@ -1536,31 +1486,7 @@ class EvaluationController extends Controller
             }
 
             // Configurar Chrome/Chromium
-            $chromePath = null;
-            if (PHP_OS_FAMILY === 'Windows') {
-                $puppeteerCache = getenv('USERPROFILE') . '\.cache\puppeteer\chrome';
-                if (is_dir($puppeteerCache)) {
-                    $chromeDirs = glob($puppeteerCache . '\win64-*\chrome-win64\chrome.exe');
-                    if (!empty($chromeDirs)) {
-                        $chromePath = $chromeDirs[0];
-                    }
-                }
-                
-                if (!$chromePath) {
-                    $possiblePaths = [
-                        'C:\Program Files\Google\Chrome\Application\chrome.exe',
-                        'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
-                        env('CHROME_PATH'),
-                    ];
-                    
-                    foreach ($possiblePaths as $path) {
-                        if ($path && file_exists($path)) {
-                            $chromePath = $path;
-                            break;
-                        }
-                    }
-                }
-            }
+            $chromePath = $this->resolverChromePath();
             
             $browsershot = Browsershot::html($html);
             
