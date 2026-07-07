@@ -794,6 +794,12 @@ class EvaluationController extends Controller
                             
                             $browsershot = Browsershot::html($html);
                             
+                            if (PHP_OS_FAMILY !== 'Windows') {
+                                $browsershot->setNodeBinary('/usr/bin/node');
+                                $browsershot->setNpmBinary('/usr/bin/npm');
+                                $browsershot->setNodeModulePath(base_path('node_modules'));
+                            }
+                            
                             if ($chromePath) {
                                 $browsershot->setChromePath($chromePath);
                             }
@@ -802,7 +808,8 @@ class EvaluationController extends Controller
                                     '--no-sandbox',
                                     '--disable-setuid-sandbox',
                                     '--disable-dev-shm-usage',
-                                    '--disable-gpu'
+                                    '--disable-gpu',
+                                    '--user-data-dir=/tmp/chrome-user-data'
                                 ])
                                 ->waitUntilNetworkIdle(false)
                                 ->timeout(120)
@@ -1190,6 +1197,7 @@ class EvaluationController extends Controller
             // Convertir HTML a PDF con Browsershot (renderiza JavaScript/Chart.js)
             $pdfPath = null;
             $htmlPath = null; // Mantener HTML como backup opcional
+            $pdfError = null;
             
             if ($html) {
                 try {
@@ -1231,6 +1239,13 @@ class EvaluationController extends Controller
                     
                     $browsershot = Browsershot::html($html);
                     
+                    // Configurar Node.js y npm para entornos Linux (Railway)
+                    if (PHP_OS_FAMILY !== 'Windows') {
+                        $browsershot->setNodeBinary('/usr/bin/node');
+                        $browsershot->setNpmBinary('/usr/bin/npm');
+                        $browsershot->setNodeModulePath(base_path('node_modules'));
+                    }
+                    
                     // Configurar Chrome/Chromium si se encontró
                     if ($chromePath) {
                         $browsershot->setChromePath($chromePath);
@@ -1245,7 +1260,8 @@ class EvaluationController extends Controller
                             '--no-sandbox',
                             '--disable-setuid-sandbox',
                             '--disable-dev-shm-usage',
-                            '--disable-gpu'
+                            '--disable-gpu',
+                            '--user-data-dir=/tmp/chrome-user-data'
                         ])
                         ->waitUntilNetworkIdle(false) // Esperar a que todas las peticiones de red terminen (false = no esperar indefinidamente)
                         ->timeout(120) // Timeout de 120 segundos
@@ -1264,6 +1280,7 @@ class EvaluationController extends Controller
                     $this->guardarHtmlEvaluacion($idEvaluacion, $html);
 
                 } catch (\Exception $e) {
+                    $pdfError = $e->getMessage();
                     Log::error('Error al convertir HTML a PDF', [
                         'id_evaluacion' => $idEvaluacion,
                         'error' => $e->getMessage(),
@@ -1354,7 +1371,8 @@ class EvaluationController extends Controller
                     'html_guardado_fallback' => !empty($htmlPath),
                     'puntuacion' => $puntuacion,
                     'pdf_path' => $pdfPath,
-                    'html_path' => $htmlPath ?? null
+                    'html_path' => $htmlPath ?? null,
+                    'pdf_error' => $pdfError
                 ]
             ], 200);
 
@@ -1496,6 +1514,12 @@ class EvaluationController extends Controller
             
             $browsershot = Browsershot::html($html);
             
+            if (PHP_OS_FAMILY !== 'Windows') {
+                $browsershot->setNodeBinary('/usr/bin/node');
+                $browsershot->setNpmBinary('/usr/bin/npm');
+                $browsershot->setNodeModulePath(base_path('node_modules'));
+            }
+            
             if ($chromePath) {
                 $browsershot->setChromePath($chromePath);
             }
@@ -1504,7 +1528,8 @@ class EvaluationController extends Controller
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
-                    '--disable-gpu'
+                    '--disable-gpu',
+                    '--user-data-dir=/tmp/chrome-user-data'
                 ])
                 ->waitUntilNetworkIdle(false)
                 ->timeout(120)
@@ -1774,6 +1799,13 @@ class EvaluationController extends Controller
         }
 
         $browsershot = Browsershot::html($html);
+        
+        if (PHP_OS_FAMILY !== 'Windows') {
+            $browsershot->setNodeBinary('/usr/bin/node');
+            $browsershot->setNpmBinary('/usr/bin/npm');
+            $browsershot->setNodeModulePath(base_path('node_modules'));
+        }
+        
         $chromePath = $this->resolverChromePath();
         if ($chromePath) {
             $browsershot->setChromePath($chromePath);
@@ -1784,6 +1816,7 @@ class EvaluationController extends Controller
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
+                '--user-data-dir=/tmp/chrome-user-data'
             ])
             ->waitUntilNetworkIdle(false)
             ->timeout(120)
