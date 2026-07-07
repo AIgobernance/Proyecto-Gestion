@@ -32,7 +32,7 @@ class UsuarioRepository
         if (self::$columnasTablaCache === null) {
             try {
                 $columnas = DB::select(
-                    'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ?',
+                    'SELECT column_name AS "COLUMN_NAME" FROM information_schema.columns WHERE LOWER(table_name) = LOWER(?)',
                     [$this->table]
                 );
                 self::$columnasTablaCache = array_map(

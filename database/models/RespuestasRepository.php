@@ -33,20 +33,21 @@ class RespuestasRepository
             // Verificar si la tabla existe
             $tablaExiste = DB::selectOne("
                 SELECT COUNT(*) as existe 
-                FROM INFORMATION_SCHEMA.TABLES 
-                WHERE TABLE_NAME = ?
+                FROM information_schema.tables 
+                WHERE LOWER(table_name) = LOWER(?)
             ", [$this->table]);
 
-            if (!$tablaExiste || $tablaExiste->existe == 0) {
+            $existeCount = $tablaExiste->existe ?? $tablaExiste->Existe ?? 0;
+            if ($existeCount == 0) {
                 Log::warning('La tabla Respuestas no existe en la base de datos');
                 return false;
             }
 
             // Verificar columnas disponibles
             $columnas = DB::select("
-                SELECT COLUMN_NAME 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = ?
+                SELECT column_name AS \"COLUMN_NAME\" 
+                FROM information_schema.columns 
+                WHERE LOWER(table_name) = LOWER(?)
             ", [$this->table]);
 
             $columnasDisponibles = array_map(function ($col) {
@@ -151,19 +152,21 @@ class RespuestasRepository
             if (self::$hasFechaCreacionCache === null) {
                 $hasFechaCreacion = DB::selectOne("
                     SELECT COUNT(*) as existe 
-                    FROM INFORMATION_SCHEMA.COLUMNS 
-                    WHERE TABLE_NAME = ? AND COLUMN_NAME = 'Fecha_Creacion'
+                    FROM information_schema.columns 
+                    WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = 'fecha_creacion'
                 ", [$this->table]);
-                self::$hasFechaCreacionCache = ($hasFechaCreacion && $hasFechaCreacion->existe > 0);
+                $existeCount = $hasFechaCreacion->existe ?? $hasFechaCreacion->Existe ?? 0;
+                self::$hasFechaCreacionCache = ($hasFechaCreacion && $existeCount > 0);
             }
             
             if (self::$hasFechaActualizacionCache === null) {
                 $hasFechaActualizacion = DB::selectOne("
                     SELECT COUNT(*) as existe 
-                    FROM INFORMATION_SCHEMA.COLUMNS 
-                    WHERE TABLE_NAME = ? AND COLUMN_NAME = 'Fecha_Actualizacion'
+                    FROM information_schema.columns 
+                    WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = 'fecha_actualizacion'
                 ", [$this->table]);
-                self::$hasFechaActualizacionCache = ($hasFechaActualizacion && $hasFechaActualizacion->existe > 0);
+                $existeCount = $hasFechaActualizacion->existe ?? $hasFechaActualizacion->Existe ?? 0;
+                self::$hasFechaActualizacionCache = ($hasFechaActualizacion && $existeCount > 0);
             }
 
             $hasFechaCreacion = self::$hasFechaCreacionCache;

@@ -237,11 +237,12 @@ class DashboardController extends Controller
                 // Verificar si existe la columna FechaCrea (sin guión bajo)
                 $tieneFechaCreacion = DB::selectOne("
                     SELECT COUNT(*) as existe 
-                    FROM INFORMATION_SCHEMA.COLUMNS 
-                    WHERE TABLE_NAME = 'usuario' AND COLUMN_NAME = 'FechaCrea'
+                    FROM information_schema.columns 
+                    WHERE LOWER(table_name) = 'usuario' AND LOWER(column_name) = 'fechacrea'
                 ");
                 
-                if ($tieneFechaCreacion && $tieneFechaCreacion->existe > 0) {
+                $existeFecha = $tieneFechaCreacion->existe ?? $tieneFechaCreacion->Existe ?? 0;
+                if ($tieneFechaCreacion && $existeFecha > 0) {
                     if ($period === 'week') {
                         $usuariosPorMes = DB::select("
                             SELECT 
@@ -324,11 +325,12 @@ class DashboardController extends Controller
                     // Verificar si existe la columna Marco
                     $tieneMarco = DB::selectOne("
                         SELECT COUNT(*) as existe 
-                        FROM INFORMATION_SCHEMA.COLUMNS 
-                        WHERE TABLE_NAME = 'Evaluacion' AND COLUMN_NAME = 'Marco'
+                        FROM information_schema.columns 
+                        WHERE LOWER(table_name) = 'evaluacion' AND LOWER(column_name) = 'marco'
                     ");
                     
-                    if ($tieneMarco && $tieneMarco->existe > 0) {
+                    $existeMarco = $tieneMarco->existe ?? $tieneMarco->Existe ?? 0;
+                    if ($tieneMarco && $existeMarco > 0) {
                         $distribucionPorMarco = DB::select("
                             SELECT 
                                 COALESCE(Marco, 'Sin marco') as name,
@@ -348,11 +350,12 @@ class DashboardController extends Controller
                 // Verificar si existe la columna Fecha_Creacion
                 $tieneFechaCreacionDocs = DB::selectOne("
                     SELECT COUNT(*) as existe 
-                    FROM INFORMATION_SCHEMA.COLUMNS 
-                    WHERE TABLE_NAME = 'Documentos_Adjuntos' AND COLUMN_NAME = 'Fecha_Creacion'
+                    FROM information_schema.columns 
+                    WHERE LOWER(table_name) = 'documentos_adjuntos' AND LOWER(column_name) = 'fecha_creacion'
                 ");
                 
-                if ($tieneFechaCreacionDocs && $tieneFechaCreacionDocs->existe > 0) {
+                $existeFechaDocs = $tieneFechaCreacionDocs->existe ?? $tieneFechaCreacionDocs->Existe ?? 0;
+                if ($tieneFechaCreacionDocs && $existeFechaDocs > 0) {
                     if ($period === 'week') {
                         $documentosPorMes = DB::select("
                             SELECT 

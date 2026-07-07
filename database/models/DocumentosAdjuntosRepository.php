@@ -26,20 +26,21 @@ class DocumentosAdjuntosRepository
             // Verificar si la tabla existe
             $tablaExiste = DB::selectOne("
                 SELECT COUNT(*) as existe 
-                FROM INFORMATION_SCHEMA.TABLES 
-                WHERE TABLE_NAME = ?
+                FROM information_schema.tables 
+                WHERE LOWER(table_name) = LOWER(?)
             ", [$this->table]);
 
-            if (!$tablaExiste || $tablaExiste->existe == 0) {
+            $existeCount = $tablaExiste->existe ?? $tablaExiste->Existe ?? 0;
+            if ($existeCount == 0) {
                 Log::warning('La tabla Documentos_Adjuntos no existe en la base de datos');
                 throw new \Exception('La tabla Documentos_Adjuntos no existe');
             }
 
             // Verificar columnas disponibles
             $columnas = DB::select("
-                SELECT COLUMN_NAME 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = ?
+                SELECT column_name AS \"COLUMN_NAME\" 
+                FROM information_schema.columns 
+                WHERE LOWER(table_name) = LOWER(?)
             ", [$this->table]);
 
             $columnasDisponibles = array_map(function ($col) {

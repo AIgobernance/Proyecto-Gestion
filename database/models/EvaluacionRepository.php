@@ -58,10 +58,11 @@ class EvaluacionRepository
             if (self::$tablaExisteCache === null) {
                 $tablaExiste = DB::selectOne("
                     SELECT COUNT(*) as existe 
-                    FROM INFORMATION_SCHEMA.TABLES 
-                    WHERE TABLE_NAME = ?
+                    FROM information_schema.tables 
+                    WHERE LOWER(table_name) = LOWER(?)
                 ", [$this->table]);
-                self::$tablaExisteCache = ($tablaExiste && $tablaExiste->existe > 0);
+                $existeCount = $tablaExiste->existe ?? $tablaExiste->Existe ?? 0;
+                self::$tablaExisteCache = ($tablaExiste && $existeCount > 0);
             }
 
             if (!self::$tablaExisteCache) {
@@ -72,9 +73,9 @@ class EvaluacionRepository
             // Obtener columnas disponibles (usar cache)
             if (self::$columnasCache === null) {
                 $columnas = DB::select("
-                    SELECT COLUMN_NAME 
-                    FROM INFORMATION_SCHEMA.COLUMNS 
-                    WHERE TABLE_NAME = ?
+                    SELECT column_name AS \"COLUMN_NAME\" 
+                    FROM information_schema.columns 
+                    WHERE LOWER(table_name) = LOWER(?)
                 ", [$this->table]);
                 self::$columnasCache = array_map(function ($col) {
                     return $col->COLUMN_NAME;
@@ -111,21 +112,23 @@ class EvaluacionRepository
                 // Agregar puntuación de Resultados si existe la tabla
                 $tablaResultadosExiste = DB::selectOne("
                     SELECT COUNT(*) as existe 
-                    FROM INFORMATION_SCHEMA.TABLES 
-                    WHERE TABLE_NAME = 'Resultados'
+                    FROM information_schema.tables 
+                    WHERE LOWER(table_name) = 'resultados'
                 ");
                 
                 $tienePuntuacionResultados = false;
-                if ($tablaResultadosExiste && $tablaResultadosExiste->existe > 0) {
+                $existeResultados = $tablaResultadosExiste->existe ?? $tablaResultadosExiste->Existe ?? 0;
+                if ($tablaResultadosExiste && $existeResultados > 0) {
                     // Verificar si la tabla Resultados tiene la columna Puntuacion
                     $columnaPuntuacionExiste = DB::selectOne("
                         SELECT COUNT(*) as existe 
-                        FROM INFORMATION_SCHEMA.COLUMNS 
-                        WHERE TABLE_NAME = 'Resultados' 
-                        AND COLUMN_NAME = 'Puntuacion'
+                        FROM information_schema.columns 
+                        WHERE LOWER(table_name) = 'resultados' 
+                        AND LOWER(column_name) = 'puntuacion'
                     ");
                     
-                    if ($columnaPuntuacionExiste && $columnaPuntuacionExiste->existe > 0) {
+                    $existePuntuacion = $columnaPuntuacionExiste->existe ?? $columnaPuntuacionExiste->Existe ?? 0;
+                    if ($columnaPuntuacionExiste && $existePuntuacion > 0) {
                         $tienePuntuacionResultados = true;
                         $selectEvaluacion[] = $isSqlSrv ? 'r.[Puntuacion] as Puntuacion_Resultados' : 'r."Puntuacion" as Puntuacion_Resultados';
                     }
@@ -464,28 +467,31 @@ class EvaluacionRepository
             try {
                 $tablaResultadosExiste = DB::selectOne("
                     SELECT COUNT(*) as existe 
-                    FROM INFORMATION_SCHEMA.TABLES 
-                    WHERE TABLE_NAME = 'Resultados'
+                    FROM information_schema.tables 
+                    WHERE LOWER(table_name) = 'resultados'
                 ");
                 
-                if ($tablaResultadosExiste && $tablaResultadosExiste->existe > 0) {
+                $existeResultados = $tablaResultadosExiste->existe ?? $tablaResultadosExiste->Existe ?? 0;
+                if ($tablaResultadosExiste && $existeResultados > 0) {
                     // Verificar si la tabla Resultados tiene la columna Puntuacion
                     $columnaPuntuacionExiste = DB::selectOne("
                         SELECT COUNT(*) as existe 
-                        FROM INFORMATION_SCHEMA.COLUMNS 
-                        WHERE TABLE_NAME = 'Resultados' 
-                        AND COLUMN_NAME = 'Puntuacion'
+                        FROM information_schema.columns 
+                        WHERE LOWER(table_name) = 'resultados' 
+                        AND LOWER(column_name) = 'puntuacion'
                     ");
                     
-                    if ($columnaPuntuacionExiste && $columnaPuntuacionExiste->existe > 0) {
+                    $existePuntuacion = $columnaPuntuacionExiste->existe ?? $columnaPuntuacionExiste->Existe ?? 0;
+                    if ($columnaPuntuacionExiste && $existePuntuacion > 0) {
                         // Verificar si la tabla Evaluacion tiene columna Puntuacion
                         $columnaEvaluacionExiste = DB::selectOne("
                             SELECT COUNT(*) as existe 
-                            FROM INFORMATION_SCHEMA.COLUMNS 
-                            WHERE TABLE_NAME = ? AND COLUMN_NAME = 'Puntuacion'
+                            FROM information_schema.columns 
+                            WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = 'puntuacion'
                         ", [$this->table]);
                         
-                        $tienePuntuacionEvaluacion = ($columnaEvaluacionExiste && $columnaEvaluacionExiste->existe > 0);
+                        $existePuntuacionEvaluacion = $columnaEvaluacionExiste->existe ?? $columnaEvaluacionExiste->Existe ?? 0;
+                        $tienePuntuacionEvaluacion = ($columnaEvaluacionExiste && $existePuntuacionEvaluacion > 0);
                         
                         $isSqlSrv = DB::getDriverName() === 'sqlsrv';
                         // Construir el SELECT según las columnas disponibles
@@ -571,11 +577,11 @@ class EvaluacionRepository
             // Fallback: usar solo la tabla Evaluacion
             $columnaExiste = DB::selectOne("
                 SELECT COUNT(*) as existe 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = ? AND COLUMN_NAME = ?
+                FROM information_schema.columns 
+                WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?)
             ", [$this->table, $columnaPuntuacion]);
 
-            if (!$columnaExiste || $columnaExiste->existe == 0) {
+            if (!$columnaExiste || ($columnaExiste->existe ?? $columnaExiste->Existe ?? 0) == 0) {
                 Log::warning('Columna de puntuación no encontrada', [
                     'columna' => $columnaPuntuacion,
                     'tabla' => $this->table
@@ -614,11 +620,12 @@ class EvaluacionRepository
             // Verificar si la columna existe
             $columnaExiste = DB::selectOne("
                 SELECT COUNT(*) as existe 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = ? AND COLUMN_NAME = ?
+                FROM information_schema.columns 
+                WHERE LOWER(table_name) = LOWER(?) AND LOWER(column_name) = LOWER(?)
             ", [$this->table, $columnaEstado]);
 
-            if (!$columnaExiste || $columnaExiste->existe == 0) {
+            $existeCount = $columnaExiste->existe ?? $columnaExiste->Existe ?? 0;
+            if (!$columnaExiste || $existeCount == 0) {
                 // Si no existe columna de estado, asumir que todas están completadas
                 return 100.0;
             }
@@ -657,20 +664,11 @@ class EvaluacionRepository
             if (self::$tablaExisteCache === null) {
                 $tablaExiste = DB::selectOne("
                     SELECT COUNT(*) as existe 
-                    FROM INFORMATION_SCHEMA.TABLES 
-                    WHERE TABLE_NAME = ?
+                    FROM information_schema.tables 
+                    WHERE LOWER(table_name) = LOWER(?)
                 ", [$this->table]);
-                self::$tablaExisteCache = ($tablaExiste && $tablaExiste->existe > 0);
-            }
-
-            if (!self::$tablaExisteCache) {
-                Log::warning('La tabla Evaluacion no existe en la base de datos');
-                return [
-                    'totalEvaluaciones' => 0,
-                    'ultimaEvaluacion' => 'N/A',
-                    'promedioPuntuacion' => 0,
-                    'completitud' => 0,
-                ];
+                $existeCount = $tablaExiste->existe ?? $tablaExiste->Existe ?? 0;
+                self::$tablaExisteCache = ($tablaExiste && $existeCount > 0);
             }
 
             $totalEvaluaciones = $this->contarPorUsuario($idUsuario);
@@ -760,19 +758,20 @@ class EvaluacionRepository
             // Verificar si la tabla existe
             $tablaExiste = DB::selectOne("
                 SELECT COUNT(*) as existe 
-                FROM INFORMATION_SCHEMA.TABLES 
-                WHERE TABLE_NAME = ?
+                FROM information_schema.tables 
+                WHERE LOWER(table_name) = LOWER(?)
             ", [$this->table]);
 
-            if (!$tablaExiste || $tablaExiste->existe == 0) {
+            $existeCount = $tablaExiste->existe ?? $tablaExiste->Existe ?? 0;
+            if ($existeCount == 0) {
                 throw new \Exception('La tabla Evaluacion no existe en la base de datos');
             }
 
             // Obtener columnas disponibles
             $columnas = DB::select("
-                SELECT COLUMN_NAME 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = ?
+                SELECT column_name AS \"COLUMN_NAME\" 
+                FROM information_schema.columns 
+                WHERE LOWER(table_name) = LOWER(?)
             ", [$this->table]);
 
             $columnasDisponibles = array_map(function ($col) {
