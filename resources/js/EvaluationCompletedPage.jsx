@@ -135,6 +135,7 @@ const styles = `
 export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
   const { id } = useParams(); // Obtener ID de la evaluación de la URL
   const [pdfReady, setPdfReady] = useState(false);
+  const [resultsReady, setResultsReady] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
   const [pdfUrl, setPdfUrl] = useState(null);
   const [puntuacion, setPuntuacion] = useState(null);
@@ -255,6 +256,9 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
             if (!isNaN(puntuacionValue) && puntuacionValue >= 0) {
               console.log('Actualizando puntuación:', puntuacionValue);
               setPuntuacion(puntuacionValue);
+              // Mostrar resultados en cuanto llega la puntuación, sin esperar PDF
+              setResultsReady(true);
+              setIsChecking(false);
             } else {
               console.warn('Puntuación inválida:', data.puntuacion);
             }
@@ -320,7 +324,7 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
 
   // Obtener datos para las gráficas
   useEffect(() => {
-    if (!id || !pdfReady) return;
+    if (!id || !resultsReady) return;
 
     const fetchChartData = async () => {
       try {
@@ -343,11 +347,11 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
     };
 
     fetchChartData();
-  }, [id, pdfReady]);
+  }, [id, resultsReady]);
 
   // Cargar Chart.js y renderizar gráficas cuando chartData esté disponible
   useEffect(() => {
-    if (!chartData || !pdfReady) return;
+    if (!chartData || !resultsReady) return;
 
     // Cargar Chart.js desde CDN si no está cargado
     if (!window.Chart) {
@@ -522,7 +526,7 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
         if (chart) chart.destroy();
       }
     };
-  }, [chartData, pdfReady]);
+  }, [chartData, resultsReady]);
 
   const handleDownloadPdf = async () => {
     if (!id || isDownloadingPdf) {
@@ -716,7 +720,7 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
           </Card>
         </section>
 
-        {/* Resultados disponibles (solo botón Descargar PDF) */}
+        {/* Resultados: se muestra cuando llega la puntuación, sin importar el PDF */}
         {isChecking ? (
           <section className="results-card">
             <div className="results-head">
@@ -730,11 +734,11 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
               </p>
             </div>
           </section>
-        ) : pdfReady ? (
+        ) : resultsReady ? (
           <section className="results-card">
             <div className="results-head">
               <h2 className="results-title">Resultados disponibles</h2>
-              <p className="results-desc">Tu análisis detallado de gobernanza de IA está listo para descargar</p>
+              <p className="results-desc">Tu análisis detallado de gobernanza de IA está listo</p>
               {puntuacion !== null && typeof puntuacion === 'number' && !isNaN(puntuacion) && (
                 <p style={{ color: 'rgba(255,255,255,0.95)', fontSize: '16px', marginTop: '8px', fontWeight: 600 }}>
                   Puntuación: {Number(puntuacion).toFixed(2)} / 100
@@ -754,41 +758,50 @@ export function EvaluationCompletedPage({ onBack, onDownloadPdf }) {
                 </ul>
               </div>
 
-              {/* Botón Descargar PDF */}
-              <button
-                className="btn-secondary"
-                onClick={handleDownloadPdf}
-                disabled={isDownloadingPdf}
-              >
-                {isDownloadingPdf ? (
-                  <>
-                    <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
-                    {downloadStatus || "Descargando..."}
-                  </>
-                ) : (
-                  <>
-                    <Download size={18} /> Descargar PDF
-                  </>
-                )}
-              </button>
+              {/* Botón Descargar PDF: solo si el PDF está listo */}
+              {pdfReady ? (
+                <>
+                  <button
+                    className="btn-secondary"
+                    onClick={handleDownloadPdf}
+                    disabled={isDownloadingPdf}
+                  >
+                    {isDownloadingPdf ? (
+                      <>
+                        <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+                        {downloadStatus || "Descargando..."}
+                      </>
+                    ) : (
+                      <>
+                        <Download size={18} /> Descargar PDF
+                      </>
+                    )}
+                  </button>
 
-              {isDownloadingPdf && (
-                <div className="download-progress" role="status" aria-live="polite">
-                  <div className="download-progress__track">
-                    <div
-                      className={`download-progress__bar ${downloadIndeterminate ? "download-progress__bar--indeterminate" : ""}`}
-                      style={downloadIndeterminate ? undefined : { width: `${downloadProgress}%` }}
-                    />
-                  </div>
-                  <div className="download-progress__meta">
-                    <span className="download-progress__label">{downloadStatus}</span>
-                    <span className="download-progress__pct">
-                      {downloadIndeterminate && downloadProgress < 99
-                        ? "En progreso..."
-                        : `${downloadProgress}%`}
-                    </span>
-                  </div>
-                </div>
+                  {isDownloadingPdf && (
+                    <div className="download-progress" role="status" aria-live="polite">
+                      <div className="download-progress__track">
+                        <div
+                          className={`download-progress__bar ${downloadIndeterminate ? "download-progress__bar--indeterminate" : ""}`}
+                          style={downloadIndeterminate ? undefined : { width: `${downloadProgress}%` }}
+                        />
+                      </div>
+                      <div className="download-progress__meta">
+                        <span className="download-progress__label">{downloadStatus}</span>
+                        <span className="download-progress__pct">
+                          {downloadIndeterminate && downloadProgress < 99
+                            ? "En progreso..."
+                            : `${downloadProgress}%`}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '14px', textAlign: 'center', margin: 0 }}>
+                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', marginRight: 6, verticalAlign: 'middle' }} />
+                  El PDF se está generando, estará disponible en breve...
+                </p>
               )}
 
               {/* Gráficas */}
