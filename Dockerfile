@@ -14,8 +14,10 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure Chrome path for Browsershot
+# Configure Chrome path for Browsershot and make caches writable
 ENV CHROME_PATH=/usr/bin/chromium
+ENV HOME=/tmp
+ENV XDG_CACHE_HOME=/tmp
 
 # Install PHP extensions (PostgreSQL instead of SQL Server)
 RUN docker-php-ext-install bcmath gd zip dom pdo pdo_pgsql pgsql

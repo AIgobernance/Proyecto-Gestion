@@ -1739,6 +1739,12 @@ class EvaluationController extends Controller
 
     private function resolverChromePath(): ?string
     {
+        // Forzar variables de entorno para que Chromium/Fontconfig tengan carpetas de caché escribibles en Linux
+        if (PHP_OS_FAMILY !== 'Windows') {
+            putenv('HOME=/tmp');
+            putenv('XDG_CACHE_HOME=/tmp');
+        }
+
         // Intentar leer variables de entorno del sistema (setadas en Dockerfile ENV o Railway env vars)
         // getenv() lee variables del sistema; env() solo lee .env de Laravel
         $chromePath = getenv('PUPPETEER_EXECUTABLE_PATH') ?: getenv('CHROME_PATH') ?: null;
