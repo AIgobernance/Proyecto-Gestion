@@ -1746,9 +1746,11 @@ class EvaluationController extends Controller
     private function resolverChromePath(): ?string
     {
         // Forzar variables de entorno para que Chromium/Fontconfig tengan carpetas de caché escribibles en Linux
+        // y deshabilitar crashpad (gestor de fallos) que falla en Docker
         if (PHP_OS_FAMILY !== 'Windows') {
             putenv('HOME=/tmp');
             putenv('XDG_CACHE_HOME=/tmp');
+            putenv('DISABLE_CRASHPAD=1');
         }
 
         // Intentar leer variables de entorno del sistema (setadas en Dockerfile ENV o Railway env vars)

@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
 ENV CHROME_PATH=/usr/bin/chromium
 ENV HOME=/tmp
 ENV XDG_CACHE_HOME=/tmp
+ENV DISABLE_CRASHPAD=1
 
 # Install PHP extensions (PostgreSQL instead of SQL Server)
 RUN docker-php-ext-install bcmath gd zip dom pdo pdo_pgsql pgsql
