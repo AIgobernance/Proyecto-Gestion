@@ -28,7 +28,8 @@ RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-av
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Disable conflicting MPMs and enable prefork
-RUN a2dismod mpm_event mpm_worker || true
+RUN a2dismod mpm_event || true
+RUN a2dismod mpm_worker || true
 RUN a2enmod mpm_prefork
 
 # Enable Apache mod_rewrite
