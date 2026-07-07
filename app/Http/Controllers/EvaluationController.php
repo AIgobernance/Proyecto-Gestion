@@ -810,7 +810,8 @@ class EvaluationController extends Controller
                                     '--disable-dev-shm-usage',
                                     '--disable-gpu',
                                     '--no-zygote',
-                                    '--user-data-dir=/tmp/chrome-user-data'
+                                    '--user-data-dir=/tmp/chrome-user-data',
+                                    '--crash-dumps-dir=/tmp'
                                 ])
                                 ->waitUntilNetworkIdle(false)
                                 ->timeout(120)
@@ -1263,7 +1264,8 @@ class EvaluationController extends Controller
                             '--disable-dev-shm-usage',
                             '--disable-gpu',
                             '--no-zygote',
-                            '--user-data-dir=/tmp/chrome-user-data'
+                            '--user-data-dir=/tmp/chrome-user-data',
+                            '--crash-dumps-dir=/tmp'
                         ])
                         ->waitUntilNetworkIdle(false) // Esperar a que todas las peticiones de red terminen (false = no esperar indefinidamente)
                         ->timeout(120) // Timeout de 120 segundos
@@ -1532,7 +1534,8 @@ class EvaluationController extends Controller
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
                     '--no-zygote',
-                    '--user-data-dir=/tmp/chrome-user-data'
+                    '--user-data-dir=/tmp/chrome-user-data',
+                    '--crash-dumps-dir=/tmp'
                 ])
                 ->waitUntilNetworkIdle(false)
                 ->timeout(120)
@@ -1828,7 +1831,8 @@ class EvaluationController extends Controller
                 '--disable-dev-shm-usage',
                 '--disable-gpu',
                 '--no-zygote',
-                '--user-data-dir=/tmp/chrome-user-data'
+                '--user-data-dir=/tmp/chrome-user-data',
+                '--crash-dumps-dir=/tmp'
             ])
             ->waitUntilNetworkIdle(false)
             ->timeout(120)
