@@ -4,6 +4,6 @@
     "builder": "DOCKERFILE"
   },
   "deploy": {
-    "startCommand": "a2dismod mpm_event mpm_worker && a2enmod mpm_prefork && apache2-foreground"
+    "startCommand": "a2dismod mpm_event || true; a2dismod mpm_worker || true; a2enmod mpm_prefork || true; apache2-foreground"
   }
 }
