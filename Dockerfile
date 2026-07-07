@@ -1,6 +1,7 @@
 FROM php:8.2-apache
 
 # Install system dependencies
+# chromium is kept for its shared libraries (libnss3, libatk, etc.) that Chrome needs
 RUN apt-get update && apt-get install -y \
     curl \
     unzip \
@@ -14,26 +15,21 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Configure Chrome path for Browsershot and make caches writable
-ENV CHROME_PATH=/usr/bin/chromium
-ENV HOME=/tmp
-ENV XDG_CACHE_HOME=/tmp
-ENV DISABLE_CRASHPAD=1
-
 # Install PHP extensions (PostgreSQL instead of SQL Server)
 RUN docker-php-ext-install bcmath gd zip dom pdo pdo_pgsql pgsql
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Install Node.js (for Vite build)
-# PUPPETEER_SKIP_CHROMIUM_DOWNLOAD must be set BEFORE npm install
-# so that the puppeteer postinstall script doesn't try to download Chrome
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+# Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
+
+# Puppeteer will download its OWN Chrome binary compatible with its version.
+# PUPPETEER_CACHE_DIR must be set BEFORE npm install and Chrome download.
+# DO NOT set PUPPETEER_EXECUTABLE_PATH here — let Puppeteer find its own Chrome.
+ENV PUPPETEER_CACHE_DIR=/var/cache/puppeteer
 
 # Configure Apache DocumentRoot
 ENV APACHE_DOCUMENT_ROOT /var/www/html/public
@@ -61,13 +57,14 @@ COPY . .
 RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-interaction --no-scripts \
     && php artisan package:discover --ansi
 
-# Install Node dependencies and build assets
-RUN npm install \
-    && npm run build
+# Install Node dependencies, build assets, then download Puppeteer's own compatible Chrome
+# PUPPETEER_SKIP_CHROMIUM_DOWNLOAD must NOT be set so that npx puppeteer browsers install works
+RUN npm install && npm run build && npx puppeteer browsers install chrome
 
-# Set permissions
+# Set permissions (including the Puppeteer Chrome cache so www-data can execute it)
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache \
+    && chmod -R 755 /var/cache/puppeteer
 
 # Expose port 80
 EXPOSE 80

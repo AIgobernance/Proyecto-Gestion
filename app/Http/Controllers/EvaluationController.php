@@ -1745,50 +1745,39 @@ class EvaluationController extends Controller
 
     private function resolverChromePath(): ?string
     {
-        // Forzar variables de entorno para que Chromium/Fontconfig tengan carpetas de caché escribibles en Linux
-        // y deshabilitar crashpad (gestor de fallos) que falla en Docker
         if (PHP_OS_FAMILY !== 'Windows') {
-            putenv('HOME=/tmp');
-            putenv('XDG_CACHE_HOME=/tmp');
-            putenv('DISABLE_CRASHPAD=1');
-        }
-
-        // Intentar leer variables de entorno del sistema (setadas en Dockerfile ENV o Railway env vars)
-        // getenv() lee variables del sistema; env() solo lee .env de Laravel
-        $chromePath = getenv('PUPPETEER_EXECUTABLE_PATH') ?: getenv('CHROME_PATH') ?: null;
-
-        if ($chromePath && file_exists($chromePath)) {
-            return $chromePath;
-        }
-
-        if (PHP_OS_FAMILY !== 'Windows') {
-            // Rutas estándar de Chromium/Chrome en Linux/Debian
-            $linuxPaths = [
-                '/usr/bin/chromium',
-                '/usr/bin/chromium-browser',
-                '/usr/bin/google-chrome',
-                '/usr/bin/google-chrome-stable',
-            ];
-            foreach ($linuxPaths as $path) {
-                if (file_exists($path)) {
-                    return $path;
-                }
+            // En Linux (Railway/Docker): buscar el Chrome que Puppeteer descargó en PUPPETEER_CACHE_DIR.
+            // NO usar /usr/bin/chromium del sistema — es incompatible con Puppeteer v24.
+            $cacheDir = getenv('PUPPETEER_CACHE_DIR') ?: '/var/cache/puppeteer';
+            $chromePaths = glob($cacheDir . '/chrome/linux-*/chrome-linux64/chrome');
+            if (!empty($chromePaths)) {
+                // Usar la versión más reciente disponible
+                sort($chromePaths);
+                $path = end($chromePaths);
+                Log::info('Usando Chrome de Puppeteer', ['chrome_path' => $path]);
+                return $path;
             }
+
+            // Si Puppeteer no descargó Chrome, devolver null para que Puppeteer lo encuentre
+            // automáticamente vía PUPPETEER_CACHE_DIR en su propio proceso Node
+            Log::warning('Chrome de Puppeteer no encontrado en cache, dejando que Puppeteer lo auto-detecte', [
+                'cache_dir' => $cacheDir
+            ]);
             return null;
         }
 
-        // Windows: buscar en caché de Puppeteer y rutas estándar
-        $puppeteerCache = getenv('USERPROFILE') . '\.cache\puppeteer\chrome';
+        // Windows (desarrollo local): buscar Chrome instalado
+        $puppeteerCache = getenv('USERPROFILE') . '\\.cache\\puppeteer\\chrome';
         if (is_dir($puppeteerCache)) {
-            $chromeDirs = glob($puppeteerCache . '\win64-*\chrome-win64\chrome.exe');
+            $chromeDirs = glob($puppeteerCache . '\\win64-*\\chrome-win64\\chrome.exe');
             if (!empty($chromeDirs)) {
                 return $chromeDirs[0];
             }
         }
 
         foreach ([
-            'C:\Program Files\Google\Chrome\Application\chrome.exe',
-            'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
         ] as $path) {
             if (file_exists($path)) {
                 return $path;
