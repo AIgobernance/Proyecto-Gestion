@@ -66,8 +66,12 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 755 /var/cache/puppeteer
 
-# Expose port 80
-EXPOSE 80
+# Copy and configure entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Start Apache: fix MPM conflict and configure dynamic port from Railway at runtime
-CMD ["bash", "-c", "rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.* && sed -i \"s/Listen 80/Listen ${PORT:-80}/\" /etc/apache2/ports.conf && sed -i \"s/:80>/:${PORT:-80}>/\" /etc/apache2/sites-enabled/000-default.conf && apache2-foreground"]
+# Railway assigns PORT dynamically — expose 8080 as hint but entrypoint handles it
+EXPOSE 8080
+
+# Use entrypoint script for reliable port configuration
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
